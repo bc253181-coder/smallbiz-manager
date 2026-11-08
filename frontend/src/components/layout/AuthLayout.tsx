@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { SupportWidget } from '@/features/support/SupportWidget'
 import { Brand } from './Brand'
 
@@ -18,6 +19,14 @@ export function AuthLayout({ title, subtitle, children, wide }: {
           {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
           <div className="mt-6">{children}</div>
         </div>
+        <p className="mt-6 flex justify-center gap-4 text-xs text-slate-500">
+          <Link to="/terms" className="hover:text-slate-700 hover:underline">
+            用户协议
+          </Link>
+          <Link to="/privacy" className="hover:text-slate-700 hover:underline">
+            隐私政策
+          </Link>
+        </p>
       </div>
       <SupportWidget />
     </div>

@@ -1,5 +1,7 @@
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
+import { Suspense } from 'react'
 import { Link, Navigate, NavLink, Outlet } from 'react-router'
+import { PageLoading } from '@/components/layout/PageLoading'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
 
@@ -48,7 +50,9 @@ export function AdminLayout() {
         </nav>
       </header>
       <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <Outlet />
+        <Suspense fallback={<PageLoading />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   )

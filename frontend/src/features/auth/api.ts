@@ -2,7 +2,7 @@ import { api } from '@/lib/api'
 import type { BusinessType, SessionResponse, TenantView, UserView } from './types'
 
 export const authApi = {
-  register: (body: { email: string; password: string; displayName: string }) =>
+  register: (body: { email: string; password: string; displayName: string; agreeTerms: boolean }) =>
     api.post<SessionResponse>('/auth/register', body).then((r) => r.data),
 
   login: (body: { email: string; password: string }) =>

@@ -7,6 +7,9 @@
 backend/target/
 backend/.mvn/wrapper/maven-wrapper.jar
 backend/uploads/
+# 付款截图等私密文件，绝不提交
+backend/private-uploads/
+backend/target/test-private/
 *.log
 
 # 前端
@@ -22,3 +25,6 @@ e2e/playwright-report/
 *.iml
 .DS_Store
 Thumbs.db
+
+# 生产备份
+deploy/backups/

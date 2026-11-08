@@ -4,37 +4,41 @@ import { FullPageSpinner } from '@/components/layout/AuthLayout'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
-import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
-import { ProductDetailPage } from '@/features/catalog/pages/ProductDetailPage'
-import { ProductFormPage } from '@/features/catalog/pages/ProductFormPage'
-import { ProductListPage } from '@/features/catalog/pages/ProductListPage'
-import { DashboardPage } from '@/features/dashboard/DashboardPage'
-import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
-import { MovementsPage } from '@/features/inventory/pages/MovementsPage'
-import { CustomerDetailPage } from '@/features/partners/pages/CustomerDetailPage'
-import { CustomerListPage } from '@/features/partners/pages/CustomerListPage'
-import { SupplierDetailPage } from '@/features/partners/pages/SupplierDetailPage'
-import { SupplierListPage } from '@/features/partners/pages/SupplierListPage'
-import { PurchaseDetailPage } from '@/features/purchasing/pages/PurchaseDetailPage'
-import { PurchaseFormPage } from '@/features/purchasing/pages/PurchaseFormPage'
-import { PurchaseListPage } from '@/features/purchasing/pages/PurchaseListPage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
-import { AdminCodesPage } from '@/features/admin/pages/AdminCodesPage'
-import { AdminConfigPage } from '@/features/admin/pages/AdminConfigPage'
-import { AdminPaymentsPage } from '@/features/admin/pages/AdminPaymentsPage'
-import { AdminSupportPage } from '@/features/admin/pages/AdminSupportPage'
-import { AdminOverviewPage, AdminTenantsPage } from '@/features/admin/pages/AdminTenantsPages'
 import { RequireFeature } from '@/features/billing/FeatureGate'
-import { BillingPage } from '@/features/billing/pages/BillingPage'
-import { PaymentPage } from '@/features/billing/pages/PaymentPage'
-import { ReportsPage } from '@/features/reports/pages/ReportsPage'
-import { SaleDetailPage } from '@/features/sales/pages/SaleDetailPage'
-import { SaleFormPage } from '@/features/sales/pages/SaleFormPage'
-import { SaleListPage } from '@/features/sales/pages/SaleListPage'
+import { PrivacyPage, TermsPage } from '@/features/legal/LegalPages'
 import { useCanManage } from '@/lib/hooks'
-import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CreateStorePage } from '@/features/tenant/pages/CreateStorePage'
 import { SelectStorePage } from '@/features/tenant/pages/SelectStorePage'
+import {
+  AdminCodesPage,
+  AdminConfigPage,
+  AdminOverviewPage,
+  AdminPaymentsPage,
+  AdminSupportPage,
+  AdminTenantsPage,
+  BillingPage,
+  CategoriesPage,
+  CustomerDetailPage,
+  CustomerListPage,
+  DashboardPage,
+  InventoryPage,
+  MovementsPage,
+  PaymentPage,
+  ProductDetailPage,
+  ProductFormPage,
+  ProductListPage,
+  PurchaseDetailPage,
+  PurchaseFormPage,
+  PurchaseListPage,
+  ReportsPage,
+  SaleDetailPage,
+  SaleFormPage,
+  SaleListPage,
+  SettingsPage,
+  SupplierDetailPage,
+  SupplierListPage,
+} from '@/lazyPages'
 
 /** 未登录 → 去登录页（登录后回到原页面）。 */
 function RequireAuth() {
@@ -90,6 +94,9 @@ function NotFoundPage() {
 }
 
 export const router = createBrowserRouter([
+  // 公开页面：登录与否都能访问
+  { path: '/terms', element: <TermsPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
   {
     element: <GuestOnly />,
     children: [

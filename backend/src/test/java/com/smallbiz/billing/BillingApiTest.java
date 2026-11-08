@@ -25,7 +25,7 @@ class BillingApiTest extends IntegrationTest {
                 .content("{\"email\":\"admin@platform.test\",\"password\":\"AdminPass123\"}")).andReturn().getResponse();
         if (res.getStatus() != 200) {
             res = mvc.perform(post("/api/v1/auth/register").contentType("application/json")
-                    .content("{\"email\":\"admin@platform.test\",\"password\":\"AdminPass123\",\"displayName\":\"平台\"}"))
+                    .content("{\"email\":\"admin@platform.test\",\"password\":\"AdminPass123\",\"displayName\":\"平台\",\"agreeTerms\":true}"))
                     .andReturn().getResponse();
         }
         return new Session("admin@platform.test", "AdminPass123", read(res, "$.accessToken"), refreshCookie(res),

@@ -23,7 +23,8 @@ export function UpgradePrompt({ feature, className }: { feature: Feature; classN
         <span className="flex size-12 items-center justify-center rounded-full bg-amber-50 text-amber-600">
           <Lock className="size-6" aria-hidden />
         </span>
-        <h2 className="text-lg font-semibold text-slate-900">「{FEATURE_LABELS[feature]}」是标准版功能</h2>
+        {/* 代替整个页面显示，因此作为页面主标题 */}
+        <h1 className="text-lg font-semibold text-slate-900">「{FEATURE_LABELS[feature]}」是标准版功能</h1>
         {FEATURE_DESCRIPTIONS[feature] && <p className="text-sm text-slate-600">{FEATURE_DESCRIPTIONS[feature]}</p>}
         <p className="text-sm text-slate-500">首月体验只需 ¥1.99 / RM 1.00。套餐到期后已有数据会保留，续费后即可继续使用。</p>
         {isOwner ? (

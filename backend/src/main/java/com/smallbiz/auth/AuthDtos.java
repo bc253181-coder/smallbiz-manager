@@ -7,8 +7,10 @@ import com.smallbiz.tenant.BusinessType;
 import com.smallbiz.tenant.MemberRole;
 import com.smallbiz.tenant.Plan;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -21,7 +23,8 @@ public final class AuthDtos {
     public record RegisterRequest(
             @NotBlank(message = "请填写邮箱") @Email(message = "邮箱格式不正确") @Size(max = 191) String email,
             @NotBlank(message = "请填写密码") @Size(min = 8, max = 64, message = "密码长度需为 8–64 位") String password,
-            @NotBlank(message = "请填写昵称") @Size(max = 100, message = "昵称最多 100 字") String displayName) {
+            @NotBlank(message = "请填写昵称") @Size(max = 100, message = "昵称最多 100 字") String displayName,
+            @NotNull(message = "请阅读并同意用户协议和隐私政策") @AssertTrue(message = "请阅读并同意用户协议和隐私政策") Boolean agreeTerms) {
 
         /** 校验前去掉邮箱前后空格（用户常从别处复制粘贴）。 */
         public RegisterRequest {

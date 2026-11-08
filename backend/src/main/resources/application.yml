@@ -27,6 +27,9 @@ spring:
 
 server:
   port: 8080
+  # 在 Nginx 等反向代理之后：用 X-Forwarded-For / X-Forwarded-Proto 识别真实 IP 和 HTTPS
+  # （只信任内网代理地址；登录失败限制、客服限速都按真实 IP 计算）
+  forward-headers-strategy: native
   error:
     include-message: never
 
@@ -38,18 +41,28 @@ smallbiz:
     # 刷新令牌轮换后，旧令牌在此时间内仍可再用（防止请求中断导致意外登出）
     refresh-reuse-grace: 30s
     # 生产环境（HTTPS）必须为 true
-    cookie-secure: false
+    cookie-secure: ${COOKIE_SECURE:false}
   cors:
-    allowed-origins: http://localhost:5173
+    # 生产环境前后端同域名，不需要跨域；需要时用逗号分隔多个地址
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   storage:
     # 商品图片存放目录（相对于后端启动目录）；上线时改为对象存储
-    upload-dir: ./uploads
+    upload-dir: ${UPLOAD_DIR:./uploads}
     # 付款截图等私密文件（不对外提供访问，只能通过鉴权接口读取）
-    private-dir: ./private-uploads
+    private-dir: ${PRIVATE_UPLOAD_DIR:./private-uploads}
   platform:
     # 平台管理员邮箱，逗号分隔（环境变量 PLATFORM_ADMIN_EMAILS）
     admin-emails: ${PLATFORM_ADMIN_EMAILS:}
     # 人工客服微信：只显示在本网站内，不要发布到小红书
-    support-wechat-id: Pianzibudehaosi_1A
+    support-wechat-id: ${SUPPORT_WECHAT_ID:Pianzibudehaosi_1A}
     # 首次启动时从这里导入收款码图片
-    payment-assets-dir: ../assets/payment
+    payment-assets-dir: ${PAYMENT_ASSETS_DIR:../assets/payment}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
