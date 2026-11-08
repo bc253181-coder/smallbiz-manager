@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ReceiptText } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -10,7 +9,8 @@ import { formatDateTime } from '@/lib/format'
 import { useCanManage } from '@/lib/hooks'
 import { CUSTOMER_TYPE_LABELS, PRICE_TIER_LABELS, customerApi } from '../api'
 import { CustomerFormDialog } from '../CustomerFormDialog'
-import { HistoryComingSoon, NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
+import { CustomerSalesHistory } from '@/features/sales/CustomerSalesHistory'
+import { NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
 
 const BACK = { to: '/customers', label: '返回客户列表' }
 
@@ -67,13 +67,7 @@ export function CustomerDetailPage() {
           { label: '备注', value: c.notes },
           { label: '添加时间', value: formatDateTime(c.createdAt) },
         ]}
-        history={
-          <HistoryComingSoon
-            title="购买记录"
-            icon={ReceiptText}
-            description="销售模块上线后，这里会显示该客户的历史订单、累计消费金额和最近购买时间。"
-          />
-        }
+        history={<CustomerSalesHistory customerId={c.id} />}
       />
       <CustomerFormDialog open={editing} customer={c} onClose={() => setEditing(false)} />
       <ConfirmDialog

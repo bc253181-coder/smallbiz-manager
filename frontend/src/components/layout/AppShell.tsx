@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router'
 import { Brand } from './Brand'
 import { LowStockBell } from './LowStockBell'
+import { MobileTabBar } from './MobileTabBar'
 import { SidebarNav } from './SidebarNav'
 import { StoreSwitcher } from './StoreSwitcher'
 import { UserMenu } from './UserMenu'
@@ -13,9 +14,9 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   return (
-    <div className="min-h-dvh lg:pl-64">
+    <div className="min-h-dvh lg:pl-64 print:pl-0">
       {/* 桌面侧边栏 */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex print:hidden">
         <div className="flex h-16 items-center border-b border-slate-100 px-5">
           <Brand />
         </div>
@@ -50,7 +51,7 @@ export function AppShell() {
       </Dialog.Root>
 
       {/* 顶栏 */}
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6 print:hidden">
         <button
           type="button"
           className="-ml-2 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
@@ -65,9 +66,12 @@ export function AppShell() {
         <UserMenu />
       </header>
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* 手机底部留出底部导航的高度 */}
+      <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-6 print:p-0">
         <Outlet />
       </main>
+
+      <MobileTabBar onMore={() => setDrawerOpen(true)} />
     </div>
   )
 }
