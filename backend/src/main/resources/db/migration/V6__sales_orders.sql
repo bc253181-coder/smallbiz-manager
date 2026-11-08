@@ -1,0 +1,60 @@
+-- SmallBiz Manager · V6：销售单
+-- 开单即完成（COMPLETED）并扣库存；取消（CANCELLED）恢复库存
+-- unit_cost 为销售时的成本快照，用于毛利计算；paid_amount / payment_status 为应收账款预留
+
+CREATE TABLE sales_orders (
+    id                     BIGINT        NOT NULL AUTO_INCREMENT,
+    tenant_id              BIGINT        NOT NULL,
+    order_no               VARCHAR(30)   NOT NULL,
+    customer_id            BIGINT        NULL,
+    customer_name_snapshot VARCHAR(100)  NULL,
+    price_tier             VARCHAR(20)   NOT NULL,
+    status                 VARCHAR(20)   NOT NULL,
+    order_date             DATETIME(6)   NOT NULL,
+    subtotal               DECIMAL(14,2) NOT NULL,
+    discount_amount        DECIMAL(14,2) NOT NULL DEFAULT 0,
+    total_amount           DECIMAL(14,2) NOT NULL,
+    total_cost             DECIMAL(14,2) NOT NULL,
+    paid_amount            DECIMAL(14,2) NOT NULL DEFAULT 0,
+    payment_status         VARCHAR(20)   NOT NULL DEFAULT 'PAID',
+    item_count             INT           NOT NULL DEFAULT 0,
+    total_quantity         INT           NOT NULL DEFAULT 0,
+    notes                  VARCHAR(500)  NULL,
+    cancelled_at           DATETIME(6)   NULL,
+    cancelled_by           BIGINT        NULL,
+    cancel_reason          VARCHAR(200)  NULL,
+    created_by             BIGINT        NULL,
+    version                INT           NOT NULL DEFAULT 0,
+    created_at             DATETIME(6)   NOT NULL,
+    updated_at             DATETIME(6)   NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_sales_orders_tenant_no (tenant_id, order_no),
+    KEY idx_sales_orders_tenant_date (tenant_id, order_date),
+    KEY idx_sales_orders_tenant_customer (tenant_id, customer_id),
+    KEY idx_sales_orders_tenant_status_date (tenant_id, status, order_date),
+    CONSTRAINT fk_sales_orders_tenant FOREIGN KEY (tenant_id) REFERENCES tenants (id),
+    CONSTRAINT fk_sales_orders_customer FOREIGN KEY (customer_id) REFERENCES customers (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE sales_order_items (
+    id                    BIGINT        NOT NULL AUTO_INCREMENT,
+    tenant_id             BIGINT        NOT NULL,
+    sales_order_id        BIGINT        NOT NULL,
+    product_id            BIGINT        NOT NULL,
+    product_name_snapshot VARCHAR(200)  NOT NULL,
+    sku_snapshot          VARCHAR(64)   NOT NULL,
+    unit_snapshot         VARCHAR(20)   NOT NULL,
+    quantity              INT           NOT NULL,
+    unit_price            DECIMAL(14,2) NOT NULL,
+    unit_cost             DECIMAL(14,2) NOT NULL,
+    line_total            DECIMAL(14,2) NOT NULL,
+    line_no               INT           NOT NULL,
+    created_at            DATETIME(6)   NOT NULL,
+    updated_at            DATETIME(6)   NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_sales_items_order (sales_order_id),
+    KEY idx_sales_items_tenant_product (tenant_id, product_id),
+    CONSTRAINT fk_sales_items_tenant FOREIGN KEY (tenant_id) REFERENCES tenants (id),
+    CONSTRAINT fk_sales_items_order FOREIGN KEY (sales_order_id) REFERENCES sales_orders (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sales_items_product FOREIGN KEY (product_id) REFERENCES products (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;

@@ -15,6 +15,8 @@ import com.smallbiz.common.ApiException;
 import com.smallbiz.tenant.Tenant;
 import com.smallbiz.tenant.TenantRepository;
 
+import jakarta.persistence.EntityManager;
+
 /**
  * 库存的唯一修改入口。
  *
@@ -38,11 +40,14 @@ public class InventoryService {
     private final ProductRepository products;
     private final StockMovementRepository movements;
     private final TenantRepository tenants;
+    private final EntityManager em;
 
-    public InventoryService(ProductRepository products, StockMovementRepository movements, TenantRepository tenants) {
+    public InventoryService(ProductRepository products, StockMovementRepository movements, TenantRepository tenants,
+            EntityManager em) {
         this.products = products;
         this.movements = movements;
         this.tenants = tenants;
+        this.em = em;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -50,8 +55,7 @@ public class InventoryService {
         if (change.qtyChange() == 0) {
             throw ApiException.badRequest("ZERO_QUANTITY", "变动数量不能为 0");
         }
-        Product product = products.findByIdForUpdate(productId)
-                .orElseThrow(() -> ApiException.notFound("PRODUCT_NOT_FOUND", "商品不存在"));
+        Product product = lockFresh(productId);
         int before = product.getStockQty();
         long after = (long) before + change.qtyChange();
         if (after > Integer.MAX_VALUE || after < Integer.MIN_VALUE) {
@@ -81,8 +85,7 @@ public class InventoryService {
         if (actualQty < 0) {
             throw ApiException.badRequest("INVALID_QUANTITY", "实际数量不能为负数");
         }
-        Product product = products.findByIdForUpdate(productId)
-                .orElseThrow(() -> ApiException.notFound("PRODUCT_NOT_FOUND", "商品不存在"));
+        Product product = lockFresh(productId);
         int delta = actualQty - product.getStockQty();
         if (delta == 0) {
             throw ApiException.badRequest("NO_CHANGE", "实际数量与当前库存相同，无需调整");
@@ -101,6 +104,31 @@ public class InventoryService {
         BigDecimal total = currentCost.multiply(BigDecimal.valueOf(currentQty))
                 .add(inCost.multiply(BigDecimal.valueOf(inQty)));
         return total.divide(BigDecimal.valueOf((long) currentQty + inQty), 2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 加写锁并读取商品库存和成本的<b>最新已提交值</b>。
+     *
+     * <p>为什么不能只用 {@code findByIdForUpdate}：
+     * <ol>
+     *   <li>如果同一事务里之前读过这个商品（例如开单时先读价格），Hibernate 会返回持久化上下文中的
+     *       旧对象，不会用 FOR UPDATE 查到的新数据覆盖字段；</li>
+     *   <li>MySQL 默认 REPEATABLE READ：普通 SELECT 读的是事务第一次读取时的快照，
+     *       Hibernate 的 refresh(PESSIMISTIC_WRITE) 也是用普通 SELECT 取数据，同样读到旧快照。</li>
+     * </ol>
+     * 只有"加锁读"（SELECT … FOR UPDATE）一定读到最新已提交的值。
+     * 因此这里先用 JPQL 查询确认商品存在且属于当前店铺（并加锁），
+     * 再用原生加锁读取得最新的库存和成本写回对象。并发开单测试覆盖了这个问题。
+     */
+    private Product lockFresh(Long productId) {
+        Product product = products.findByIdForUpdate(productId)
+                .orElseThrow(() -> ApiException.notFound("PRODUCT_NOT_FOUND", "商品不存在"));
+        Object[] row = (Object[]) em.createNativeQuery(
+                "SELECT stock_qty, cost_price FROM products WHERE id = :id FOR UPDATE")
+                .setParameter("id", product.getId())
+                .getSingleResult();
+        product.syncFromLockedRead(((Number) row[0]).intValue(), (BigDecimal) row[1]);
+        return product;
     }
 
     private boolean allowNegativeStock(Long tenantId) {

@@ -102,6 +102,12 @@ public class Product extends TenantScopedEntity {
         this.stockQty = newQty;
     }
 
+    /** 仅供 InventoryService 调用：用加锁读到的最新库存和成本覆盖可能过期的字段。 */
+    public void syncFromLockedRead(int currentStock, BigDecimal currentCost) {
+        this.stockQty = currentStock;
+        this.costPrice = currentCost;
+    }
+
     public Long getCategoryId() {
         return categoryId;
     }
