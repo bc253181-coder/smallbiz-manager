@@ -39,3 +39,6 @@ smallbiz:
     cookie-secure: false
   cors:
     allowed-origins: http://localhost:5173
+  storage:
+    # 商品图片存放目录（相对于后端启动目录）；上线时改为对象存储
+    upload-dir: ./uploads

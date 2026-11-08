@@ -9,3 +9,5 @@ spring:
 smallbiz:
   security:
     access-token-ttl: 2h
+  storage:
+    upload-dir: ./target/test-uploads

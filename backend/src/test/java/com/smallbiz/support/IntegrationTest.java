@@ -93,6 +93,21 @@ public abstract class IntegrationTest {
         return id.longValue();
     }
 
+    /** 以某会话发送 JSON 请求，返回响应。 */
+    protected MockHttpServletResponse send(MockHttpServletRequestBuilder b, Session s, String body) throws Exception {
+        MockHttpServletRequestBuilder req = withAuth(b, s);
+        if (body != null) {
+            req = req.contentType(MediaType.APPLICATION_JSON).content(body);
+        }
+        MockHttpServletResponse res = mvc.perform(req).andReturn().getResponse();
+        res.setCharacterEncoding("UTF-8");
+        return res;
+    }
+
+    protected static <T> T read(MockHttpServletResponse res, String path) throws Exception {
+        return JsonPath.read(res.getContentAsString(), path);
+    }
+
     protected static MockHttpServletRequestBuilder withAuth(MockHttpServletRequestBuilder b, Session s) {
         return b.header(HttpHeaders.AUTHORIZATION, "Bearer " + s.accessToken());
     }
