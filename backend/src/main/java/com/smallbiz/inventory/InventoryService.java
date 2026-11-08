@@ -1,6 +1,7 @@
 package com.smallbiz.inventory;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -60,10 +61,46 @@ public class InventoryService {
             throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_STOCK", "「" + product.getName() + "」库存不足",
                     Map.of("productId", product.getId(), "available", before, "requested", -change.qtyChange()));
         }
+        if (change.qtyChange() > 0 && change.unitCost() != null
+                && (change.type() == MovementType.STOCK_IN || change.type() == MovementType.PURCHASE_RECEIVE)) {
+            product.setCostPrice(weightedAverageCost(before, product.getCostPrice(), change.qtyChange(),
+                    change.unitCost()));
+        }
         product.applyStockChange((int) after);
         return movements.save(new StockMovement(product.getId(), change.type(), change.qtyChange(), before,
                 change.unitCost(), change.refType(), change.refId(), trimToNull(change.reason()),
                 change.operatorId()));
+    }
+
+    /**
+     * 盘点：把库存调整为实际清点的数量，差额记为一条 ADJUSTMENT 流水。
+     * 先加锁再计算差额，避免并发时按过期的库存计算。
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public StockMovement adjustTo(Long productId, int actualQty, String reason, Long operatorId) {
+        if (actualQty < 0) {
+            throw ApiException.badRequest("INVALID_QUANTITY", "实际数量不能为负数");
+        }
+        Product product = products.findByIdForUpdate(productId)
+                .orElseThrow(() -> ApiException.notFound("PRODUCT_NOT_FOUND", "商品不存在"));
+        int delta = actualQty - product.getStockQty();
+        if (delta == 0) {
+            throw ApiException.badRequest("NO_CHANGE", "实际数量与当前库存相同，无需调整");
+        }
+        return apply(productId, new Change(MovementType.ADJUSTMENT, delta, null, null, null, reason, operatorId));
+    }
+
+    /**
+     * 移动加权平均成本：(现库存 × 原成本 + 入库数 × 入库单价) ÷ (现库存 + 入库数)。
+     * 现库存 ≤ 0 时（没有可参考的存货）直接使用入库单价。
+     */
+    static BigDecimal weightedAverageCost(int currentQty, BigDecimal currentCost, int inQty, BigDecimal inCost) {
+        if (currentQty <= 0 || currentCost == null) {
+            return inCost.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal total = currentCost.multiply(BigDecimal.valueOf(currentQty))
+                .add(inCost.multiply(BigDecimal.valueOf(inQty)));
+        return total.divide(BigDecimal.valueOf((long) currentQty + inQty), 2, RoundingMode.HALF_UP);
     }
 
     private boolean allowNegativeStock(Long tenantId) {

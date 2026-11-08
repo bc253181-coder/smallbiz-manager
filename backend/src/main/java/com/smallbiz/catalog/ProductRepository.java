@@ -23,6 +23,22 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("select p.categoryId, count(p) from Product p where p.categoryId is not null group by p.categoryId")
     List<Object[]> countByCategory();
 
+    /** [商品数, 库存总量, 库存价值(只计正库存，按成本)] —— 所有未删除商品。 */
+    @Query("""
+            select count(p), coalesce(sum(p.stockQty), 0),
+                   coalesce(sum(case when p.stockQty > 0 then p.stockQty * p.costPrice else 0 end), 0)
+            from Product p
+            """)
+    List<Object[]> stockTotals();
+
+    /** [低库存数, 缺货数] —— 仅在售商品。 */
+    @Query("""
+            select coalesce(sum(case when p.stockQty <= p.lowStockThreshold then 1 else 0 end), 0),
+                   coalesce(sum(case when p.stockQty <= 0 then 1 else 0 end), 0)
+            from Product p where p.status = com.smallbiz.catalog.ProductStatus.ACTIVE
+            """)
+    List<Object[]> alertCounts();
+
     /** 原生 SQL（绕过软删除过滤），因此显式带 tenant_id。 */
     @Modifying
     @Query(value = "update products set category_id = null "

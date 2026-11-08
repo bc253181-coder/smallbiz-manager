@@ -3,9 +3,11 @@ package com.smallbiz.inventory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
-public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
+public interface StockMovementRepository extends JpaRepository<StockMovement, Long>,
+        JpaSpecificationExecutor<StockMovement> {
 
     Page<StockMovement> findByProductId(Long productId, Pageable pageable);
 
