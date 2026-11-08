@@ -26,7 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: '商品', to: '/products', icon: Package },
   { label: '库存', to: '/inventory', icon: Warehouse },
   { label: '销售', to: '/sales', icon: ReceiptText, comingSoon: true },
-  { label: '采购', to: '/purchases', icon: Truck, comingSoon: true },
+  { label: '采购', to: '/purchases', icon: Truck, managerOnly: true },
   { label: '客户', to: '/customers', icon: Contact },
   { label: '供应商', to: '/suppliers', icon: Factory, managerOnly: true },
   { label: '报表', to: '/reports', icon: ChartColumn, comingSoon: true },

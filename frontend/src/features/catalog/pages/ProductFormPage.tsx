@@ -211,7 +211,7 @@ function ProductForm({ product }: { product?: Product }) {
         title={editing ? '编辑商品' : '新增商品'}
         back={editing ? { to: `/products/${product.id}`, label: '返回商品详情' } : { to: '/products', label: '返回商品列表' }}
       />
-      <form onSubmit={onSubmit} noValidate className="grid gap-6 lg:grid-cols-3">
+      <form onSubmit={onSubmit} noValidate className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           <FormError message={formError} />
           <Card>

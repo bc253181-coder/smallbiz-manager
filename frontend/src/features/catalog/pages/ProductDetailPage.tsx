@@ -105,7 +105,7 @@ export function ProductDetailPage() {
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <Card className="lg:col-span-2">
           <CardBody className="flex flex-col gap-6 sm:flex-row">
             <ProductThumb url={p.imageUrl} name={p.name} className="size-40 self-center rounded-xl sm:self-start" />

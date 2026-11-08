@@ -51,7 +51,7 @@ export function PartnerDetailLayout({
           )
         }
       />
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <Card>
           <CardHeader title="基本资料" />
           <CardBody>

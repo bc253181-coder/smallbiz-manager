@@ -55,7 +55,7 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <Card className="lg:col-span-2">
           <CardHeader title="开始使用" description="完成以下步骤，开始用 SmallBiz Manager 管理生意" />
           <CardBody className="p-0">

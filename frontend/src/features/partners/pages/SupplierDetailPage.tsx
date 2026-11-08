@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Truck } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -8,7 +7,8 @@ import { errorCode, errorMessage } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import { supplierApi } from '../api'
 import { SupplierFormDialog } from '../SupplierFormDialog'
-import { HistoryComingSoon, NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
+import { SupplierPurchaseHistory } from '@/features/purchasing/SupplierPurchaseHistory'
+import { NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
 
 const BACK = { to: '/suppliers', label: '返回供应商列表' }
 
@@ -64,13 +64,7 @@ export function SupplierDetailPage() {
           { label: '备注', value: s.notes },
           { label: '添加时间', value: formatDateTime(s.createdAt) },
         ]}
-        history={
-          <HistoryComingSoon
-            title="采购记录"
-            icon={Truck}
-            description="采购模块上线后，这里会显示向该供应商下的采购单、采购金额和供应过的商品。"
-          />
-        }
+        history={<SupplierPurchaseHistory supplierId={s.id} />}
       />
       <SupplierFormDialog open={editing} supplier={s} onClose={() => setEditing(false)} />
       <ConfirmDialog

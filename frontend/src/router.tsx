@@ -15,6 +15,9 @@ import { CustomerDetailPage } from '@/features/partners/pages/CustomerDetailPage
 import { CustomerListPage } from '@/features/partners/pages/CustomerListPage'
 import { SupplierDetailPage } from '@/features/partners/pages/SupplierDetailPage'
 import { SupplierListPage } from '@/features/partners/pages/SupplierListPage'
+import { PurchaseDetailPage } from '@/features/purchasing/pages/PurchaseDetailPage'
+import { PurchaseFormPage } from '@/features/purchasing/pages/PurchaseFormPage'
+import { PurchaseListPage } from '@/features/purchasing/pages/PurchaseListPage'
 import { useCanManage } from '@/lib/hooks'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CreateStorePage } from '@/features/tenant/pages/CreateStorePage'
@@ -113,6 +116,10 @@ export const router = createBrowserRouter([
                 children: [
                   { path: '/suppliers', element: <SupplierListPage /> },
                   { path: '/suppliers/:id', element: <SupplierDetailPage /> },
+                  { path: '/purchases', element: <PurchaseListPage /> },
+                  { path: '/purchases/new', element: <PurchaseFormPage /> },
+                  { path: '/purchases/:id', element: <PurchaseDetailPage /> },
+                  { path: '/purchases/:id/edit', element: <PurchaseFormPage /> },
                 ],
               },
               { path: '/settings', element: <SettingsPage /> },
