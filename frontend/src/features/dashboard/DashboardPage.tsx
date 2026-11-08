@@ -1,15 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
-import { ChartColumn, CheckCircle2, Circle, Package, ReceiptText } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Circle, PackageCheck, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { tenantApi } from '@/features/auth/api'
-import { inventoryApi } from '@/features/inventory/api'
-import { useMoney } from '@/lib/format'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { BUSINESS_TYPE_LABELS, PLAN_LABELS, ROLE_LABELS } from '@/features/auth/types'
-import { formatDate } from '@/lib/utils'
+import { ProductThumb } from '@/features/catalog/components/ProductThumb'
+import { inventoryApi } from '@/features/inventory/api'
+import { reportApi } from '@/features/reports/api'
+import { TrendChart } from '@/features/reports/TrendChart'
+import { saleApi } from '@/features/sales/api'
+import { SaleStatusBadge } from '@/features/sales/SaleStatusBadge'
+import { formatDateTime, useMoney } from '@/lib/format'
+import { useCanManage } from '@/lib/hooks'
+import { cn } from '@/lib/utils'
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -22,160 +27,193 @@ function greeting(): string {
 
 export function DashboardPage() {
   const { session } = useAuth()
-  const tenant = session?.currentTenant
-  const { data: detail } = useQuery({ queryKey: ['tenant'], queryFn: tenantApi.current })
-  const { data: summary } = useQuery({ queryKey: ['inventory', 'summary'], queryFn: inventoryApi.summary })
   const money = useMoney()
+  const canManage = useCanManage()
+  const tenant = session?.currentTenant
+
+  const summary = useQuery({ queryKey: ['sales', 'dashboard'], queryFn: reportApi.dashboard })
+  const trend = useQuery({ queryKey: ['sales', 'trend', 30], queryFn: () => reportApi.trend(30) })
+  const inventory = useQuery({ queryKey: ['inventory', 'summary'], queryFn: inventoryApi.summary })
+  const lowStock = useQuery({ queryKey: ['inventory', 'low-stock', 5], queryFn: () => inventoryApi.lowStock(5) })
+  const recent = useQuery({ queryKey: ['sales', { recent: true }], queryFn: () => saleApi.list({ size: 5 }) })
+  const detail = useQuery({ queryKey: ['tenant'], queryFn: tenantApi.current })
   if (!session || !tenant) return null
 
-  const profileDone = !!(detail?.contactPhone || detail?.address)
-  const productCount = summary?.productCount
-  const lowCount = summary?.lowStockCount
+  const s = summary.data
+  const inv = inventory.data
+  const hasSales = (recent.data?.totalItems ?? 0) > 0
+  const hasProducts = (inv?.productCount ?? 0) > 0
+  const profileDone = !!(detail.data?.contactPhone || detail.data?.address)
+  const showGuide = recent.isSuccess && inventory.isSuccess && detail.isSuccess && !(hasSales && hasProducts && profileDone)
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">
-          {greeting()}，{session.user.displayName}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">这里是「{tenant.name}」的经营概览</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            {greeting()}，{session.user.displayName}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">「{tenant.name}」经营概览{s ? ` · ${s.today.replaceAll('-', '/')}` : ''}</p>
+        </div>
+        <Link to="/sales/new" className={cn(buttonVariants(), 'hidden sm:inline-flex')}>
+          <Plus aria-hidden />
+          开单
+        </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="商品总数" value={productCount?.toLocaleString('zh-CN')} to="/products" />
-        <StatCard label="库存总量" value={summary?.totalQty.toLocaleString('zh-CN')} to="/inventory" />
-        {summary?.inventoryValue !== null && (
-          <StatCard label="库存价值（按成本）" value={summary ? money(summary.inventoryValue) : undefined} to="/inventory" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+        <Stat label="今日销售额" value={s ? money(s.todaySales) : undefined} sub={s ? `${s.todayOrders} 笔订单` : undefined} to="/sales" />
+        <Stat label="本月销售额" value={s ? money(s.monthSales) : undefined} sub={s ? `${s.monthOrders} 笔订单` : undefined} to="/sales" />
+        {canManage ? (
+          <>
+            <Stat label="本月毛利" value={s?.monthGrossProfit != null ? money(s.monthGrossProfit) : undefined} sub="销售额 − 成本" to="/reports" />
+            <Stat label="本月采购" value={s?.monthPurchases != null ? money(s.monthPurchases) : undefined} sub="已收货的采购" to="/purchases" />
+            <Stat label="库存价值" value={inv?.inventoryValue != null ? money(inv.inventoryValue) : undefined} sub={inv ? `${inv.productCount} 种商品` : undefined} to="/inventory" />
+          </>
+        ) : (
+          <Stat label="商品数" value={inv ? String(inv.productCount) : undefined} sub={inv ? `库存 ${inv.totalQty} 件` : undefined} to="/products" />
         )}
-        <StatCard
+        <Stat
           label="低库存商品"
-          value={lowCount?.toLocaleString('zh-CN')}
+          value={inv ? String(inv.lowStockCount) : undefined}
+          sub={inv ? (inv.outOfStockCount ? `其中缺货 ${inv.outOfStockCount}` : inv.lowStockCount ? '需要补货' : '库存充足') : undefined}
           to="/inventory?lowStock=true"
-          tone={lowCount ? 'amber' : undefined}
+          tone={inv?.lowStockCount ? 'amber' : undefined}
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
-        <Card className="lg:col-span-2">
+      {showGuide && (
+        <Card>
           <CardHeader title="开始使用" description="完成以下步骤，开始用 SmallBiz Manager 管理生意" />
-          <CardBody className="p-0">
-            <ol className="divide-y divide-slate-100">
-              <Step done title="创建店铺" description={`「${tenant.name}」已创建`} />
-              <Step
-                done={profileDone}
-                title="完善店铺资料"
-                description="填写联系电话和地址，以后会显示在打印的单据上"
-                action={
-                  <Link to="/settings" className="text-sm font-medium text-blue-600 hover:underline">
-                    {profileDone ? '查看' : '去填写'}
-                  </Link>
-                }
-              />
-              <Step
-                done={(productCount ?? 0) > 0}
-                title="添加第一个商品"
-                description="录入商品名称、SKU、价格和库存"
-                action={
-                  <Link to={(productCount ?? 0) > 0 ? '/products' : '/products/new'} className="text-sm font-medium text-blue-600 hover:underline">
-                    {(productCount ?? 0) > 0 ? '查看' : '去添加'}
-                  </Link>
-                }
-              />
-              <Step title="记录第一笔销售" description="开单后自动扣减库存、统计销售额" comingSoon />
-            </ol>
+          <ol className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <Step done={profileDone} title="完善店铺资料" to="/settings" />
+            <Step done={hasProducts} title="添加第一个商品" to="/products/new" />
+            <Step done={hasSales} title="记录第一笔销售" to="/sales/new" />
+          </ol>
+        </Card>
+      )}
+
+      <div className="grid gap-6 xl:grid-cols-3 [&>*]:min-w-0">
+        <Card className="xl:col-span-2">
+          <CardHeader
+            title="近 30 天销售额"
+            description={trend.data ? `合计 ${money(trend.data.total.amount)} · ${trend.data.total.orderCount} 笔订单` : undefined}
+            action={
+              canManage && (
+                <Link to="/reports" className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
+                  查看报表
+                  <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              )
+            }
+          />
+          <CardBody>
+            {trend.data ? <TrendChart data={trend.data.points} label="销售额" /> : <div className="h-60 animate-pulse rounded-lg bg-slate-50" />}
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="店铺信息" />
-          <CardBody className="space-y-3 text-sm">
-            <InfoRow label="店铺名称" value={tenant.name} />
-            <InfoRow label="经营类型" value={BUSINESS_TYPE_LABELS[tenant.businessType]} />
-            <InfoRow label="我的角色" value={ROLE_LABELS[tenant.role]} />
-            <InfoRow
-              label="当前套餐"
-              value={
-                <span className="inline-flex items-center gap-2">
-                  <Badge tone={tenant.plan === 'FREE' ? 'slate' : 'blue'}>{PLAN_LABELS[tenant.plan]}</Badge>
-                  {tenant.planExpiresAt && tenant.plan !== 'FREE' && (
-                    <span className="text-xs text-slate-500">至 {formatDate(tenant.planExpiresAt)}</span>
-                  )}
-                </span>
-              }
-            />
-            <InfoRow label="时区" value={tenant.timezone} />
-          </CardBody>
+          <CardHeader
+            title="需要补货"
+            action={
+              <Link to="/inventory?lowStock=true" className="whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
+                全部
+              </Link>
+            }
+          />
+          {lowStock.data && lowStock.data.items.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 px-5 py-10 text-sm text-slate-500">
+              <PackageCheck className="size-8 text-emerald-500" aria-hidden />
+              库存都很充足
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {lowStock.data?.items.map((p) => (
+                <li key={p.id}>
+                  <Link to={`/products/${p.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
+                    <ProductThumb url={p.imageUrl} name={p.name} className="size-9" />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{p.name}</span>
+                    <span className={cn('whitespace-nowrap text-sm font-semibold tabular-nums', p.stockQty <= 0 ? 'text-red-600' : 'text-amber-700')}>
+                      {p.stockQty <= 0 ? '缺货' : `剩 ${p.stockQty} ${p.unit}`}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {canManage && (lowStock.data?.count ?? 0) > 0 && (
+            <div className="border-t border-slate-100 px-5 py-3">
+              <Link to="/purchases/new" className="text-sm font-medium text-blue-600 hover:underline">
+                新建采购单补货 →
+              </Link>
+            </div>
+          )}
         </Card>
       </div>
 
       <Card>
-        <CardBody className="flex flex-col items-center gap-3 py-12 text-center">
-          <div className="flex gap-3 text-slate-300">
-            <Package className="size-8" aria-hidden />
-            <ReceiptText className="size-8" aria-hidden />
-            <ChartColumn className="size-8" aria-hidden />
-          </div>
-          <h2 className="text-base font-semibold text-slate-900">还没有经营数据</h2>
-          <p className="max-w-md text-sm text-slate-500">
-            录入商品、记录销售和采购后，这里会显示今日销售额、本月销售额、库存价值、低库存提醒和销售趋势图。
-          </p>
-        </CardBody>
+        <CardHeader
+          title="最近销售"
+          action={
+            <Link to="/sales" className="whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
+              全部
+            </Link>
+          }
+        />
+        {recent.data && recent.data.items.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-slate-500">还没有销售记录</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {recent.data?.items.map((o) => (
+              <li key={o.id}>
+                <Link to={`/sales/${o.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-900">{o.customerName ?? '散客'}</p>
+                    <p className="text-xs text-slate-500">
+                      {o.orderNo} · {formatDateTime(o.orderDate)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={cn('text-sm font-semibold tabular-nums', o.status === 'CANCELLED' && 'text-slate-400 line-through')}>
+                      {money(o.totalAmount)}
+                    </span>
+                    <SaleStatusBadge status={o.status} />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   )
 }
 
-function Step({
-  title,
-  description,
-  done,
-  comingSoon,
-  action,
-}: {
-  title: string
-  description: string
-  done?: boolean
-  comingSoon?: boolean
-  action?: ReactNode
-}) {
-  return (
-    <li className="flex items-center gap-3 px-5 py-4">
-      {done ? (
-        <CheckCircle2 className="size-5 shrink-0 text-emerald-500" aria-label="已完成" />
-      ) : (
-        <Circle className="size-5 shrink-0 text-slate-300" aria-label="未完成" />
-      )}
-      <div className="min-w-0 flex-1">
-        <p className={done ? 'text-sm font-medium text-slate-500 line-through' : 'text-sm font-medium text-slate-900'}>
-          {title}
-        </p>
-        <p className="text-xs text-slate-500">{description}</p>
-      </div>
-      {comingSoon ? <Badge>即将上线</Badge> : action}
-    </li>
-  )
-}
-
-function StatCard({ label, value, to, tone }: { label: string; value: string | undefined; to: string; tone?: 'amber' }) {
+function Stat({ label, value, sub, to, tone }: { label: string; value?: string; sub?: string; to: string; tone?: 'amber' }) {
   return (
     <Link to={to} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-blue-200">
       <p className="text-sm text-slate-500">{label}</p>
       {value === undefined ? (
-        <div className="mt-2 h-8 w-16 animate-pulse rounded bg-slate-100" />
+        <div className="mt-2 h-7 w-20 animate-pulse rounded bg-slate-100" />
       ) : (
-        <p className={tone === 'amber' ? 'mt-1 text-2xl font-semibold text-amber-700' : 'mt-1 text-2xl font-semibold text-slate-900'}>
-          {value}
-        </p>
+        <p className={cn('mt-1 truncate text-xl font-semibold tabular-nums', tone === 'amber' ? 'text-amber-700' : 'text-slate-900')}>{value}</p>
       )}
+      {sub && <p className="mt-0.5 truncate text-xs text-slate-500">{sub}</p>}
     </Link>
   )
 }
 
-function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+function Step({ done, title, to }: { done: boolean; title: string; to: string }): ReactNode {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="shrink-0 whitespace-nowrap text-slate-500">{label}</span>
-      <span className="min-w-0 break-words text-right font-medium text-slate-900">{value}</span>
-    </div>
+    <li>
+      <Link to={to} className="flex items-center gap-3 px-5 py-4 hover:bg-slate-50">
+        {done ? (
+          <CheckCircle2 className="size-5 shrink-0 text-emerald-500" aria-label="已完成" />
+        ) : (
+          <Circle className="size-5 shrink-0 text-slate-300" aria-label="未完成" />
+        )}
+        <span className={done ? 'text-sm text-slate-500 line-through' : 'text-sm font-medium text-slate-900'}>{title}</span>
+      </Link>
+    </li>
   )
 }
