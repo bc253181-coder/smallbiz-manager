@@ -13,6 +13,7 @@ import { errorCode, errorMessage } from '@/lib/api'
 import { formatDateTime, formatQty, useMoney } from '@/lib/format'
 import { useCanManage } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
+import { StockActionDialog, type StockMode } from '@/features/inventory/StockActionDialog'
 import { productApi } from '../api'
 import { ProductThumb } from '../components/ProductThumb'
 import { MOVEMENT_LABELS, STATUS_LABELS } from '../types'
@@ -25,6 +26,7 @@ export function ProductDetailPage() {
   const canManage = useCanManage()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [movementPage, setMovementPage] = useState(0)
+  const [stockMode, setStockMode] = useState<StockMode | null>(null)
 
   const { data: p, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['product', productId],
@@ -151,13 +153,29 @@ export function ProductDetailPage() {
                 <span className="font-medium">{money((Number(p.costPrice) * p.stockQty).toFixed(2))}</span>
               </div>
             )}
-            <p className="text-xs text-slate-500">入库、出库和盘点功能将在库存模块上线</p>
+            {canManage && (
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                {(['in', 'out', 'adjust'] as const).map((mode) => (
+                  <Button key={mode} size="sm" variant="secondary" onClick={() => setStockMode(mode)}>
+                    {mode === 'in' ? '入库' : mode === 'out' ? '出库' : '盘点'}
+                  </Button>
+                ))}
+              </div>
+            )}
           </CardBody>
         </Card>
       </div>
 
       <Card className="mt-6">
-        <CardHeader title="库存变动记录" description="每一次库存变化都会自动记录，不可修改" />
+        <CardHeader
+          title="库存变动记录"
+          description="每一次库存变化都会自动记录，不可修改"
+          action={
+            <Link to={`/inventory/movements?productId=${p.id}`} className="whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
+              按条件查看
+            </Link>
+          }
+        />
         {movements.isLoading ? (
           <div className="h-32 animate-pulse bg-slate-50" />
         ) : movements.isError ? (
@@ -212,6 +230,12 @@ export function ProductDetailPage() {
           )
         )}
       </Card>
+
+      <StockActionDialog
+        mode={stockMode ?? 'in'}
+        target={stockMode ? { id: p.id, name: p.name, sku: p.sku, unit: p.unit, stockQty: p.stockQty } : null}
+        onClose={() => setStockMode(null)}
+      />
 
       <ConfirmDialog
         open={confirmDelete}

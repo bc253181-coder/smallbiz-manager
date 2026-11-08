@@ -3,6 +3,7 @@ import { Dialog } from 'radix-ui'
 import { useState } from 'react'
 import { Outlet } from 'react-router'
 import { Brand } from './Brand'
+import { LowStockBell } from './LowStockBell'
 import { SidebarNav } from './SidebarNav'
 import { StoreSwitcher } from './StoreSwitcher'
 import { UserMenu } from './UserMenu'
@@ -60,6 +61,7 @@ export function AppShell() {
         </button>
         <StoreSwitcher />
         <div className="flex-1" />
+        <LowStockBell />
         <UserMenu />
       </header>
 

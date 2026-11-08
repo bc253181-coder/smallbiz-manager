@@ -5,7 +5,8 @@ import { Link } from 'react-router'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { tenantApi } from '@/features/auth/api'
-import { productApi } from '@/features/catalog/api'
+import { inventoryApi } from '@/features/inventory/api'
+import { useMoney } from '@/lib/format'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { BUSINESS_TYPE_LABELS, PLAN_LABELS, ROLE_LABELS } from '@/features/auth/types'
 import { formatDate } from '@/lib/utils'
@@ -23,19 +24,13 @@ export function DashboardPage() {
   const { session } = useAuth()
   const tenant = session?.currentTenant
   const { data: detail } = useQuery({ queryKey: ['tenant'], queryFn: tenantApi.current })
-  const { data: allProducts } = useQuery({
-    queryKey: ['products', 'dashboard-count'],
-    queryFn: () => productApi.list({ size: 1 }),
-  })
-  const { data: lowStockProducts } = useQuery({
-    queryKey: ['products', 'dashboard-low'],
-    queryFn: () => productApi.list({ size: 1, lowStock: true, status: 'ACTIVE' }),
-  })
+  const { data: summary } = useQuery({ queryKey: ['inventory', 'summary'], queryFn: inventoryApi.summary })
+  const money = useMoney()
   if (!session || !tenant) return null
 
   const profileDone = !!(detail?.contactPhone || detail?.address)
-  const productCount = allProducts?.totalItems
-  const lowCount = lowStockProducts?.totalItems
+  const productCount = summary?.productCount
+  const lowCount = summary?.lowStockCount
 
   return (
     <div className="space-y-6">
@@ -47,11 +42,15 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="商品总数" value={productCount} to="/products" />
+        <StatCard label="商品总数" value={productCount?.toLocaleString('zh-CN')} to="/products" />
+        <StatCard label="库存总量" value={summary?.totalQty.toLocaleString('zh-CN')} to="/inventory" />
+        {summary?.inventoryValue !== null && (
+          <StatCard label="库存价值（按成本）" value={summary ? money(summary.inventoryValue) : undefined} to="/inventory" />
+        )}
         <StatCard
           label="低库存商品"
-          value={lowCount}
-          to="/products?lowStock=true&status=ACTIVE"
+          value={lowCount?.toLocaleString('zh-CN')}
+          to="/inventory?lowStock=true"
           tone={lowCount ? 'amber' : undefined}
         />
       </div>
@@ -157,7 +156,7 @@ function Step({
   )
 }
 
-function StatCard({ label, value, to, tone }: { label: string; value: number | undefined; to: string; tone?: 'amber' }) {
+function StatCard({ label, value, to, tone }: { label: string; value: string | undefined; to: string; tone?: 'amber' }) {
   return (
     <Link to={to} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-blue-200">
       <p className="text-sm text-slate-500">{label}</p>
@@ -165,7 +164,7 @@ function StatCard({ label, value, to, tone }: { label: string; value: number | u
         <div className="mt-2 h-8 w-16 animate-pulse rounded bg-slate-100" />
       ) : (
         <p className={tone === 'amber' ? 'mt-1 text-2xl font-semibold text-amber-700' : 'mt-1 text-2xl font-semibold text-slate-900'}>
-          {value.toLocaleString('zh-CN')}
+          {value}
         </p>
       )}
     </Link>

@@ -9,6 +9,8 @@ import { ProductDetailPage } from '@/features/catalog/pages/ProductDetailPage'
 import { ProductFormPage } from '@/features/catalog/pages/ProductFormPage'
 import { ProductListPage } from '@/features/catalog/pages/ProductListPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
+import { MovementsPage } from '@/features/inventory/pages/MovementsPage'
 import { useCanManage } from '@/lib/hooks'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CreateStorePage } from '@/features/tenant/pages/CreateStorePage'
@@ -98,6 +100,8 @@ export const router = createBrowserRouter([
                 ],
               },
               { path: '/products/:id', element: <ProductDetailPage /> },
+              { path: '/inventory', element: <InventoryPage /> },
+              { path: '/inventory/movements', element: <MovementsPage /> },
               { path: '/settings', element: <SettingsPage /> },
               { path: '*', element: <NotFoundPage /> },
             ],
