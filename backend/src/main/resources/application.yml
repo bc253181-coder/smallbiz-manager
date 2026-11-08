@@ -44,3 +44,12 @@ smallbiz:
   storage:
     # 商品图片存放目录（相对于后端启动目录）；上线时改为对象存储
     upload-dir: ./uploads
+    # 付款截图等私密文件（不对外提供访问，只能通过鉴权接口读取）
+    private-dir: ./private-uploads
+  platform:
+    # 平台管理员邮箱，逗号分隔（环境变量 PLATFORM_ADMIN_EMAILS）
+    admin-emails: ${PLATFORM_ADMIN_EMAILS:}
+    # 人工客服微信：只显示在本网站内，不要发布到小红书
+    support-wechat-id: Pianzibudehaosi_1A
+    # 首次启动时从这里导入收款码图片
+    payment-assets-dir: ../assets/payment

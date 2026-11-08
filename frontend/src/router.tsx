@@ -18,6 +18,15 @@ import { SupplierListPage } from '@/features/partners/pages/SupplierListPage'
 import { PurchaseDetailPage } from '@/features/purchasing/pages/PurchaseDetailPage'
 import { PurchaseFormPage } from '@/features/purchasing/pages/PurchaseFormPage'
 import { PurchaseListPage } from '@/features/purchasing/pages/PurchaseListPage'
+import { AdminLayout } from '@/features/admin/AdminLayout'
+import { AdminCodesPage } from '@/features/admin/pages/AdminCodesPage'
+import { AdminConfigPage } from '@/features/admin/pages/AdminConfigPage'
+import { AdminPaymentsPage } from '@/features/admin/pages/AdminPaymentsPage'
+import { AdminSupportPage } from '@/features/admin/pages/AdminSupportPage'
+import { AdminOverviewPage, AdminTenantsPage } from '@/features/admin/pages/AdminTenantsPages'
+import { RequireFeature } from '@/features/billing/FeatureGate'
+import { BillingPage } from '@/features/billing/pages/BillingPage'
+import { PaymentPage } from '@/features/billing/pages/PaymentPage'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
 import { SaleDetailPage } from '@/features/sales/pages/SaleDetailPage'
 import { SaleFormPage } from '@/features/sales/pages/SaleFormPage'
@@ -95,6 +104,18 @@ export const router = createBrowserRouter([
       { path: '/select-tenant', element: <SelectStorePage /> },
       { path: '/stores/new', element: <CreateStorePage firstStore={false} /> },
       {
+        path: '/admin',
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <AdminOverviewPage /> },
+          { path: 'payments', element: <AdminPaymentsPage /> },
+          { path: 'tenants', element: <AdminTenantsPage /> },
+          { path: 'codes', element: <AdminCodesPage /> },
+          { path: 'config', element: <AdminConfigPage /> },
+          { path: 'support', element: <AdminSupportPage /> },
+        ],
+      },
+      {
         element: <RequireTenant />,
         children: [
           {
@@ -116,21 +137,38 @@ export const router = createBrowserRouter([
               { path: '/sales', element: <SaleListPage /> },
               { path: '/sales/new', element: <SaleFormPage /> },
               { path: '/sales/:id', element: <SaleDetailPage /> },
-              { path: '/customers', element: <CustomerListPage /> },
-              { path: '/customers/:id', element: <CustomerDetailPage /> },
+              {
+                element: <RequireFeature feature="CUSTOMERS" />,
+                children: [
+                  { path: '/customers', element: <CustomerListPage /> },
+                  { path: '/customers/:id', element: <CustomerDetailPage /> },
+                ],
+              },
               {
                 element: <RequireManager />,
                 children: [
-                  { path: '/suppliers', element: <SupplierListPage /> },
-                  { path: '/suppliers/:id', element: <SupplierDetailPage /> },
+                  {
+                    element: <RequireFeature feature="SUPPLIERS" />,
+                    children: [
+                      { path: '/suppliers', element: <SupplierListPage /> },
+                      { path: '/suppliers/:id', element: <SupplierDetailPage /> },
+                    ],
+                  },
                   { path: '/reports', element: <ReportsPage /> },
-                  { path: '/purchases', element: <PurchaseListPage /> },
-                  { path: '/purchases/new', element: <PurchaseFormPage /> },
-                  { path: '/purchases/:id', element: <PurchaseDetailPage /> },
-                  { path: '/purchases/:id/edit', element: <PurchaseFormPage /> },
+                  {
+                    element: <RequireFeature feature="PURCHASING" />,
+                    children: [
+                      { path: '/purchases', element: <PurchaseListPage /> },
+                      { path: '/purchases/new', element: <PurchaseFormPage /> },
+                      { path: '/purchases/:id', element: <PurchaseDetailPage /> },
+                      { path: '/purchases/:id/edit', element: <PurchaseFormPage /> },
+                    ],
+                  },
                 ],
               },
               { path: '/settings', element: <SettingsPage /> },
+              { path: '/settings/billing', element: <BillingPage /> },
+              { path: '/settings/billing/pay/:id', element: <PaymentPage /> },
               { path: '*', element: <NotFoundPage /> },
             ],
           },

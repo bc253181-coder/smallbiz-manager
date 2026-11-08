@@ -84,6 +84,10 @@ public class User extends BaseEntity {
         return platformAdmin;
     }
 
+    public void setPlatformAdmin(boolean platformAdmin) {
+        this.platformAdmin = platformAdmin;
+    }
+
     public void setLastLoginAt(Instant lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
     }

@@ -93,7 +93,7 @@ class AuthFlowTest extends IntegrationTest {
 
     @Test
     void loginWithSingleTenantSelectsItAutomatically() throws Exception {
-        Session s = registerWithTenant("login1", "我的小店");
+        Session s = registerWithFreeTenant("login1", "我的小店");
         mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content(json("{\"email\":\"%s\",\"password\":\"%s\"}", s.email(), s.password())))
                 .andExpect(status().isOk())

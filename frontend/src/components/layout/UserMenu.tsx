@@ -1,4 +1,4 @@
-import { LogOut, Settings } from 'lucide-react'
+import { CreditCard, LogOut, Settings, ShieldCheck } from 'lucide-react'
 import { DropdownMenu } from 'radix-ui'
 import { useNavigate } from 'react-router'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -35,6 +35,18 @@ export function UserMenu() {
             <Settings className="size-4" aria-hidden />
             账号与店铺设置
           </DropdownMenu.Item>
+          {session.currentTenant && (
+            <DropdownMenu.Item className={itemClass} onSelect={() => navigate('/settings/billing')}>
+              <CreditCard className="size-4" aria-hidden />
+              套餐与续费
+            </DropdownMenu.Item>
+          )}
+          {session.user.platformAdmin && (
+            <DropdownMenu.Item className={itemClass} onSelect={() => navigate('/admin')}>
+              <ShieldCheck className="size-4" aria-hidden />
+              平台后台
+            </DropdownMenu.Item>
+          )}
           <DropdownMenu.Item
             className={itemClass}
             onSelect={async () => {

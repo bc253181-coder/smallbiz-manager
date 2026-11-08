@@ -7,15 +7,26 @@ import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+
+import com.smallbiz.billing.PlanGuard;
 import com.smallbiz.catalog.ImageStorage;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     private final ImageStorage imageStorage;
+    private final PlanGuard planGuard;
 
-    public WebConfig(ImageStorage imageStorage) {
+    public WebConfig(ImageStorage imageStorage, PlanGuard planGuard) {
         this.imageStorage = imageStorage;
+        this.planGuard = planGuard;
+    }
+
+    /** 套餐功能拦截（@RequiresFeature）。 */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(planGuard).addPathPatterns("/api/**");
     }
 
     /** 商品图片：文件名为随机 UUID 且内容不可变，可以长期缓存。 */

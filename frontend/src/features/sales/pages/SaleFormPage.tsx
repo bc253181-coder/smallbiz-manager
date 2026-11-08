@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import type { Product } from '@/features/catalog/types'
 import { customerApi, PRICE_TIER_LABELS, type PriceTier } from '@/features/partners/api'
 import { CustomerFormDialog } from '@/features/partners/CustomerFormDialog'
 import { errorCode, errorMessage, type ApiErrorBody } from '@/lib/api'
+import { useFeature } from '@/features/billing/api'
 import { useMoney } from '@/lib/format'
 import { fromCents, isMoney, toCents } from '@/lib/money'
 import { cn } from '@/lib/utils'
@@ -52,9 +53,12 @@ export function SaleFormPage() {
   const [saving, setSaving] = useState(false)
   const [newCustomer, setNewCustomer] = useState(false)
 
+  const canCustomers = useFeature('CUSTOMERS')
+  const canWholesale = useFeature('WHOLESALE_PRICE')
   const customers = useQuery({
     queryKey: ['customers', 'all'],
     queryFn: () => customerApi.list({ size: 100, sort: 'name,asc' }),
+    enabled: canCustomers,
   })
   // 从客户详情页"开单"进入时，按该客户的默认价格
   const [initialTierApplied, setInitialTierApplied] = useState(false)
@@ -124,8 +128,8 @@ export function SaleFormPage() {
     setSaving(true)
     try {
       const sale = await saleApi.create({
-        customerId: customerId ? Number(customerId) : null,
-        priceTier: tier,
+        customerId: canCustomers && customerId ? Number(customerId) : null,
+        priceTier: canWholesale ? tier : 'RETAIL',
         discountAmount: discount.trim() || null,
         notes,
         items: lines.map((l) => ({ productId: l.productId, quantity: Number(l.quantity), unitPrice: l.unitPrice.trim() })),
@@ -244,6 +248,15 @@ export function SaleFormPage() {
           <Card>
             <CardHeader title="客户与价格" />
             <CardBody className="space-y-4">
+              {!canCustomers && (
+                <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                  免费版开单按散客零售价。升级标准版可记录客户、使用批发价。{' '}
+                  <Link to="/settings/billing" className="font-medium text-blue-600 hover:underline">
+                    查看套餐
+                  </Link>
+                </p>
+              )}
+              {canCustomers && (<>
               <Field label="客户" htmlFor="so-customer">
                 <Select id="so-customer" value={customerId} onChange={(e) => changeCustomer(e.target.value)}>
                   <option value="">散客（不记录客户）</option>
@@ -259,6 +272,8 @@ export function SaleFormPage() {
                 <Plus className="size-4" aria-hidden />
                 新增客户
               </button>
+              </>)}
+              {canWholesale && (
               <fieldset>
                 <legend className="mb-1.5 text-sm font-medium text-slate-700">价格</legend>
                 <div className="grid grid-cols-2 gap-2">
@@ -279,6 +294,7 @@ export function SaleFormPage() {
                 </div>
                 <p className="mt-1 text-xs text-slate-500">切换后，未手动改过的单价会自动更新</p>
               </fieldset>
+              )}
             </CardBody>
           </Card>
 

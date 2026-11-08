@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.smallbiz.auth.User;
+import com.smallbiz.billing.PlanGuard;
+import com.smallbiz.billing.PlanPolicy;
 import com.smallbiz.auth.UserRepository;
 import com.smallbiz.catalog.ProductDtos.CreateProductRequest;
 import com.smallbiz.catalog.ProductDtos.MovementView;
@@ -47,10 +49,12 @@ public class ProductService {
     private final SequenceService sequences;
     private final ImageStorage images;
     private final UserRepository users;
+    private final PlanGuard planGuard;
 
     public ProductService(ProductRepository products, CategoryRepository categories, CategoryService categoryService,
             InventoryService inventory, StockMovementRepository movements, SequenceService sequences,
-            ImageStorage images, UserRepository users) {
+            ImageStorage images, UserRepository users, PlanGuard planGuard) {
+        this.planGuard = planGuard;
         this.products = products;
         this.categories = categories;
         this.categoryService = categoryService;
@@ -115,6 +119,10 @@ public class ProductService {
 
     @Transactional
     public ProductView create(CreateProductRequest req, Long tenantId, Long userId) {
+        Integer max = PlanPolicy.maxProducts(planGuard.currentPlan(tenantId));
+        if (max != null && products.count() >= max) {
+            throw PlanGuard.limitReached("products", max);
+        }
         String sku = blankToNull(req.sku());
         if (sku == null) {
             sku = nextAutoSku(tenantId);

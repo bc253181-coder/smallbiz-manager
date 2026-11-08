@@ -81,6 +81,7 @@ public class SalesController {
     }
 
     @GetMapping("/customers/{id}/stats")
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.CUSTOMERS)
     public CustomerStats customerStats(@PathVariable Long id) {
         CurrentUser.requireTenantId();
         return service.customerStats(id);

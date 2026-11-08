@@ -11,3 +11,8 @@ smallbiz:
     access-token-ttl: 2h
   storage:
     upload-dir: ./target/test-uploads
+    private-dir: ./target/test-private
+  platform:
+    admin-emails: admin@platform.test
+    support-wechat-id: TEST_WECHAT
+    payment-assets-dir: ../assets/payment

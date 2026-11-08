@@ -69,10 +69,23 @@ public abstract class IntegrationTest {
                 ((Number) JsonPath.read(body, "$.user.id")).longValue());
     }
 
-    /** 注册一个新用户并创建店铺，返回绑定店铺的会话。 */
+    @Autowired
+    protected org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    /**
+     * 注册一个新用户并创建店铺，返回绑定店铺的会话。
+     * 店铺默认开通一年标准版（大部分业务测试需要采购、客户等付费功能）；测试套餐限制请用 {@link #registerWithFreeTenant}。
+     */
     protected Session registerWithTenant(String prefix, String tenantName) throws Exception {
-        Session s = register(prefix);
-        return createTenant(s, tenantName);
+        Session s = createTenant(register(prefix), tenantName);
+        jdbcTemplate.update("update tenants set plan = 'STANDARD', plan_expires_at = date_add(utc_timestamp(6), interval 365 day) "
+                + "where id = ?", currentTenantId(s, mvc));
+        return s;
+    }
+
+    /** 注册并创建免费版店铺。 */
+    protected Session registerWithFreeTenant(String prefix, String tenantName) throws Exception {
+        return createTenant(register(prefix), tenantName);
     }
 
     protected Session createTenant(Session s, String tenantName) throws Exception {

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { SupportWidget } from '@/features/support/SupportWidget'
 import { Brand } from './Brand'
 
 /** 登录、注册、创建店铺等页面的居中布局。 */
@@ -18,6 +19,7 @@ export function AuthLayout({ title, subtitle, children, wide }: {
           <div className="mt-6">{children}</div>
         </div>
       </div>
+      <SupportWidget />
     </div>
   )
 }

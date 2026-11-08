@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Download } from 'lucide-react'
+import { Download, Lock } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -8,6 +8,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/form'
 import { ErrorState, PageHeader } from '@/components/ui/page'
 import { errorMessage } from '@/lib/api'
+import { useFeature, usePlan } from '@/features/billing/api'
 import { useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { downloadCsv, reportApi, type GroupBy } from '../api'
@@ -48,6 +49,11 @@ export function ReportsPage() {
   const from = params.get('from') ?? all[0].from
   const to = params.get('to') ?? all[0].to
   const invalid = from > to
+  const plan = usePlan()
+  const fullReports = plan.data ? plan.data.features.FULL_REPORTS : true
+  // 免费版：可查看近 30 天和本月（取两者中更早的一天）
+  const earliest = [all[0].from, all[3].from].sort()[0]
+  const locked = (d: string) => !fullReports && d < earliest
 
   function update(changes: Record<string, string | null>) {
     const next = new URLSearchParams(params)
@@ -62,6 +68,16 @@ export function ReportsPage() {
     <div>
       <PageHeader title="经营报表" description="已取消的销售单和未收货的采购单不计入统计；日期按店铺时区计算" />
 
+      {!fullReports && (
+        <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+          <Lock className="size-4 shrink-0" aria-hidden />
+          免费版可查看本月和近 30 天的报表；查看更早的数据和导出需要标准版。
+          <Link to="/settings/billing" className="font-medium underline">
+            查看套餐
+          </Link>
+        </p>
+      )}
+
       <Card className="mb-6">
         <CardBody className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-1.5" aria-label="快捷日期">
@@ -70,18 +86,21 @@ export function ReportsPage() {
                 key={p.key}
                 type="button"
                 aria-pressed={from === p.from && to === p.to}
+                disabled={locked(p.from)}
+                title={locked(p.from) ? '需要标准版' : undefined}
                 onClick={() => update({ from: p.from, to: p.to })}
                 className={cn(
-                  'rounded-lg border px-3 py-1.5 text-sm',
+                  'inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50',
                   from === p.from && to === p.to ? 'border-blue-600 bg-blue-50 font-medium text-blue-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50',
                 )}
               >
                 {p.label}
+                {locked(p.from) && <Lock className="size-3" aria-label="需要标准版" />}
               </button>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Input type="date" aria-label="开始日期" value={from} max={to} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
+            <Input type="date" aria-label="开始日期" value={from} max={to} min={fullReports ? undefined : earliest} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
             <span className="text-slate-400">至</span>
             <Input type="date" aria-label="结束日期" value={to} min={from} onChange={(e) => e.target.value && update({ to: e.target.value })} className="w-40" />
           </div>
@@ -126,6 +145,15 @@ export function ReportsPage() {
 
 function ExportButton({ path, params, name }: { path: string; params: Record<string, string>; name: string }) {
   const [busy, setBusy] = useState(false)
+  const canExport = useFeature('EXPORT')
+  if (!canExport) {
+    return (
+      <Link to="/settings/billing" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-sm text-slate-500 hover:bg-slate-50" title="导出需要标准版">
+        <Lock className="size-3.5" aria-hidden />
+        导出 CSV（标准版）
+      </Link>
+    )
+  }
   return (
     <Button
       size="sm"
