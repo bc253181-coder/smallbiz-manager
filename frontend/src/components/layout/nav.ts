@@ -21,7 +21,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: '仪表盘', to: '/', icon: LayoutDashboard },
-  { label: '商品', to: '/products', icon: Package, comingSoon: true },
+  { label: '商品', to: '/products', icon: Package },
   { label: '库存', to: '/inventory', icon: Warehouse, comingSoon: true },
   { label: '销售', to: '/sales', icon: ReceiptText, comingSoon: true },
   { label: '采购', to: '/purchases', icon: Truck, comingSoon: true },

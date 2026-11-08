@@ -4,7 +4,12 @@ import { FullPageSpinner } from '@/components/layout/AuthLayout'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RegisterPage } from '@/features/auth/pages/RegisterPage'
+import { CategoriesPage } from '@/features/catalog/pages/CategoriesPage'
+import { ProductDetailPage } from '@/features/catalog/pages/ProductDetailPage'
+import { ProductFormPage } from '@/features/catalog/pages/ProductFormPage'
+import { ProductListPage } from '@/features/catalog/pages/ProductListPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { useCanManage } from '@/lib/hooks'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CreateStorePage } from '@/features/tenant/pages/CreateStorePage'
 import { SelectStorePage } from '@/features/tenant/pages/SelectStorePage'
@@ -33,6 +38,13 @@ function GuestOnly() {
   const { status } = useAuth()
   if (status === 'loading') return <FullPageSpinner />
   if (status === 'authenticated') return <Navigate to="/" replace />
+  return <Outlet />
+}
+
+/** 只有店主/管理员能进入的页面（店员直接访问网址时回到上一级）。 */
+function RequireManager() {
+  const canManage = useCanManage()
+  if (!canManage) return <Navigate to="/products" replace />
   return <Outlet />
 }
 
@@ -76,6 +88,16 @@ export const router = createBrowserRouter([
             element: <AppShell />,
             children: [
               { path: '/', element: <DashboardPage /> },
+              { path: '/products', element: <ProductListPage /> },
+              { path: '/products/categories', element: <CategoriesPage /> },
+              {
+                element: <RequireManager />,
+                children: [
+                  { path: '/products/new', element: <ProductFormPage /> },
+                  { path: '/products/:id/edit', element: <ProductFormPage /> },
+                ],
+              },
+              { path: '/products/:id', element: <ProductDetailPage /> },
               { path: '/settings', element: <SettingsPage /> },
               { path: '*', element: <NotFoundPage /> },
             ],

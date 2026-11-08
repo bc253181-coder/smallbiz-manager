@@ -3,7 +3,8 @@ import { LoaderCircle } from 'lucide-react'
 import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-const buttonVariants = cva(
+// eslint-disable-next-line react-refresh/only-export-components -- 供 <Link> 复用按钮样式
+export const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
