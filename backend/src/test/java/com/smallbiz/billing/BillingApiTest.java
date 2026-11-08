@@ -201,6 +201,24 @@ class BillingApiTest extends IntegrationTest {
         assertThat(count).isEqualTo(1); // 数据仍在
     }
 
+    // ---------------- 价格（2026-11-09 调价，V9） ----------------
+
+    @Test
+    void currentPricesAfterRepricing() throws Exception {
+        Session s = registerWithFreeTenant("bill-price", "价格店");
+        MockHttpServletResponse cny = send(get("/api/v1/billing/prices?currency=CNY"), s, null);
+        assertThat((List<String>) read(cny, "$[*].amount")).containsExactly("1.99", "6.99", "69.90");
+        assertThat((List<String>) read(cny, "$[*].plan")).containsOnly("STANDARD"); // 专业版功能完成前不出售
+        MockHttpServletResponse myr = send(get("/api/v1/billing/prices?currency=MYR"), s, null);
+        assertThat((List<String>) read(myr, "$[*].amount")).containsExactly("1.00", "4.99", "49.90");
+
+        Session admin = admin();
+        MockHttpServletResponse all = send(get("/api/v1/admin/plan-prices"), admin, null);
+        assertThat((List<String>) read(all, "$[?(@.plan == 'PRO' && @.currency == 'CNY')].amount")).containsExactly("9.90", "109.90");
+        assertThat((List<String>) read(all, "$[?(@.plan == 'PRO' && @.currency == 'MYR')].amount")).containsExactly("6.90", "69.90");
+        assertThat((List<String>) read(all, "$[?(@.plan == 'PRO' && @.period == 'TRIAL_MONTH')]")).isEmpty(); // 首月体验只针对标准版
+    }
+
     // ---------------- 扫码付款 ----------------
 
     @Test

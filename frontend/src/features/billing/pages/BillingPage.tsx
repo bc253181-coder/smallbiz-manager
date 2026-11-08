@@ -12,6 +12,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { PLAN_LABELS } from '@/features/auth/types'
 import { errorCode, errorMessage, refreshSession } from '@/lib/api'
 import { formatDateTime, formatMoney } from '@/lib/format'
+import { fromCents, toCents } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import {
   billingApi,
@@ -215,8 +216,9 @@ function BuyCard() {
             <div className="grid gap-2 sm:grid-cols-3">
               {options.map((p) => {
                 const active = selected?.id === p.id
-                const saving =
-                  p.period === 'YEAR' && monthly ? Math.round(Number(monthly.amount) * 12 - Number(p.amount)) : 0
+                // 年付相比 12 个月月付节省的金额（按分计算，避免浮点误差）
+                const savingCents =
+                  p.period === 'YEAR' && monthly ? (toCents(monthly.amount) ?? 0) * 12 - (toCents(p.amount) ?? 0) : 0
                 return (
                   <button
                     key={p.id}
@@ -229,7 +231,7 @@ function BuyCard() {
                     )}
                   >
                     {p.period === 'TRIAL_MONTH' && <Badge tone="amber" className="absolute right-2 top-2">每店限一次</Badge>}
-                    {saving > 0 && <Badge tone="green" className="absolute right-2 top-2">省 {formatMoney(String(saving), currency)}</Badge>}
+                    {savingCents > 0 && <Badge tone="green" className="absolute right-2 top-2">省 {formatMoney(fromCents(savingCents), currency)}</Badge>}
                     <p className="text-sm font-medium text-slate-700">{PERIOD_LABELS[p.period]}</p>
                     <p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">{formatMoney(p.amount, p.currency)}</p>
                     <p className="text-xs text-slate-500">{p.durationDays} 天</p>
