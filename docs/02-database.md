@@ -405,7 +405,7 @@ erDiagram
 | period | VARCHAR(20) | TRIAL_MONTH 首月体验 / MONTH / YEAR |
 | duration_days | INT | 30 / 30 / 365 |
 | currency | CHAR(3) | CNY / MYR |
-| amount | DECIMAL(10,2) | 如 1.99、19.90、168.00 |
+| amount | DECIMAL(10,2) | 如 1.99、6.99、69.90 |
 | enabled | BOOLEAN | 例如专业版在第二阶段功能完成前设为 false |
 | | | UNIQUE(plan, period, currency) |
 
@@ -414,10 +414,10 @@ erDiagram
 | 套餐 | 周期 | CNY | MYR |
 |---|---|---|---|
 | STANDARD | 首月体验 | 1.99 | 1.00 |
-| STANDARD | 月 | 19.90 | 12.90 |
-| STANDARD | 年 | 168.00 | 109.00 |
-| PRO | 月 | 39.90 | 25.90 |
-| PRO | 年 | 328.00 | 209.00 |
+| STANDARD | 月 | 6.99 | 4.99 |
+| STANDARD | 年 | 69.90 | 49.90 |
+| PRO | 月 | 9.90 | 6.90 |
+| PRO | 年 | 109.90 | 69.90 |
 
 **payment_methods** —— 收款方式（平台级）
 
