@@ -11,6 +11,10 @@ import { ProductListPage } from '@/features/catalog/pages/ProductListPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { InventoryPage } from '@/features/inventory/pages/InventoryPage'
 import { MovementsPage } from '@/features/inventory/pages/MovementsPage'
+import { CustomerDetailPage } from '@/features/partners/pages/CustomerDetailPage'
+import { CustomerListPage } from '@/features/partners/pages/CustomerListPage'
+import { SupplierDetailPage } from '@/features/partners/pages/SupplierDetailPage'
+import { SupplierListPage } from '@/features/partners/pages/SupplierListPage'
 import { useCanManage } from '@/lib/hooks'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { CreateStorePage } from '@/features/tenant/pages/CreateStorePage'
@@ -46,7 +50,7 @@ function GuestOnly() {
 /** 只有店主/管理员能进入的页面（店员直接访问网址时回到上一级）。 */
 function RequireManager() {
   const canManage = useCanManage()
-  if (!canManage) return <Navigate to="/products" replace />
+  if (!canManage) return <Navigate to="/" replace />
   return <Outlet />
 }
 
@@ -102,6 +106,15 @@ export const router = createBrowserRouter([
               { path: '/products/:id', element: <ProductDetailPage /> },
               { path: '/inventory', element: <InventoryPage /> },
               { path: '/inventory/movements', element: <MovementsPage /> },
+              { path: '/customers', element: <CustomerListPage /> },
+              { path: '/customers/:id', element: <CustomerDetailPage /> },
+              {
+                element: <RequireManager />,
+                children: [
+                  { path: '/suppliers', element: <SupplierListPage /> },
+                  { path: '/suppliers/:id', element: <SupplierDetailPage /> },
+                ],
+              },
               { path: '/settings', element: <SettingsPage /> },
               { path: '*', element: <NotFoundPage /> },
             ],

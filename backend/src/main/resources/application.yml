@@ -35,6 +35,8 @@ smallbiz:
     jwt-secret: ${JWT_SECRET}
     access-token-ttl: 2h
     refresh-token-ttl: 30d
+    # 刷新令牌轮换后，旧令牌在此时间内仍可再用（防止请求中断导致意外登出）
+    refresh-reuse-grace: 30s
     # 生产环境（HTTPS）必须为 true
     cookie-secure: false
   cors:

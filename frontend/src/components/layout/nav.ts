@@ -17,6 +17,8 @@ export interface NavItem {
   icon: LucideIcon
   /** 尚未上线的模块：显示但不可点击，并标注上线阶段。 */
   comingSoon?: boolean
+  /** 仅店主/管理员可见。 */
+  managerOnly?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -25,8 +27,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: '库存', to: '/inventory', icon: Warehouse },
   { label: '销售', to: '/sales', icon: ReceiptText, comingSoon: true },
   { label: '采购', to: '/purchases', icon: Truck, comingSoon: true },
-  { label: '客户', to: '/customers', icon: Contact, comingSoon: true },
-  { label: '供应商', to: '/suppliers', icon: Factory, comingSoon: true },
+  { label: '客户', to: '/customers', icon: Contact },
+  { label: '供应商', to: '/suppliers', icon: Factory, managerOnly: true },
   { label: '报表', to: '/reports', icon: ChartColumn, comingSoon: true },
   { label: '设置', to: '/settings', icon: Settings },
 ]

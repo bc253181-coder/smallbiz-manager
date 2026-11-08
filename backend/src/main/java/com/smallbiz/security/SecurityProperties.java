@@ -10,11 +10,15 @@ public record SecurityProperties(
         String jwtSecret,
         Duration accessTokenTtl,
         Duration refreshTokenTtl,
-        boolean cookieSecure) {
+        boolean cookieSecure,
+        Duration refreshReuseGrace) {
 
     public SecurityProperties {
         if (jwtSecret == null || jwtSecret.length() < 32) {
             throw new IllegalStateException("smallbiz.security.jwt-secret 必须设置且至少 32 个字符（环境变量 JWT_SECRET）");
+        }
+        if (refreshReuseGrace == null) {
+            refreshReuseGrace = Duration.ofSeconds(30);
         }
     }
 

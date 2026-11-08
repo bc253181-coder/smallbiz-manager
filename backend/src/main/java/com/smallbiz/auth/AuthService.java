@@ -90,7 +90,13 @@ public class AuthService {
         return issue(user, tenantId);
     }
 
-    /** 用刷新令牌换新的访问令牌；同时轮换刷新令牌（旧的立即作废）。 */
+    /**
+     * 用刷新令牌换新的访问令牌，同时轮换刷新令牌。
+     *
+     * <p>轮换宽限期：旧令牌被轮换后的短时间内仍可再用。原因是浏览器可能在收到新 Cookie 前中断请求
+     * （刷新页面、网络抖动、多个标签页同时刷新），此时浏览器手里只有旧令牌；没有宽限期用户会被意外登出。
+     * 退出登录和修改密码作废的令牌不享受宽限期。
+     */
     @Transactional
     public IssuedSession refresh(String rawRefreshToken) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
@@ -98,9 +104,11 @@ public class AuthService {
         }
         Instant now = Instant.now();
         RefreshToken token = refreshTokens.findByTokenHashForUpdate(TokenService.sha256(rawRefreshToken))
-                .filter(t -> t.isUsable(now))
+                .filter(t -> t.isUsable(now) || t.isInRotationGrace(now, props.refreshReuseGrace()))
                 .orElseThrow(() -> ApiException.unauthorized("REFRESH_INVALID", "登录已过期，请重新登录"));
-        token.revoke(now);
+        if (token.isUsable(now)) {
+            token.rotate(now);
+        }
         User user = users.findById(token.getUserId())
                 .filter(u -> u.getStatus() == User.Status.ACTIVE)
                 .orElseThrow(() -> ApiException.unauthorized("REFRESH_INVALID", "登录已过期，请重新登录"));

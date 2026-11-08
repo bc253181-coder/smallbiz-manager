@@ -1,11 +1,13 @@
 import { NavLink } from 'react-router'
+import { useCanManage } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './nav'
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const canManage = useCanManage()
   return (
     <nav aria-label="主导航" className="space-y-0.5">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => !item.managerOnly || canManage).map((item) => {
         const Icon = item.icon
         if (item.comingSoon) {
           return (

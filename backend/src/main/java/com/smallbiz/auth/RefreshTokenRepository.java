@@ -18,6 +18,8 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     Optional<RefreshToken> findByTokenHashForUpdate(String hash);
 
     @Modifying
-    @Query("update RefreshToken t set t.revokedAt = :now where t.userId = :userId and t.revokedAt is null")
+    /** 作废该用户所有刷新令牌，包括仍在轮换宽限期内的旧令牌。 */
+    @Query("update RefreshToken t set t.revokedAt = coalesce(t.revokedAt, :now), t.rotatedAt = null "
+            + "where t.userId = :userId and (t.revokedAt is null or t.rotatedAt is not null)")
     int revokeAllForUser(Long userId, Instant now);
 }

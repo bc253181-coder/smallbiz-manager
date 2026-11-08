@@ -36,6 +36,10 @@ public class RefreshToken {
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
+    /** 因轮换而作废的时间；退出登录/改密码作废时为空（不享受宽限期）。 */
+    @Column(name = "rotated_at")
+    private Instant rotatedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -54,10 +58,23 @@ public class RefreshToken {
         return revokedAt == null && expiresAt.isAfter(now);
     }
 
+    /** 退出登录：立即彻底作废。 */
     public void revoke(Instant now) {
         if (revokedAt == null) {
             revokedAt = now;
         }
+        rotatedAt = null;
+    }
+
+    /** 轮换：作废，但在宽限期内仍可再用一次换取新令牌。 */
+    public void rotate(Instant now) {
+        revokedAt = now;
+        rotatedAt = now;
+    }
+
+    /** 刚被轮换（宽限期内）且未过期。 */
+    public boolean isInRotationGrace(Instant now, java.time.Duration grace) {
+        return rotatedAt != null && rotatedAt.plus(grace).isAfter(now) && expiresAt.isAfter(now);
     }
 
     public Long getUserId() {

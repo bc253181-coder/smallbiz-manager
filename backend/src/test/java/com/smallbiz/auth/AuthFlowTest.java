@@ -28,6 +28,9 @@ class AuthFlowTest extends IntegrationTest {
     @Autowired
     TenantMemberRepository members;
 
+    @Autowired
+    org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     // ---------- 注册 ----------
 
     @Test
@@ -134,7 +137,7 @@ class AuthFlowTest extends IntegrationTest {
     }
 
     @Test
-    void refreshRotatesToken_andOldRefreshTokenCannotBeReused() throws Exception {
+    void refreshRotatesToken_oldTokenOnlyUsableWithinGracePeriod() throws Exception {
         Session s = registerWithTenant("refresh", "刷新测试店");
 
         MockHttpServletResponse res = mvc.perform(post("/api/v1/auth/refresh")
@@ -145,9 +148,52 @@ class AuthFlowTest extends IntegrationTest {
         String newRefresh = refreshCookie(res);
         assertThat(newRefresh).isNotBlank().isNotEqualTo(s.refreshToken());
 
+        // 宽限期内：旧令牌仍可用（模拟浏览器没收到新 Cookie 的情况）
+        mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("sb_refresh", s.refreshToken())))
+                .andExpect(status().isOk());
+
+        // 超过宽限期：旧令牌失效
+        ageRotation(s.refreshToken(), 120);
         mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("sb_refresh", s.refreshToken())))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("REFRESH_INVALID"));
+
+        // 新令牌正常
+        mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("sb_refresh", newRefresh)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void logoutAndPasswordChangeDisableGracePeriod() throws Exception {
+        Session s = register("grace");
+        String rotatedOut = s.refreshToken();
+        MockHttpServletResponse r1 = mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("sb_refresh", rotatedOut)))
+                .andReturn().getResponse();
+        String current = refreshCookie(r1);
+
+        // 修改密码后，仍在宽限期内的旧令牌也必须失效
+        String token = JsonPath.read(r1.getContentAsString(), "$.accessToken");
+        Session fresh = new Session(s.email(), s.password(), token, current, s.userId());
+        mvc.perform(withAuth(put("/api/v1/auth/me/password"), fresh).contentType(MediaType.APPLICATION_JSON)
+                .content(json("{\"oldPassword\":\"%s\",\"newPassword\":\"NewSecret123\"}", s.password())))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("sb_refresh", rotatedOut)))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("sb_refresh", current)))
+                .andExpect(status().isUnauthorized());
+
+        // 退出登录作废的令牌不享受宽限期
+        Session s2 = register("grace2");
+        mvc.perform(post("/api/v1/auth/logout").cookie(new Cookie("sb_refresh", s2.refreshToken())))
+                .andExpect(status().isNoContent());
+        mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("sb_refresh", s2.refreshToken())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /** 把某个令牌的轮换时间往前推，模拟宽限期已过。 */
+    private void ageRotation(String rawToken, int seconds) {
+        jdbc.update("update refresh_tokens set rotated_at = date_sub(rotated_at, interval ? second) where token_hash = ?",
+                seconds, com.smallbiz.security.TokenService.sha256(rawToken));
     }
 
     @Test
