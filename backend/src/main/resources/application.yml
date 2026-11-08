@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: smallbiz-backend
+  config:
+    # 本地开发凭据：项目根目录的 .env.dev（KEY=VALUE 格式，按 properties 读取）
+    import: optional:file:../.env.dev[.properties]
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${DB_NAME:smallbiz}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=utf8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        # 多商户隔离：所有 @TenantId 实体的查询/写入自动带上当前商户
+        tenant_identifier_resolver: com.smallbiz.tenant.TenantIdentifierResolver
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+server:
+  port: 8080
+  error:
+    include-message: never
+
+smallbiz:
+  security:
+    jwt-secret: ${JWT_SECRET}
+    access-token-ttl: 2h
+    refresh-token-ttl: 30d
+    # 生产环境（HTTPS）必须为 true
+    cookie-secure: false
+  cors:
+    allowed-origins: http://localhost:5173

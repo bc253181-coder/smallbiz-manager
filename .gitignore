@@ -1,0 +1,24 @@
+# 本地凭据（绝不提交）
+.env
+.env.*
+!.env.example
+
+# 后端
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/uploads/
+*.log
+
+# 前端
+frontend/node_modules/
+frontend/dist/
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+
+# IDE / 系统
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

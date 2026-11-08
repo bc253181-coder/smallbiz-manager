@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${DB_TEST_NAME:smallbiz_test}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=utf8
+  flyway:
+    # 测试库每次启动先清空再迁移；额外加载仅用于测试的表
+    clean-disabled: false
+    locations: classpath:db/migration,classpath:db/testmigration
+
+smallbiz:
+  security:
+    access-token-ttl: 2h
