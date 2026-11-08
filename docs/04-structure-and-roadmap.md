@@ -69,14 +69,17 @@ smallbiz-manager/
 - [x] Git 2.56，仓库已初始化（main 分支），每个阶段一个提交
 - [x] 项目文件夹：`OneDrive\应用\smallbiz-manager`
 
-### 阶段 1 · 项目骨架 + 认证 + 多商户（最关键）
-- [ ] 后端：Spring Boot 项目、Flyway V1（users、tenants、tenant_members、refresh_tokens、tenant_sequences）
-- [ ] JWT 认证、注册/登录/刷新/退出、BCrypt
-- [ ] TenantEntity + Hibernate `@TenantId` 自动隔离；角色权限；平台管理员标识
-- [ ] tenants 表包含套餐字段（plan、plan_expires_at、trial_used），新商户默认免费版
-- [ ] 前端：Vite + React + TS + Tailwind + shadcn/ui；登录、注册、创建商户页面
-- [ ] AppShell 布局（侧边栏、顶栏、手机底部导航），空白的仪表盘
-- [ ] 测试：注册→创建商户→登录；token 过期刷新；隔离测试基类
+### 阶段 1 · 项目骨架 + 认证 + 多商户 ✅（2026-11-08 完成，分支 `feature/phase-1-auth`）
+- [x] 后端：Spring Boot 4.1 / Java 25、Flyway V1（users、tenants、tenant_members、refresh_tokens、tenant_sequences）
+- [x] JWT 认证（2 小时）+ 轮换式刷新令牌（HttpOnly Cookie，30 天）、注册/登录/刷新/退出、BCrypt、登录失败 5 次锁定 15 分钟
+- [x] `TenantScopedEntity` + Hibernate `@TenantId` 自动隔离；未选店铺时解析为不存在的商户 0（默认查不到任何数据）；角色权限；平台管理员标识
+- [x] tenants 表包含套餐字段（plan、plan_expires_at、trial_used），新商户默认免费版；到期自动按免费版计
+- [x] 店铺：创建（每账号最多 5 家）、切换、查看/修改资料（仅店主）；个人资料、修改密码（修改后所有设备下线）
+- [x] 前端：Vite 8 + React 19 + TS 7 + Tailwind 4 + Radix；登录、注册、创建店铺、选择店铺、仪表盘、设置页面
+- [x] AppShell 布局：桌面侧边栏、手机抽屉菜单、店铺切换、用户菜单（底部导航在业务模块上线后加入）
+- [x] 后端测试 18 个全部通过：认证流程 14 个 + 多商户隔离 4 个（查询/按 id/JPQL/修改/删除/新增自动带商户）
+- [x] 浏览器验证（桌面 + 375px 手机）：注册校验 → 创建店铺 → 刷新页面保持登录 → 修改店铺资料 → 新建第二家店 → 切换 → 退出 → 错误密码 → 登录后选择店铺
+- 已知限制：同一浏览器多个标签页同时刷新令牌时，其中一个可能需要重新登录（后续可加短暂宽限期）
 - **验收**：两个账号分别注册并创建商户，各自登录后进入自己的空仪表盘
 
 ### 阶段 2 · 分类与商品
