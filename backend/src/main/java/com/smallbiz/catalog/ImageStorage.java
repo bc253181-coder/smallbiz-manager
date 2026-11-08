@@ -26,10 +26,13 @@ import com.smallbiz.common.ApiException;
 public class ImageStorage {
 
     @ConfigurationProperties(prefix = "smallbiz.storage")
-    public record Properties(String uploadDir) {
+    public record Properties(String uploadDir, String privateDir) {
         public Properties {
             if (uploadDir == null || uploadDir.isBlank()) {
                 uploadDir = "./uploads";
+            }
+            if (privateDir == null || privateDir.isBlank()) {
+                privateDir = "./private-uploads";
             }
         }
     }
@@ -40,22 +43,89 @@ public class ImageStorage {
     private static final Logger log = LoggerFactory.getLogger(ImageStorage.class);
 
     private final Path root;
+    private final Path privateRoot;
 
     public ImageStorage(Properties props) {
         this.root = Path.of(props.uploadDir()).toAbsolutePath().normalize();
+        this.privateRoot = Path.of(props.privateDir()).toAbsolutePath().normalize();
     }
 
     public Path root() {
         return root;
     }
 
-    /** 保存图片，返回相对路径（例如 t12/uuid.jpg）。 */
+    /** 保存商品图片（公开目录），返回相对路径（例如 t12/uuid.jpg）。 */
     public String store(Long tenantId, MultipartFile file) {
+        return save(root, "t" + tenantId, file, MAX_BYTES);
+    }
+
+    /** 保存到公开目录的指定子目录（例如平台收款码 platform/）。 */
+    public String storePublic(String folder, MultipartFile file) {
+        return save(root, folder, file, MAX_BYTES);
+    }
+
+    /** 保存私密图片（不对外提供访问），例如付款截图。最大 5MB。 */
+    public String storePrivate(String folder, MultipartFile file) {
+        return save(privateRoot, folder, file, 5L * 1024 * 1024);
+    }
+
+    /** 读取私密图片；调用方负责权限校验。 */
+    public byte[] readPrivate(String relative) {
+        Path target = privateRoot.resolve(relative).normalize();
+        if (!target.startsWith(privateRoot) || !Files.exists(target)) {
+            throw ApiException.notFound("FILE_NOT_FOUND", "文件不存在");
+        }
+        try {
+            return Files.readAllBytes(target);
+        } catch (IOException e) {
+            throw new IllegalStateException("文件读取失败", e);
+        }
+    }
+
+    /** 把本地已有文件复制到公开目录（首次启动导入收款码）。 */
+    public String importPublic(String folder, Path source) {
+        try {
+            String ext = detectExtension(Files.readAllBytes(source));
+            if (ext == null) {
+                throw new IllegalArgumentException("不支持的图片格式：" + source);
+            }
+            String relative = folder + "/" + UUID.randomUUID() + "." + ext;
+            Path target = root.resolve(relative).normalize();
+            Files.createDirectories(target.getParent());
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            return relative;
+        } catch (IOException e) {
+            throw new IllegalStateException("导入图片失败：" + source, e);
+        }
+    }
+
+    public void deletePrivateQuietly(String relative) {
+        try {
+            Path target = privateRoot.resolve(relative).normalize();
+            if (target.startsWith(privateRoot)) {
+                Files.deleteIfExists(target);
+            }
+        } catch (IOException e) {
+            log.warn("Failed to delete private file {}", relative, e);
+        }
+    }
+
+    public static String contentType(String relative) {
+        if (relative.endsWith(".png")) {
+            return "image/png";
+        }
+        if (relative.endsWith(".webp")) {
+            return "image/webp";
+        }
+        return "image/jpeg";
+    }
+
+    private String save(Path base, String folder, MultipartFile file, long maxBytes) {
         if (file == null || file.isEmpty()) {
             throw ApiException.badRequest("IMAGE_REQUIRED", "请选择图片");
         }
-        if (file.getSize() > MAX_BYTES) {
-            throw ApiException.badRequest("IMAGE_TOO_LARGE", "图片不能超过 2MB");
+        if (file.getSize() > maxBytes) {
+            throw ApiException.badRequest("IMAGE_TOO_LARGE", "图片不能超过 " + (maxBytes / 1024 / 1024) + "MB");
         }
         String ext;
         try (InputStream in = file.getInputStream()) {
@@ -66,8 +136,8 @@ public class ImageStorage {
         if (ext == null) {
             throw ApiException.badRequest("IMAGE_TYPE_NOT_ALLOWED", "只支持 JPG、PNG、WebP 格式的图片");
         }
-        String relative = "t" + tenantId + "/" + UUID.randomUUID() + "." + ext;
-        Path target = root.resolve(relative).normalize();
+        String relative = folder + "/" + UUID.randomUUID() + "." + ext;
+        Path target = base.resolve(relative).normalize();
         try {
             Files.createDirectories(target.getParent());
             try (InputStream in = file.getInputStream()) {

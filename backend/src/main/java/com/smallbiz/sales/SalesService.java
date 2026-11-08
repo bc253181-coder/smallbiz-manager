@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.smallbiz.auth.User;
 import com.smallbiz.auth.UserRepository;
+import com.smallbiz.billing.Feature;
+import com.smallbiz.billing.PlanGuard;
 import com.smallbiz.catalog.Product;
 import com.smallbiz.catalog.ProductRepository;
 import com.smallbiz.catalog.ProductStatus;
@@ -57,9 +59,11 @@ public class SalesService {
     private final SequenceService sequences;
     private final UserRepository users;
     private final TenantRepository tenants;
+    private final PlanGuard planGuard;
 
     public SalesService(SalesOrderRepository orders, ProductRepository products, CustomerService customers,
-            InventoryService inventory, SequenceService sequences, UserRepository users, TenantRepository tenants) {
+            InventoryService inventory, SequenceService sequences, UserRepository users, TenantRepository tenants,
+            PlanGuard planGuard) {
         this.orders = orders;
         this.products = products;
         this.customers = customers;
@@ -67,6 +71,7 @@ public class SalesService {
         this.sequences = sequences;
         this.users = users;
         this.tenants = tenants;
+        this.planGuard = planGuard;
     }
 
     // ---------------- 查询 ----------------
@@ -121,6 +126,13 @@ public class SalesService {
      */
     @Transactional
     public SaleView create(SaleRequest req, Long tenantId, Long userId, boolean hideCost) {
+        // 免费版：只能给散客按零售价开单
+        if (req.customerId() != null) {
+            planGuard.require(tenantId, Feature.CUSTOMERS);
+        }
+        if (req.priceTier() == Customer.PriceTier.WHOLESALE) {
+            planGuard.require(tenantId, Feature.WHOLESALE_PRICE);
+        }
         Customer customer = req.customerId() == null ? null : customers.load(req.customerId());
         List<SalesOrderItem> items = buildItems(req.items(), req.priceTier());
         BigDecimal subtotal = items.stream().map(SalesOrderItem::getLineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);

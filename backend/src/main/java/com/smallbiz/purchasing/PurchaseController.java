@@ -33,6 +33,7 @@ import jakarta.validation.Valid;
 /** 采购：涉及成本和供应商，仅店主/管理员。 */
 @RestController
 @RequestMapping("/api/v1")
+@com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.PURCHASING)
 @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
 public class PurchaseController {
 

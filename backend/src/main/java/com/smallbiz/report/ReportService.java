@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.smallbiz.billing.Feature;
+import com.smallbiz.billing.PlanGuard;
+import com.smallbiz.billing.PlanPolicy;
 import com.smallbiz.catalog.Category;
 import com.smallbiz.catalog.CategoryRepository;
 import com.smallbiz.common.ApiException;
@@ -46,11 +49,14 @@ public class ReportService {
     private final ReportRepository reports;
     private final TenantRepository tenants;
     private final CategoryRepository categories;
+    private final PlanGuard planGuard;
 
-    public ReportService(ReportRepository reports, TenantRepository tenants, CategoryRepository categories) {
+    public ReportService(ReportRepository reports, TenantRepository tenants, CategoryRepository categories,
+            PlanGuard planGuard) {
         this.reports = reports;
         this.tenants = tenants;
         this.categories = categories;
+        this.planGuard = planGuard;
     }
 
     /** 已校验的日期区间（含首尾两天）。 */
@@ -74,6 +80,14 @@ public class ReportService {
         }
         if (ChronoUnit.DAYS.between(f, t) >= MAX_DAYS) {
             throw ApiException.badRequest("RANGE_TOO_LONG", "日期范围最长 366 天");
+        }
+        // 免费版只能看近 30 天（以及本月），更早的数据需要标准版
+        LocalDate earliestFree = today.minusDays(PlanPolicy.FREE_REPORT_DAYS - 1L);
+        if (today.withDayOfMonth(1).isBefore(earliestFree)) {
+            earliestFree = today.withDayOfMonth(1);
+        }
+        if (f.isBefore(earliestFree) && !PlanPolicy.allows(planGuard.currentPlan(tenantId), Feature.FULL_REPORTS)) {
+            throw PlanGuard.featureRequired(Feature.FULL_REPORTS);
         }
         return new Range(f, t, zone);
     }

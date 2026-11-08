@@ -38,10 +38,13 @@ public class AuthService {
     private final TokenService tokenService;
     private final SecurityProperties props;
     private final LoginAttemptService loginAttempts;
+    private final com.smallbiz.config.PlatformProperties platform;
 
     public AuthService(UserRepository users, RefreshTokenRepository refreshTokens, TenantRepository tenants,
             TenantMemberRepository members, PasswordEncoder passwordEncoder, TokenService tokenService,
-            SecurityProperties props, LoginAttemptService loginAttempts) {
+            SecurityProperties props, LoginAttemptService loginAttempts,
+            com.smallbiz.config.PlatformProperties platform) {
+        this.platform = platform;
         this.users = users;
         this.refreshTokens = refreshTokens;
         this.tenants = tenants;
@@ -64,6 +67,7 @@ public class AuthService {
         }
         User user = users.save(new User(email, passwordEncoder.encode(req.password()), req.displayName().trim()));
         user.setLastLoginAt(Instant.now());
+        syncPlatformAdmin(user);
         return issue(user, null);
     }
 
@@ -84,6 +88,7 @@ public class AuthService {
         }
         loginAttempts.reset(email);
         user.setLastLoginAt(Instant.now());
+        syncPlatformAdmin(user);
 
         List<TenantMember> memberships = activeMemberships(user.getId());
         Long tenantId = memberships.size() == 1 ? memberships.get(0).getTenantId() : null;
@@ -197,6 +202,14 @@ public class AuthService {
             expiresIn = tokenService.accessTokenTtlSeconds();
         }
         return new SessionResponse(accessToken, expiresIn, UserView.of(user), current, summaries);
+    }
+
+    /** 配置中的平台管理员邮箱自动获得平台管理员身份；从配置移除后下次登录即取消。 */
+    private void syncPlatformAdmin(User user) {
+        boolean shouldBe = platform.isAdminEmail(user.getEmail());
+        if (user.isPlatformAdmin() != shouldBe) {
+            user.setPlatformAdmin(shouldBe);
+        }
     }
 
     private List<TenantMember> activeMemberships(Long userId) {

@@ -27,6 +27,7 @@ import jakarta.validation.Valid;
 /** 供应商：涉及进货渠道和价格，仅店主/管理员可查看和管理。 */
 @RestController
 @RequestMapping("/api/v1/suppliers")
+@com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.SUPPLIERS)
 @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
 public class SupplierController {
 

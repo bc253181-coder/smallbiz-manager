@@ -27,6 +27,7 @@ import jakarta.validation.Valid;
 /** 客户：所有成员可查看和新增（店员开单时需要登记客户）；修改、删除限店主/管理员。 */
 @RestController
 @RequestMapping("/api/v1/customers")
+@com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.CUSTOMERS)
 public class CustomerController {
 
     private static final Map<String, String> SORTABLE = Map.of("name", "name", "createdAt", "createdAt",

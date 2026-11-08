@@ -71,6 +71,16 @@ public class Tenant extends BaseEntity {
         return (planExpiresAt != null && planExpiresAt.isAfter(now)) ? plan : Plan.FREE;
     }
 
+    /** 开通/续期/调整套餐。FREE 时到期时间为空。 */
+    public void changePlan(Plan plan, Instant expiresAt) {
+        this.plan = plan;
+        this.planExpiresAt = plan == Plan.FREE ? null : expiresAt;
+    }
+
+    public void markTrialUsed() {
+        this.trialUsed = true;
+    }
+
     public String getName() {
         return name;
     }

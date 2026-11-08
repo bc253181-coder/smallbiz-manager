@@ -93,6 +93,7 @@ public class ReportController {
     // ---------------- 导出 CSV ----------------
 
     @GetMapping("/reports/sales/export")
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.EXPORT)
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     public ResponseEntity<byte[]> exportSales(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
@@ -107,6 +108,7 @@ public class ReportController {
     }
 
     @GetMapping("/reports/top-products/export")
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.EXPORT)
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     public ResponseEntity<byte[]> exportProducts(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
@@ -121,6 +123,7 @@ public class ReportController {
     }
 
     @GetMapping("/reports/top-customers/export")
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.EXPORT)
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     public ResponseEntity<byte[]> exportCustomers(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
