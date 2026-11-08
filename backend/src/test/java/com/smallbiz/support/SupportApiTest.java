@@ -83,7 +83,7 @@ class SupportApiTest extends IntegrationTest {
                 .content("{\"email\":\"admin@platform.test\",\"password\":\"AdminPass123\"}")).andReturn().getResponse();
         if (res.getStatus() != 200) {
             res = mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"email\":\"admin@platform.test\",\"password\":\"AdminPass123\",\"displayName\":\"平台\"}"))
+                    .content("{\"email\":\"admin@platform.test\",\"password\":\"AdminPass123\",\"displayName\":\"平台\",\"agreeTerms\":true}"))
                     .andReturn().getResponse();
         }
         return new Session("admin@platform.test", "AdminPass123", read(res, "$.accessToken"), null,

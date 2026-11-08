@@ -15,6 +15,7 @@ const schema = z
     email: z.string().trim().min(1, '请填写邮箱').pipe(z.email('邮箱格式不正确')),
     password: z.string().min(8, '密码至少 8 位').max(64, '密码最多 64 位'),
     confirmPassword: z.string().min(1, '请再次输入密码'),
+    agreeTerms: z.boolean().refine((v) => v, '请阅读并同意用户协议和隐私政策'),
   })
   .refine((v) => v.password === v.confirmPassword, { path: ['confirmPassword'], message: '两次输入的密码不一致' })
 type FormValues = z.infer<typeof schema>
@@ -29,7 +30,7 @@ export function RegisterPage() {
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { agreeTerms: false } })
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null)
@@ -71,6 +72,22 @@ export function RegisterPage() {
             {...register('confirmPassword')}
           />
         </Field>
+        <div>
+          <label className="flex items-start gap-2 text-sm text-slate-600">
+            <input type="checkbox" className="mt-1 size-4 accent-blue-600" aria-invalid={!!errors.agreeTerms} {...register('agreeTerms')} />
+            <span>
+              我已阅读并同意{' '}
+              <Link to="/terms" target="_blank" className="text-blue-600 hover:underline">
+                《用户协议》
+              </Link>
+              和{' '}
+              <Link to="/privacy" target="_blank" className="text-blue-600 hover:underline">
+                《隐私政策》
+              </Link>
+            </span>
+          </label>
+          {errors.agreeTerms && <p className="mt-1 text-sm text-red-600">{errors.agreeTerms.message}</p>}
+        </div>
         <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
           注册
         </Button>

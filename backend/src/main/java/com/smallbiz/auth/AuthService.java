@@ -66,7 +66,9 @@ public class AuthService {
             throw ApiException.conflict("EMAIL_EXISTS", "该邮箱已注册，请直接登录");
         }
         User user = users.save(new User(email, passwordEncoder.encode(req.password()), req.displayName().trim()));
-        user.setLastLoginAt(Instant.now());
+        Instant now = Instant.now();
+        user.setLastLoginAt(now);
+        user.acceptTerms(LegalTerms.CURRENT_VERSION, now);
         syncPlatformAdmin(user);
         return issue(user, null);
     }

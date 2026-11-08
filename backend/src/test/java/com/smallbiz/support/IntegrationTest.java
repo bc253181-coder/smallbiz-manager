@@ -59,7 +59,7 @@ public abstract class IntegrationTest {
         String password = "Passw0rd!" + prefix;
         MockHttpServletResponse res = mvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json("{\"email\":\"%s\",\"password\":\"%s\",\"displayName\":\"%s\"}", email, password, prefix)))
+                .content(json("{\"email\":\"%s\",\"password\":\"%s\",\"displayName\":\"%s\",\"agreeTerms\":true}", email, password, prefix)))
                 .andReturn().getResponse();
         if (res.getStatus() != 201) {
             throw new AssertionError("register failed: " + res.getStatus() + " " + res.getContentAsString());

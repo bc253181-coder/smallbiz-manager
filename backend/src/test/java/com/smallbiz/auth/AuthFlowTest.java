@@ -38,7 +38,7 @@ class AuthFlowTest extends IntegrationTest {
         String email = uniqueEmail("reg");
         MockHttpServletResponse res = mvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json("{\"email\":\"  %s \",\"password\":\"Secret123\",\"displayName\":\"小王\"}",
+                .content(json("{\"email\":\"  %s \",\"password\":\"Secret123\",\"displayName\":\"小王\",\"agreeTerms\":true}",
                         email.toUpperCase())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.accessToken").isString())
@@ -57,7 +57,7 @@ class AuthFlowTest extends IntegrationTest {
     void duplicateEmailIsRejected() throws Exception {
         Session s = register("dup");
         mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
-                .content(json("{\"email\":\"%s\",\"password\":\"Secret123\",\"displayName\":\"x\"}", s.email())))
+                .content(json("{\"email\":\"%s\",\"password\":\"Secret123\",\"displayName\":\"x\",\"agreeTerms\":true}", s.email())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("EMAIL_EXISTS"));
     }
@@ -70,7 +70,22 @@ class AuthFlowTest extends IntegrationTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
                 .andExpect(jsonPath("$.details.fields.email").exists())
                 .andExpect(jsonPath("$.details.fields.password").exists())
-                .andExpect(jsonPath("$.details.fields.displayName").exists());
+                .andExpect(jsonPath("$.details.fields.displayName").exists())
+                .andExpect(jsonPath("$.details.fields.agreeTerms").value("请阅读并同意用户协议和隐私政策"));
+    }
+
+    @Test
+    void registrationRecordsTermsConsent() throws Exception {
+        String email = uniqueEmail("terms");
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content(json("{\"email\":\"%s\",\"password\":\"Secret123\",\"displayName\":\"x\",\"agreeTerms\":false}", email)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.fields.agreeTerms").exists());
+        Session s = register("terms");
+        String version = jdbc.queryForObject("select terms_version from users where id = ?", String.class, s.userId());
+        assertThat(version).isEqualTo(LegalTerms.CURRENT_VERSION);
+        assertThat(jdbc.queryForObject("select terms_accepted_at is not null from users where id = ?", Boolean.class, s.userId()))
+                .isTrue();
     }
 
     // ---------- 登录 ----------

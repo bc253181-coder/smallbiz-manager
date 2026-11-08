@@ -54,6 +54,8 @@ public class SecurityConfig {
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/logout").permitAll()
                 .requestMatchers("/error").permitAll()
+                // 健康检查（只暴露 health；Nginx 不对外转发 /actuator）
+                .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 // 客服机器人：未登录访客也可以提问（按 IP 限速）
                 .requestMatchers("/api/v1/support/**").permitAll()
                 // 商品图片：文件名是不可猜测的随机 UUID，<img> 标签无法携带令牌，因此公开读取

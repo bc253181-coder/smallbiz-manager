@@ -1,0 +1,9 @@
+.git/
+**/node_modules/
+frontend/dist/
+backend/target/
+backend/uploads/
+backend/private-uploads/
+deploy/backups/
+.env*
+**/.env*

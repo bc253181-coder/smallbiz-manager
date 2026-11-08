@@ -1,0 +1,5 @@
+# 自动申请并续期 HTTPS 证书（Let's Encrypt）。DOMAIN 在 deploy/.env 中设置。
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:80
+}

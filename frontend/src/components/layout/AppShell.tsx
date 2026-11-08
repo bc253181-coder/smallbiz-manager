@@ -1,11 +1,12 @@
 import { Menu, X } from 'lucide-react'
 import { Dialog } from 'radix-ui'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet } from 'react-router'
 import { SupportWidget } from '@/features/support/SupportWidget'
 import { Brand } from './Brand'
 import { LowStockBell } from './LowStockBell'
 import { MobileTabBar } from './MobileTabBar'
+import { PageLoading } from './PageLoading'
 import { SidebarNav } from './SidebarNav'
 import { StoreSwitcher } from './StoreSwitcher'
 import { UserMenu } from './UserMenu'
@@ -69,7 +70,9 @@ export function AppShell() {
 
       {/* 手机底部留出底部导航的高度 */}
       <main className="mx-auto w-full max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-6 print:p-0">
-        <Outlet />
+        <Suspense fallback={<PageLoading />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <MobileTabBar onMore={() => setDrawerOpen(true)} />

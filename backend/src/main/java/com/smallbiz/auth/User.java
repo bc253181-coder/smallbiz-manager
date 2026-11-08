@@ -36,6 +36,12 @@ public class User extends BaseEntity {
     @Column(name = "is_platform_admin", nullable = false)
     private boolean platformAdmin = false;
 
+    @Column(name = "terms_version", length = 20)
+    private String termsVersion;
+
+    @Column(name = "terms_accepted_at")
+    private Instant termsAcceptedAt;
+
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
@@ -90,5 +96,18 @@ public class User extends BaseEntity {
 
     public void setLastLoginAt(Instant lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
+    }
+
+    public void acceptTerms(String version, Instant at) {
+        this.termsVersion = version;
+        this.termsAcceptedAt = at;
+    }
+
+    public String getTermsVersion() {
+        return termsVersion;
+    }
+
+    public Instant getTermsAcceptedAt() {
+        return termsAcceptedAt;
     }
 }
