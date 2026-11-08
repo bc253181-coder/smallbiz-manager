@@ -7,7 +7,9 @@ public enum Feature {
     PURCHASING("采购管理"),
     WHOLESALE_PRICE("批发价开单"),
     FULL_REPORTS("完整报表（超过 30 天）"),
-    EXPORT("数据导出");
+    EXPORT("数据导出"),
+    /** 专业版：赊账、收款记录、客户欠款与对账单。 */
+    RECEIVABLES("应收账款");
 
     private final String label;
 

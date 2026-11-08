@@ -207,10 +207,11 @@ class BillingApiTest extends IntegrationTest {
     void currentPricesAfterRepricing() throws Exception {
         Session s = registerWithFreeTenant("bill-price", "价格店");
         MockHttpServletResponse cny = send(get("/api/v1/billing/prices?currency=CNY"), s, null);
-        assertThat((List<String>) read(cny, "$[*].amount")).containsExactly("1.99", "6.99", "69.90");
-        assertThat((List<String>) read(cny, "$[*].plan")).containsOnly("STANDARD"); // 专业版功能完成前不出售
+        // 专业版随应收账款一起开卖（V10）
+        assertThat((List<String>) read(cny, "$[*].amount")).containsExactly("1.99", "6.99", "69.90", "9.90", "109.90");
+        assertThat((List<String>) read(cny, "$[*].plan")).containsExactly("STANDARD", "STANDARD", "STANDARD", "PRO", "PRO");
         MockHttpServletResponse myr = send(get("/api/v1/billing/prices?currency=MYR"), s, null);
-        assertThat((List<String>) read(myr, "$[*].amount")).containsExactly("1.00", "4.99", "49.90");
+        assertThat((List<String>) read(myr, "$[*].amount")).containsExactly("1.00", "4.99", "49.90", "6.90", "69.90");
 
         Session admin = admin();
         MockHttpServletResponse all = send(get("/api/v1/admin/plan-prices"), admin, null);
@@ -228,7 +229,7 @@ class BillingApiTest extends IntegrationTest {
 
         List<Integer> cnyIds = read(send(get("/api/v1/billing/prices?currency=CNY"), owner, null), "$[?(@.period == 'TRIAL_MONTH')].id");
         List<Integer> myrIds = read(send(get("/api/v1/billing/prices?currency=MYR"), owner, null), "$[?(@.period == 'MONTH')].id");
-        assertThat((List<?>) read(send(get("/api/v1/billing/prices?currency=CNY"), owner, null), "$[?(@.plan == 'PRO')]")).isEmpty();
+        assertThat((List<?>) read(send(get("/api/v1/billing/prices?currency=CNY"), owner, null), "$[?(@.plan == 'PRO' && @.period == 'TRIAL_MONTH')]")).isEmpty();
         MockHttpServletResponse methods = send(get("/api/v1/billing/payment-methods"), owner, null);
         List<Integer> wechat = read(methods, "$[?(@.code == 'WECHAT_PAY')].id");
         List<String> qr = read(methods, "$[?(@.code == 'WECHAT_PAY')].qrImageUrl");

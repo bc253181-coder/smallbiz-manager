@@ -39,7 +39,7 @@ public class PlanGuard implements HandlerInterceptor {
 
     public static ApiException featureRequired(Feature feature) {
         return new ApiException(HttpStatus.FORBIDDEN, "PLAN_FEATURE_REQUIRED",
-                "「" + feature.label() + "」需要标准版，升级后即可使用",
+                "「" + feature.label() + "」需要" + PlanPolicy.label(PlanPolicy.requiredPlan(feature)) + "，升级后即可使用",
                 Map.of("feature", feature.name(), "requiredPlan", PlanPolicy.requiredPlan(feature).name()));
     }
 

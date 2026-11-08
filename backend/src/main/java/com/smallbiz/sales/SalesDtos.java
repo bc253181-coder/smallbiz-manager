@@ -35,6 +35,9 @@ public final class SalesDtos {
             @DecimalMin(value = "0", message = "优惠不能为负数")
             @Digits(integer = 12, fraction = 2, message = "优惠最多两位小数") BigDecimal discountAmount,
             @Size(max = 500, message = "备注最多 500 字") String notes,
+            /** 本次实收；为空表示全额收款。小于应收的部分记为客户欠款（专业版，需选择客户）。 */
+            @DecimalMin(value = "0", message = "实收不能为负数")
+            @Digits(integer = 12, fraction = 2, message = "实收最多两位小数") BigDecimal paidAmount,
             @NotEmpty(message = "请至少添加一个商品") @Size(max = 200, message = "一张销售单最多 200 个商品")
             List<@Valid ItemRequest> items) {
     }
@@ -63,11 +66,14 @@ public final class SalesDtos {
             Instant orderDate,
             int itemCount,
             int totalQuantity,
-            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal totalAmount) {
+            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal totalAmount,
+            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal paidAmount,
+            SalesOrder.PaymentStatus paymentStatus) {
 
         static SaleSummary of(SalesOrder o) {
             return new SaleSummary(o.getId(), o.getOrderNo(), o.getCustomerId(), o.getCustomerName(), o.getStatus(),
-                    o.getOrderDate(), o.getItemCount(), o.getTotalQuantity(), o.getTotalAmount());
+                    o.getOrderDate(), o.getItemCount(), o.getTotalQuantity(), o.getTotalAmount(), o.getPaidAmount(),
+                    o.getPaymentStatus());
         }
     }
 
@@ -87,6 +93,10 @@ public final class SalesDtos {
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal totalAmount,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal paidAmount,
             SalesOrder.PaymentStatus paymentStatus,
+            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal paidAtSale,
+            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal outstanding,
+            Instant lastPaymentAt,
+            List<PaymentLine> payments,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal totalCost,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal grossProfit,
             String notes,
@@ -95,6 +105,11 @@ public final class SalesDtos {
             Instant cancelledAt,
             String cancelledByName,
             String cancelReason) {
+    }
+
+    /** 冲抵到这张销售单的收款（含已作废的，便于追溯）。 */
+    public record PaymentLine(Long paymentId, String paymentNo, Instant receivedAt, String method, String status,
+            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal amount) {
     }
 
     public record CustomerStats(long orderCount,

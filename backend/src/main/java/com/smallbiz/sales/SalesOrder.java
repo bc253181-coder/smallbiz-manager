@@ -58,6 +58,13 @@ public class SalesOrder extends TenantScopedEntity {
     @Column(name = "total_cost", nullable = false, precision = 14, scale = 2)
     private BigDecimal totalCost = BigDecimal.ZERO;
 
+    /** 开单时实收。已收 = 开单时实收 + 有效收款冲抵之和。 */
+    @Column(name = "paid_at_sale", nullable = false, precision = 14, scale = 2)
+    private BigDecimal paidAtSale = BigDecimal.ZERO;
+
+    @Column(name = "last_payment_at")
+    private Instant lastPaymentAt;
+
     @Column(name = "paid_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal paidAmount = BigDecimal.ZERO;
 
@@ -103,7 +110,7 @@ public class SalesOrder extends TenantScopedEntity {
         this.createdBy = createdBy;
     }
 
-    /** 设置明细并计算金额：应收 = 明细合计 − 整单优惠；MVP 阶段视为已全额收款。 */
+    /** 设置明细并计算金额：应收 = 明细合计 − 整单优惠；默认开单时全额收款（赊账见 {@link #setPaidAtSale}）。 */
     public void setItems(List<SalesOrderItem> newItems, BigDecimal discount) {
         items.clear();
         int line = 1;
@@ -121,10 +128,68 @@ public class SalesOrder extends TenantScopedEntity {
         this.discountAmount = discount;
         this.totalAmount = sub.subtract(discount);
         this.totalCost = cost.setScale(2, java.math.RoundingMode.HALF_UP);
+        this.paidAtSale = totalAmount;
         this.paidAmount = totalAmount;
         this.paymentStatus = PaymentStatus.PAID;
         this.itemCount = newItems.size();
         this.totalQuantity = qty;
+    }
+
+    /** 开单时实收（0 ≤ paid ≤ 应收）；小于应收的部分为欠款。 */
+    public void setPaidAtSale(BigDecimal paid) {
+        if (paid.signum() < 0 || paid.compareTo(totalAmount) > 0) {
+            throw new IllegalArgumentException("paid out of range");
+        }
+        this.paidAtSale = paid;
+        this.paidAmount = paid;
+        refreshPaymentStatus();
+    }
+
+    /** 收款冲抵。 */
+    public void applyPayment(BigDecimal amount, Instant receivedAt) {
+        BigDecimal next = paidAmount.add(amount);
+        if (amount.signum() <= 0 || next.compareTo(totalAmount) > 0) {
+            throw new IllegalStateException("allocation exceeds outstanding");
+        }
+        this.paidAmount = next;
+        if (lastPaymentAt == null || receivedAt.isAfter(lastPaymentAt)) {
+            this.lastPaymentAt = receivedAt;
+        }
+        refreshPaymentStatus();
+    }
+
+    /** 收款作废：撤回冲抵金额。lastPaidAt 为剩余有效收款中最近的时间（可为 null）。 */
+    public void reversePayment(BigDecimal amount, Instant lastPaidAt) {
+        BigDecimal next = paidAmount.subtract(amount);
+        if (next.compareTo(paidAtSale) < 0) {
+            throw new IllegalStateException("reversal below paid at sale");
+        }
+        this.paidAmount = next;
+        this.lastPaymentAt = lastPaidAt;
+        refreshPaymentStatus();
+    }
+
+    /** 未收金额。 */
+    public BigDecimal outstanding() {
+        return totalAmount.subtract(paidAmount);
+    }
+
+    private void refreshPaymentStatus() {
+        if (paidAmount.compareTo(totalAmount) >= 0) {
+            this.paymentStatus = PaymentStatus.PAID;
+        } else if (paidAmount.signum() == 0) {
+            this.paymentStatus = PaymentStatus.UNPAID;
+        } else {
+            this.paymentStatus = PaymentStatus.PARTIAL;
+        }
+    }
+
+    public BigDecimal getPaidAtSale() {
+        return paidAtSale;
+    }
+
+    public Instant getLastPaymentAt() {
+        return lastPaymentAt;
     }
 
     public void cancel(Instant now, Long userId, String reason) {

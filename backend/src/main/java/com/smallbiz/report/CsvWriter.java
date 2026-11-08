@@ -9,12 +9,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /** 生成 Excel 可直接打开的 CSV（UTF-8 带 BOM，防止中文乱码；防公式注入）。 */
-final class CsvWriter {
+public final class CsvWriter {
 
     private CsvWriter() {
     }
 
-    static ResponseEntity<byte[]> response(String filename, List<String> header, List<List<Object>> rows) {
+    public static ResponseEntity<byte[]> response(String filename, List<String> header, List<List<Object>> rows) {
         StringBuilder sb = new StringBuilder("﻿");
         appendRow(sb, header.stream().map(h -> (Object) h).toList());
         rows.forEach(r -> appendRow(sb, r));

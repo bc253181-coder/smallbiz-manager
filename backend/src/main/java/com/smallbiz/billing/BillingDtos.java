@@ -17,8 +17,9 @@ public final class BillingDtos {
     private BillingDtos() {
     }
 
+    /** proUpgradeBonusDays：现在升级专业版时，标准版剩余时间可折算的专业版天数（非标准版时为 0）。 */
     public record CurrentPlan(Plan plan, Instant expiresAt, boolean trialUsed, long productCount, Integer maxProducts,
-            Map<Feature, Boolean> features) {
+            Map<Feature, Boolean> features, int proUpgradeBonusDays) {
     }
 
     public record PriceView(Long id, Plan plan, PlanPrice.Period period, int durationDays, String currency,
