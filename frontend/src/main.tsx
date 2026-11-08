@@ -1,14 +1,27 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
-import { Toaster } from 'sonner'
+import { toast, Toaster } from 'sonner'
 import { AuthProvider } from '@/features/auth/AuthProvider'
+import { errorCode } from '@/lib/api'
 import { router } from '@/router'
 import './index.css'
 
 const queryClient = new QueryClient({
+  // 任何操作因套餐限制被拒绝时，额外提示升级入口（各页面自己的错误提示照常显示）
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      const code = errorCode(error)
+      if (code === 'PLAN_FEATURE_REQUIRED' || code === 'PLAN_LIMIT_REACHED') {
+        toast.info('升级标准版即可使用，首月体验 ¥1.99', {
+          id: 'plan-upgrade',
+          action: { label: '查看套餐', onClick: () => void router.navigate('/settings/billing') },
+        })
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

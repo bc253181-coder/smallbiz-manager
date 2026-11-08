@@ -139,6 +139,34 @@ class BillingApiTest extends IntegrationTest {
     }
 
     @Test
+    void sameCodeRedeemedConcurrentlyByTwoStores_onlyOneSucceeds() throws Exception {
+        Session admin = admin();
+        String code = createCodes(admin, "STANDARD", 30, false, 1).get(0);
+        List<Session> stores = List.of(registerWithFreeTenant("bill-cc-a", "并发A"), registerWithFreeTenant("bill-cc-b", "并发B"),
+                registerWithFreeTenant("bill-cc-c", "并发C"), registerWithFreeTenant("bill-cc-d", "并发D"));
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(stores.size());
+        try {
+            List<java.util.concurrent.Future<Integer>> results = stores.stream().map(s -> pool.submit(() -> {
+                start.await();
+                return redeem(s, code).getStatus();
+            })).toList();
+            start.countDown();
+            List<Integer> statuses = new java.util.ArrayList<>();
+            for (var f : results) {
+                statuses.add(f.get(30, java.util.concurrent.TimeUnit.SECONDS));
+            }
+            assertThat(statuses.stream().filter(st -> st == 200).count()).isEqualTo(1);
+            assertThat(statuses.stream().filter(st -> st == 409 || st == 400).count()).isEqualTo(stores.size() - 1);
+        } finally {
+            pool.shutdownNow();
+        }
+        Integer paid = jdbcTemplate.queryForObject(
+                "select count(*) from tenants where name in ('并发A','并发B','并发C','并发D') and plan = 'STANDARD'", Integer.class);
+        assertThat(paid).isEqualTo(1);
+    }
+
+    @Test
     void redeemIsRateLimited() throws Exception {
         Session s = registerWithFreeTenant("bill-rate", "限速店");
         for (int i = 0; i < 10; i++) {

@@ -122,6 +122,8 @@ public class AuthService {
                 TenantMember.Status.ACTIVE).isEmpty()) {
             tenantId = null; // 已被移出该商户
         }
+        // 平台管理员名单改了配置后，在下次刷新令牌时生效（无需重新登录）
+        syncPlatformAdmin(user);
         return issue(user, tenantId);
     }
 

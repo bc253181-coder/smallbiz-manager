@@ -1,10 +1,13 @@
+import { Lock } from 'lucide-react'
 import { NavLink } from 'react-router'
+import { usePlan } from '@/features/billing/api'
 import { useCanManage } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './nav'
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const canManage = useCanManage()
+  const plan = usePlan()
   return (
     <nav aria-label="主导航" className="space-y-0.5">
       {NAV_ITEMS.filter((item) => !item.managerOnly || canManage).map((item) => {
@@ -37,7 +40,10 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             }
           >
             <Icon className="size-4.5 shrink-0" aria-hidden />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.feature && plan.data && !plan.data.features[item.feature] && (
+              <Lock className="size-3.5 text-slate-400" aria-label="需要标准版" />
+            )}
           </NavLink>
         )
       })}

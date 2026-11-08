@@ -2,6 +2,7 @@ import { Menu, X } from 'lucide-react'
 import { Dialog } from 'radix-ui'
 import { useState } from 'react'
 import { Outlet } from 'react-router'
+import { SupportWidget } from '@/features/support/SupportWidget'
 import { Brand } from './Brand'
 import { LowStockBell } from './LowStockBell'
 import { MobileTabBar } from './MobileTabBar'
@@ -72,6 +73,7 @@ export function AppShell() {
       </main>
 
       <MobileTabBar onMore={() => setDrawerOpen(true)} />
+      <SupportWidget withTabBar />
     </div>
   )
 }

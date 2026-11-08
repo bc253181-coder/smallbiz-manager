@@ -2,7 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router'
+import { ChevronRight, CreditCard } from 'lucide-react'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -10,7 +11,8 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/form'
 import { authApi, tenantApi } from '@/features/auth/api'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { BUSINESS_TYPE_LABELS, type BusinessType } from '@/features/auth/types'
+import { BUSINESS_TYPE_LABELS, PLAN_LABELS, type BusinessType } from '@/features/auth/types'
+import { usePlan } from '@/features/billing/api'
 import { applySession, errorMessage, fieldErrors } from '@/lib/api'
 
 const TIMEZONES = [
@@ -32,12 +34,33 @@ export function SettingsPage() {
         <h1 className="text-2xl font-semibold text-slate-900">设置</h1>
         <p className="mt-1 text-sm text-slate-500">管理店铺资料和个人账号</p>
       </div>
+      <PlanLink />
       <StoreSettings />
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileSettings />
         <PasswordSettings />
       </div>
     </div>
+  )
+}
+
+// ---------------- 套餐入口 ----------------
+
+function PlanLink() {
+  const { data } = usePlan()
+  return (
+    <Link to="/settings/billing" className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:bg-slate-50">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+        <CreditCard className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium text-slate-900">套餐与续费</span>
+        <span className="block text-sm text-slate-500">
+          {data ? `当前：${PLAN_LABELS[data.plan]}${data.expiresAt ? `，${new Date(data.expiresAt).toLocaleDateString('zh-CN')} 到期` : ''}` : '查看套餐、兑换激活码'}
+        </span>
+      </span>
+      <ChevronRight className="size-5 text-slate-400" aria-hidden />
+    </Link>
   )
 }
 

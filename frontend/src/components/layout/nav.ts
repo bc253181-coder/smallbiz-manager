@@ -10,6 +10,7 @@ import {
   Warehouse,
   type LucideIcon,
 } from 'lucide-react'
+import type { Feature } from '@/features/billing/api'
 
 export interface NavItem {
   label: string
@@ -19,6 +20,8 @@ export interface NavItem {
   comingSoon?: boolean
   /** 仅店主/管理员可见。 */
   managerOnly?: boolean
+  /** 需要付费套餐的功能：未开通时显示锁图标（仍可进入查看升级说明）。 */
+  feature?: Feature
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -26,9 +29,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: '商品', to: '/products', icon: Package },
   { label: '库存', to: '/inventory', icon: Warehouse },
   { label: '销售', to: '/sales', icon: ReceiptText },
-  { label: '采购', to: '/purchases', icon: Truck, managerOnly: true },
-  { label: '客户', to: '/customers', icon: Contact },
-  { label: '供应商', to: '/suppliers', icon: Factory, managerOnly: true },
+  { label: '采购', to: '/purchases', icon: Truck, managerOnly: true, feature: 'PURCHASING' },
+  { label: '客户', to: '/customers', icon: Contact, feature: 'CUSTOMERS' },
+  { label: '供应商', to: '/suppliers', icon: Factory, managerOnly: true, feature: 'SUPPLIERS' },
   { label: '报表', to: '/reports', icon: ChartColumn, managerOnly: true },
   { label: '设置', to: '/settings', icon: Settings },
 ]

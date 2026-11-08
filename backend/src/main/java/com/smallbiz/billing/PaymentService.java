@@ -4,7 +4,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -80,7 +79,7 @@ public class PaymentService {
                         java.util.Map.of("paymentOrderId", o.getId()));
             }
         }
-        PaymentOrder order = new PaymentOrder(tenantId, orderNo(now), uniqueReference(), price, method,
+        PaymentOrder order = new PaymentOrder(tenantId, orderNo(now, tenant.getTimezone()), uniqueReference(), price, method,
                 now.plus(PAY_WINDOW), userId);
         return orders.saveAndFlush(order);
     }
@@ -195,8 +194,9 @@ public class PaymentService {
         return ApiException.notFound("PAYMENT_NOT_FOUND", "付款单不存在");
     }
 
-    private String orderNo(Instant now) {
-        return "PAY-" + LocalDate.ofInstant(now, ZoneOffset.UTC).format(DateTimeFormatter.BASIC_ISO_DATE) + "-"
+    /** 单号日期按店铺时区，与其他单据一致。 */
+    private String orderNo(Instant now, String timezone) {
+        return "PAY-" + LocalDate.ofInstant(now, java.time.ZoneId.of(timezone)).format(DateTimeFormatter.BASIC_ISO_DATE) + "-"
                 + randomChars(6);
     }
 
