@@ -33,6 +33,9 @@ public class StockMovement {
     @Column(name = "product_id", nullable = false)
     private Long productId;
 
+    @Column(name = "warehouse_id", nullable = false)
+    private Long warehouseId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private MovementType type;
@@ -68,9 +71,11 @@ public class StockMovement {
     protected StockMovement() {
     }
 
-    StockMovement(Long productId, MovementType type, int qtyChange, int qtyBefore, BigDecimal unitCost,
+    /** qtyBefore / qtyAfter 为该仓库的数量。 */
+    StockMovement(Long productId, Long warehouseId, MovementType type, int qtyChange, int qtyBefore, BigDecimal unitCost,
             String refType, Long refId, String reason, Long createdBy) {
         this.productId = productId;
+        this.warehouseId = warehouseId;
         this.type = type;
         this.qtyChange = qtyChange;
         this.qtyBefore = qtyBefore;
@@ -92,6 +97,10 @@ public class StockMovement {
 
     public Long getProductId() {
         return productId;
+    }
+
+    public Long getWarehouseId() {
+        return warehouseId;
     }
 
     public MovementType getType() {

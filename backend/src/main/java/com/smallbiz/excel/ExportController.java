@@ -91,12 +91,13 @@ public class ExportController {
 
     @GetMapping("/movements")
     public ResponseEntity<byte[]> movements(@RequestParam(required = false) Long productId,
+            @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) MovementType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         Long tenantId = CurrentUser.requireTenantId();
         return XlsxWriter.response("库存流水_" + range(from, to, tenantId) + ".xlsx",
-                service.movements(tenantId, new InventoryQueryService.MovementFilter(productId, type, from, to)));
+                service.movements(tenantId, new InventoryQueryService.MovementFilter(productId, type, from, to, warehouseId)));
     }
 
     private String range(LocalDate from, LocalDate to, Long tenantId) {

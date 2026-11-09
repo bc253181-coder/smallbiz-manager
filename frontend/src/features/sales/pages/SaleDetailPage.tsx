@@ -20,12 +20,14 @@ import { ReceivePaymentDialog } from '@/features/receivables/ReceivePaymentDialo
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { PAYMENT_STATUS_LABELS, PRICE_SOURCE_LABELS, saleApi } from '../api'
+import { useWarehouses } from '@/features/warehouse/api'
 import { SaleStatusBadge } from '../SaleStatusBadge'
 
 const BACK = { to: '/sales', label: '返回销售列表' }
 
 export function SaleDetailPage() {
   const id = Number(useParams().id)
+  const wh = useWarehouses()
   const queryClient = useQueryClient()
   const money = useMoney()
   const canManage = useCanManage()
@@ -203,6 +205,7 @@ export function SaleDetailPage() {
                 )}
               </Row>
               <Row label="开单人">{o.createdByName ?? '—'}</Row>
+              {wh.all.length > 1 && o.warehouseName && <Row label="出货仓库">{o.warehouseName}</Row>}
               <Row label="收款">
                 <Badge tone={o.paymentStatus === 'PAID' ? 'green' : o.paymentStatus === 'PARTIAL' ? 'amber' : 'red'}>
                   {PAYMENT_STATUS_LABELS[o.paymentStatus]}

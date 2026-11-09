@@ -95,7 +95,13 @@ public final class PurchaseDtos {
             Instant cancelledAt,
             String cancelledByName,
             String cancelReason,
-            int version) {
+            int version,
+            Long warehouseId,
+            String warehouseName) {
+    }
+
+    /** 确认收货：warehouseId 为空表示默认仓库。 */
+    public record ReceiveRequest(Long warehouseId) {
     }
 
     /** 供应商供应过的商品。 */

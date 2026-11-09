@@ -6,7 +6,8 @@ import { toast } from 'sonner'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Field, Input } from '@/components/ui/form'
+import { Field, Input, Select } from '@/components/ui/form'
+import { useWarehouses } from '@/features/warehouse/api'
 import { FormDialog } from '@/components/ui/form-dialog'
 import { ErrorState, PageHeader } from '@/components/ui/page'
 import { errorCode, errorMessage } from '@/lib/api'
@@ -24,6 +25,10 @@ export function PurchaseDetailPage() {
   const money = useMoney()
   const [dialog, setDialog] = useState<'receive' | 'cancel' | 'delete' | null>(null)
   const [cancelReason, setCancelReason] = useState('')
+  // 多仓库：选择收货仓库（只有一个仓库时不显示）
+  const wh = useWarehouses()
+  const [receiveWarehouse, setReceiveWarehouse] = useState<number | null>(null)
+  const receiveTo = receiveWarehouse ?? wh.defaultWarehouse?.id ?? null
 
   const { data: o, isLoading, isError, error, refetch } = useQuery({ queryKey: ['purchase', id], queryFn: () => purchaseApi.get(id) })
 
@@ -50,7 +55,7 @@ export function PurchaseDetailPage() {
     onError: onError('下单失败'),
   })
   const receive = useMutation({
-    mutationFn: () => purchaseApi.receive(id),
+    mutationFn: () => purchaseApi.receive(id, wh.multi && receiveTo ? receiveTo : undefined),
     onSuccess: async (u) => {
       await refreshAfter(u)
       // 收货影响库存、成本、低库存提醒
@@ -59,6 +64,8 @@ export function PurchaseDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['product'] }),
         queryClient.invalidateQueries({ queryKey: ['product-movements'] }),
         queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+        queryClient.invalidateQueries({ queryKey: ['warehouses'] }),
+        queryClient.invalidateQueries({ queryKey: ['warehouse-stocks'] }),
       ])
       setDialog(null)
       toast.success(`收货完成，${u.totalQuantity} 件商品已入库`)
@@ -224,6 +231,7 @@ export function PurchaseDetailPage() {
               <Row label="下单日期">{formatDate(o.orderDate)}</Row>
               <Row label="预计到货">{o.expectedDate ? o.expectedDate.replaceAll('-', '/') : '—'}</Row>
               <Row label="创建人">{o.createdByName ?? '—'}</Row>
+              {o.warehouseName && wh.all.length > 1 && <Row label="收货仓库">{o.warehouseName}</Row>}
               {o.submittedAt && <Row label="提交下单">{formatDateTime(o.submittedAt)}</Row>}
               {o.notes && <Row label="备注">{o.notes}</Row>}
             </dl>
@@ -235,7 +243,25 @@ export function PurchaseDetailPage() {
         open={dialog === 'receive'}
         onOpenChange={(v) => !v && setDialog(null)}
         title="确认收货？"
-        description={`${o.itemCount} 种商品共 ${o.totalQuantity} 件将入库，进货成本按加权平均自动更新。收货后采购单不能再修改或取消。`}
+        description={
+          <>
+            {o.itemCount} 种商品共 {o.totalQuantity} 件将入库，进货成本按加权平均自动更新。收货后采购单不能再修改或取消。
+            {wh.multi && (
+              <span className="mt-3 block">
+                <label htmlFor="receive-warehouse" className="mb-1 block text-sm font-medium text-slate-700">
+                  收货仓库
+                </label>
+                <Select id="receive-warehouse" value={receiveTo ?? ''} onChange={(e) => setReceiveWarehouse(Number(e.target.value))}>
+                  {wh.usable.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </Select>
+              </span>
+            )}
+          </>
+        }
         confirmText="确认收货"
         loading={receive.isPending}
         onConfirm={() => receive.mutate()}

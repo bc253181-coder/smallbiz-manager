@@ -86,9 +86,10 @@ public class PurchaseController {
     }
 
     @PostMapping("/purchase-orders/{id}/receive")
-    public PurchaseView receive(@PathVariable Long id) {
+    public PurchaseView receive(@PathVariable Long id,
+            @RequestBody(required = false) com.smallbiz.purchasing.PurchaseDtos.ReceiveRequest req) {
         CurrentUser.requireTenantId();
-        return service.receive(id, CurrentUser.userId());
+        return service.receive(id, req == null ? null : req.warehouseId(), CurrentUser.userId());
     }
 
     @PostMapping("/purchase-orders/{id}/cancel")

@@ -71,11 +71,13 @@ public class SalesService {
     private final PaymentAllocationRepository allocations;
     private final CustomerPaymentRepository payments;
     private final com.smallbiz.pricing.CustomerPriceService customerPrices;
+    private final com.smallbiz.warehouse.WarehouseService warehouses;
 
     public SalesService(SalesOrderRepository orders, ProductRepository products, CustomerService customers,
             InventoryService inventory, SequenceService sequences, UserRepository users, TenantRepository tenants,
             PlanGuard planGuard, PaymentAllocationRepository allocations, CustomerPaymentRepository payments,
-            com.smallbiz.pricing.CustomerPriceService customerPrices) {
+            com.smallbiz.pricing.CustomerPriceService customerPrices, com.smallbiz.warehouse.WarehouseService warehouses) {
+        this.warehouses = warehouses;
         this.customerPrices = customerPrices;
         this.allocations = allocations;
         this.payments = payments;
@@ -166,6 +168,7 @@ public class SalesService {
             planGuard.require(tenantId, Feature.WHOLESALE_PRICE);
         }
         Customer customer = req.customerId() == null ? null : customers.load(req.customerId());
+        Long warehouseId = warehouses.resolve(tenantId, req.warehouseId(), com.smallbiz.warehouse.WarehouseService.Use.OPERATE).getId();
         Map<Long, BigDecimal> contract = customerPrices.contractPrices(tenantId, req.customerId(),
                 req.items().stream().map(ItemRequest::productId).toList());
         List<SalesOrderItem> items = buildItems(req.items(), req.priceTier(), contract);
@@ -181,13 +184,14 @@ public class SalesService {
             order.setCustomer(customer.getId(), customer.getName());
         }
         order.setNotes(Strings.blankToNull(req.notes()));
+        order.setWarehouseId(warehouseId);
         order.setItems(items, discount);
         applyPaidAtSale(order, req.paidAmount(), customer, tenantId);
         order = orders.saveAndFlush(order);
 
         for (SalesOrderItem item : sortedByProduct(order)) {
             inventory.apply(item.getProductId(), new InventoryService.Change(MovementType.SALE, -item.getQuantity(),
-                    null, REF_TYPE, order.getId(), "销售 " + order.getOrderNo(), userId));
+                    null, REF_TYPE, order.getId(), "销售 " + order.getOrderNo(), userId, warehouseId));
         }
         return toView(order, hideCost);
     }
@@ -206,8 +210,10 @@ public class SalesService {
         }
         for (SalesOrderItem item : sortedByProduct(order)) {
             try {
+                // 回到原来的出货仓库（即使专业版已到期也照常恢复）
                 inventory.apply(item.getProductId(), new InventoryService.Change(MovementType.SALE_CANCEL,
-                        item.getQuantity(), null, REF_TYPE, order.getId(), "取消销售 " + order.getOrderNo(), userId));
+                        item.getQuantity(), null, REF_TYPE, order.getId(), "取消销售 " + order.getOrderNo(), userId,
+                        order.getWarehouseId()));
             } catch (ApiException e) {
                 if ("PRODUCT_NOT_FOUND".equals(e.getCode())) {
                     throw ApiException.conflict("PRODUCT_DELETED",
@@ -319,6 +325,8 @@ public class SalesService {
                 o.getStatus() == SalesOrder.Status.COMPLETED ? o.outstanding() : BigDecimal.ZERO, o.getLastPaymentAt(),
                 paymentLines,
                 hideCost ? null : o.getTotalCost(), hideCost ? null : o.grossProfit(), o.getNotes(), items,
-                names.get(o.getCreatedBy()), o.getCancelledAt(), names.get(o.getCancelledBy()), o.getCancelReason());
+                names.get(o.getCreatedBy()), o.getCancelledAt(), names.get(o.getCancelledBy()), o.getCancelReason(),
+                o.getWarehouseId(), o.getWarehouseId() == null ? null
+                        : warehouses.names().get(o.getWarehouseId()));
     }
 }

@@ -17,7 +17,9 @@ public enum Feature {
     /** 标准版：批量打印条码标签（扫码本身所有套餐可用）。 */
     LABEL_PRINTING("打印条码标签"),
     /** 专业版：客户协议价（批发价仍为标准版的 WHOLESALE_PRICE）。 */
-    CUSTOMER_PRICES("客户协议价");
+    CUSTOMER_PRICES("客户协议价"),
+    /** 专业版：多仓库（最多 5 个）与调拨。 */
+    WAREHOUSES("多仓库");
 
     private final String label;
 

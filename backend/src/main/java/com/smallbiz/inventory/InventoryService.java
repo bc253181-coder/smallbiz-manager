@@ -2,6 +2,7 @@ package com.smallbiz.inventory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -22,28 +23,40 @@ import jakarta.persistence.EntityManager;
  *
  * <p>每次调用在调用方的事务中：
  * <ol>
- *   <li>对商品行加写锁（SELECT … FOR UPDATE），并发扣减时排队执行，不会超卖；</li>
- *   <li>校验库存是否足够（除非店铺允许负库存）；</li>
- *   <li>更新商品当前库存，并写入一条流水。</li>
+ *   <li>对商品行加写锁（SELECT … FOR UPDATE），同一商品的所有变动（不论哪个仓库）排队执行，不会超卖；</li>
+ *   <li>按<b>仓库</b>校验库存是否足够（除非店铺允许负库存；调拨调出始终不允许变成负数）；</li>
+ *   <li>更新该仓库库存和商品总库存，并写入一条流水（记录仓库，变动前后为该仓库的数量）。</li>
  * </ol>
- * 不变量：商品当前库存 == 该商品所有流水 qty_change 之和。
+ * 不变量：商品总库存 == 各仓库库存之和；某仓库库存 == 该仓库该商品所有流水 qty_change 之和。
+ * 不指定仓库时使用店铺的默认仓库。
  *
  * <p>多个商品一起变动时（例如一张订单），调用方应按商品 id 升序调用，避免死锁。
  */
 @Service
 public class InventoryService {
 
+    /** warehouseId 为空表示默认仓库。 */
     public record Change(MovementType type, int qtyChange, BigDecimal unitCost, String refType, Long refId,
-            String reason, Long operatorId) {
+            String reason, Long operatorId, Long warehouseId) {
+
+        public Change(MovementType type, int qtyChange, BigDecimal unitCost, String refType, Long refId,
+                String reason, Long operatorId) {
+            this(type, qtyChange, unitCost, refType, refId, reason, operatorId, null);
+        }
     }
 
     private final ProductRepository products;
     private final StockMovementRepository movements;
     private final TenantRepository tenants;
     private final EntityManager em;
+    private final com.smallbiz.warehouse.DefaultWarehouse defaultWarehouse;
+    private final com.smallbiz.warehouse.WarehouseRepository warehouses;
 
     public InventoryService(ProductRepository products, StockMovementRepository movements, TenantRepository tenants,
-            EntityManager em) {
+            EntityManager em, com.smallbiz.warehouse.DefaultWarehouse defaultWarehouse,
+            com.smallbiz.warehouse.WarehouseRepository warehouses) {
+        this.defaultWarehouse = defaultWarehouse;
+        this.warehouses = warehouses;
         this.products = products;
         this.movements = movements;
         this.tenants = tenants;
@@ -56,23 +69,31 @@ public class InventoryService {
             throw ApiException.badRequest("ZERO_QUANTITY", "变动数量不能为 0");
         }
         Product product = lockFresh(productId);
+        Long warehouseId = warehouseOf(change.warehouseId(), product.getTenantId());
         int before = product.getStockQty();
         long after = (long) before + change.qtyChange();
-        if (after > Integer.MAX_VALUE || after < Integer.MIN_VALUE) {
+        int warehouseBefore = lockWarehouseQty(product.getId(), warehouseId);
+        long warehouseAfter = (long) warehouseBefore + change.qtyChange();
+        if (after > Integer.MAX_VALUE || after < Integer.MIN_VALUE
+                || warehouseAfter > Integer.MAX_VALUE || warehouseAfter < Integer.MIN_VALUE) {
             throw ApiException.badRequest("QUANTITY_OUT_OF_RANGE", "库存数量超出范围");
         }
-        if (after < 0 && change.qtyChange() < 0 && !allowNegativeStock(product.getTenantId())) {
+        if (warehouseAfter < 0 && change.qtyChange() < 0
+                && (change.type() == MovementType.TRANSFER_OUT || !allowNegativeStock(product.getTenantId()))) {
             throw new ApiException(HttpStatus.CONFLICT, "INSUFFICIENT_STOCK", "「" + product.getName() + "」库存不足",
-                    Map.of("productId", product.getId(), "available", before, "requested", -change.qtyChange()));
+                    Map.of("productId", product.getId(), "warehouseId", warehouseId, "available", warehouseBefore,
+                            "requested", -change.qtyChange()));
         }
+        // 成本按商品计算（各仓库共用移动加权平均成本），以总库存为基数
         if (change.qtyChange() > 0 && change.unitCost() != null
                 && (change.type() == MovementType.STOCK_IN || change.type() == MovementType.PURCHASE_RECEIVE)) {
             product.setCostPrice(weightedAverageCost(before, product.getCostPrice(), change.qtyChange(),
                     change.unitCost()));
         }
         product.applyStockChange((int) after);
-        return movements.save(new StockMovement(product.getId(), change.type(), change.qtyChange(), before,
-                change.unitCost(), change.refType(), change.refId(), trimToNull(change.reason()),
+        writeWarehouseQty(product.getTenantId(), product.getId(), warehouseId, (int) warehouseAfter);
+        return movements.save(new StockMovement(product.getId(), warehouseId, change.type(), change.qtyChange(),
+                warehouseBefore, change.unitCost(), change.refType(), change.refId(), trimToNull(change.reason()),
                 change.operatorId()));
     }
 
@@ -81,16 +102,52 @@ public class InventoryService {
      * 先加锁再计算差额，避免并发时按过期的库存计算。
      */
     @Transactional(propagation = Propagation.MANDATORY)
-    public StockMovement adjustTo(Long productId, int actualQty, String reason, Long operatorId) {
+    public StockMovement adjustTo(Long productId, Long warehouseIdOrNull, int actualQty, String reason, Long operatorId) {
         if (actualQty < 0) {
             throw ApiException.badRequest("INVALID_QUANTITY", "实际数量不能为负数");
         }
         Product product = lockFresh(productId);
-        int delta = actualQty - product.getStockQty();
+        Long warehouseId = warehouseOf(warehouseIdOrNull, product.getTenantId());
+        int delta = actualQty - lockWarehouseQty(product.getId(), warehouseId);
         if (delta == 0) {
             throw ApiException.badRequest("NO_CHANGE", "实际数量与当前库存相同，无需调整");
         }
-        return apply(productId, new Change(MovementType.ADJUSTMENT, delta, null, null, null, reason, operatorId));
+        return apply(productId, new Change(MovementType.ADJUSTMENT, delta, null, null, null, reason, operatorId,
+                warehouseId));
+    }
+
+    /** 盘点默认仓库（兼容只有一个仓库的调用）。 */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public StockMovement adjustTo(Long productId, int actualQty, String reason, Long operatorId) {
+        return adjustTo(productId, null, actualQty, reason, operatorId);
+    }
+
+    private Long warehouseOf(Long warehouseId, Long tenantId) {
+        if (warehouseId == null) {
+            return defaultWarehouse.id(tenantId);
+        }
+        // 仓库必须属于当前店铺（按店铺自动过滤）
+        if (!warehouses.existsById(warehouseId)) {
+            throw ApiException.notFound("WAREHOUSE_NOT_FOUND", "仓库不存在");
+        }
+        return warehouseId;
+    }
+
+    /** 加锁读取该仓库的最新库存（调用前商品行已加锁，同一商品的仓库库存不会并发修改）。 */
+    private int lockWarehouseQty(Long productId, Long warehouseId) {
+        List<?> rows = em.createNativeQuery(
+                "SELECT qty FROM product_stocks WHERE product_id = :p AND warehouse_id = :w FOR UPDATE")
+                .setParameter("p", productId).setParameter("w", warehouseId).getResultList();
+        return rows.isEmpty() ? 0 : ((Number) rows.get(0)).intValue();
+    }
+
+    private void writeWarehouseQty(Long tenantId, Long productId, Long warehouseId, int qty) {
+        em.createNativeQuery("""
+                INSERT INTO product_stocks (tenant_id, product_id, warehouse_id, qty, created_at, updated_at)
+                VALUES (:t, :p, :w, :q, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
+                ON DUPLICATE KEY UPDATE qty = :q, updated_at = UTC_TIMESTAMP(6)
+                """).setParameter("t", tenantId).setParameter("p", productId).setParameter("w", warehouseId)
+                .setParameter("q", qty).executeUpdate();
     }
 
     /**

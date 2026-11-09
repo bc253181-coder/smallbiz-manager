@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { ProductCustomerPricesCard } from '@/features/partners/ProductCustomerPricesCard'
+import { ProductWarehouseStocks } from '@/features/warehouse/ProductWarehouseStocks'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
@@ -171,7 +172,8 @@ export function ProductDetailPage() {
         </Card>
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 grid gap-6 empty:hidden lg:grid-cols-2 [&>*]:min-w-0">
+        <ProductWarehouseStocks productId={p.id} unit={p.unit} />
         <ProductCustomerPricesCard productId={p.id} />
       </div>
 

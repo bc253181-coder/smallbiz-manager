@@ -18,6 +18,8 @@ import { fromCents, isMoney, toCents } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { AxiosError } from 'axios'
 import { receivableApi } from '@/features/receivables/api'
+import { useAuth } from '@/features/auth/AuthProvider'
+import { readLastWarehouse, saveLastWarehouse, useWarehouses, warehouseApi } from '@/features/warehouse/api'
 import { customerPriceApi } from '@/features/partners/customerPrices'
 import { saleApi } from '../api'
 
@@ -135,6 +137,25 @@ export function SaleFormPage() {
     setLines((ls) => ls.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
   }
 
+  // 多仓库：选择出货仓库，库存按该仓库显示和判断（只有一个仓库时不显示）
+  const { session } = useAuth()
+  const tenantId = session?.currentTenant?.id
+  const wh = useWarehouses()
+  const [pickedWarehouse, setPickedWarehouse] = useState<number | null>(null)
+  const lastWarehouse = readLastWarehouse(tenantId)
+  const warehouseId =
+    pickedWarehouse ??
+    (wh.usable.some((w) => w.id === lastWarehouse) ? lastWarehouse : null) ??
+    wh.defaultWarehouse?.id ??
+    null
+  const lineIds = lines.map((l) => l.productId)
+  const warehouseStock = useQuery({
+    queryKey: ['warehouse-stocks', warehouseId, lineIds],
+    queryFn: () => warehouseApi.stocks(warehouseId!, lineIds),
+    enabled: wh.multi && !!warehouseId && lineIds.length > 0,
+  })
+  const stockOf = (l: Line) => (wh.multi ? (warehouseStock.data?.get(l.productId) ?? l.stockQty) : l.stockQty)
+
   const qtyOf = (l: Line) => (/^\d+$/.test(l.quantity) ? Number(l.quantity) : 0)
   const lineErrors = lines.map((l) => ({
     quantity: /^\d+$/.test(l.quantity) && Number(l.quantity) >= 1 && Number(l.quantity) <= 1_000_000 ? null : '请填写 1 以上的整数',
@@ -174,7 +195,9 @@ export function SaleFormPage() {
         notes,
         paidAmount: paidCents === null ? null : fromCents(paidCents),
         items: lines.map((l) => ({ productId: l.productId, quantity: Number(l.quantity), unitPrice: l.unitPrice.trim() })),
+        warehouseId: wh.multi && warehouseId ? warehouseId : undefined,
       })
+      if (wh.multi && warehouseId) saveLastWarehouse(tenantId, warehouseId)
       queryClient.setQueryData(['sale', sale.id], sale)
       await Promise.all(
         [['sales'], ['products'], ['product'], ['product-movements'], ['inventory'], ['customer-stats'], ['receivables'], ['customer-receivable']].map((k) =>
@@ -192,7 +215,7 @@ export function SaleFormPage() {
       if (code === 'INSUFFICIENT_STOCK' && err instanceof AxiosError) {
         const d = (err.response?.data as ApiErrorBody).details as { productId?: number; available?: number } | undefined
         const line = lines.find((l) => l.productId === d?.productId)
-        setFormError(`「${line?.name ?? '商品'}」库存不足，当前只有 ${d?.available ?? 0} ${line?.unit ?? ''}。请减少数量，或先入库。`)
+        setFormError(`「${line?.name ?? '商品'}」${wh.multi ? '该仓库' : ''}库存不足，当前只有 ${d?.available ?? 0} ${line?.unit ?? ''}。请减少数量，或先入库${wh.multi ? ' / 调拨' : ''}。`)
       } else {
         setFormError(errorMessage(err, '开单失败'))
       }
@@ -227,13 +250,13 @@ export function SaleFormPage() {
                     const err = showErrors ? lineErrors[idx] : { quantity: null, unitPrice: null }
                     const c = toCents(l.unitPrice)
                     const sub = c !== null ? fromCents(c * qtyOf(l)) : null
-                    const short = qtyOf(l) > l.stockQty
+                    const short = qtyOf(l) > stockOf(l)
                     return (
                       <li key={l.productId} className="grid grid-cols-[1fr_1fr_1fr_auto] items-start gap-x-3 gap-y-2 p-3">
                         <div className="col-span-full min-w-0">
                           <p className="truncate text-sm font-medium text-slate-900">{l.name}</p>
                           <p className={cn('text-xs', short ? 'font-medium text-amber-700' : 'text-slate-500')}>
-                            {l.sku} · 库存 {l.stockQty} {l.unit}
+                            {l.sku} · {wh.multi ? '该仓库' : ''}库存 {stockOf(l)} {l.unit}
                             {short && '（库存不足）'}
                           </p>
                         </div>
@@ -284,7 +307,7 @@ export function SaleFormPage() {
                   })}
                 </ul>
               )}
-              {lines.some((l) => qtyOf(l) > l.stockQty) && (
+              {lines.some((l) => qtyOf(l) > stockOf(l)) && (
                 <p className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
                   <AlertTriangle className="size-4 shrink-0" aria-hidden />
                   有商品库存不足。除非在「设置」中开启了负库存，否则开单会失败。
@@ -298,6 +321,17 @@ export function SaleFormPage() {
           <Card>
             <CardHeader title="客户与价格" />
             <CardBody className="space-y-4">
+              {wh.multi && (
+                <Field label="出货仓库" htmlFor="sale-warehouse">
+                  <Select id="sale-warehouse" value={warehouseId ?? ''} onChange={(e) => setPickedWarehouse(Number(e.target.value))}>
+                    {wh.usable.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
               {!canCustomers && (
                 <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
                   免费版开单按散客零售价。升级标准版可记录客户、使用批发价。{' '}

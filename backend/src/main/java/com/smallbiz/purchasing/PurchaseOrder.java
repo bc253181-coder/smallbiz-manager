@@ -31,6 +31,10 @@ public class PurchaseOrder extends TenantScopedEntity {
     @Column(name = "supplier_name_snapshot", nullable = false, length = 100)
     private String supplierName;
 
+    /** 收货仓库（收货时确定）。 */
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PurchaseStatus status;
@@ -111,6 +115,14 @@ public class PurchaseOrder extends TenantScopedEntity {
     public void submit(Instant now) {
         this.status = PurchaseStatus.ORDERED;
         this.submittedAt = now;
+    }
+
+    public void setWarehouseId(Long warehouseId) {
+        this.warehouseId = warehouseId;
+    }
+
+    public Long getWarehouseId() {
+        return warehouseId;
     }
 
     public void markReceived(Instant now, Long userId) {

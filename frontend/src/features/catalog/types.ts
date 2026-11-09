@@ -8,6 +8,8 @@ export type MovementType =
   | 'SALE'
   | 'SALE_CANCEL'
   | 'PURCHASE_RECEIVE'
+  | 'TRANSFER_OUT'
+  | 'TRANSFER_IN'
 
 export interface Product {
   id: number
@@ -90,6 +92,8 @@ export const MOVEMENT_LABELS: Record<MovementType, string> = {
   SALE: '销售',
   SALE_CANCEL: '销售取消',
   PURCHASE_RECEIVE: '采购收货',
+  TRANSFER_OUT: '调拨调出',
+  TRANSFER_IN: '调拨调入',
 }
 
 export const COMMON_UNITS = ['件', '个', '台', '套', '盒', '箱', '包', '双', '条', '瓶', '支', '袋', '张', '本', '米', '公斤']

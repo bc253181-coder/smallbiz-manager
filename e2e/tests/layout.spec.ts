@@ -25,6 +25,9 @@ const PAGES = [
   '/settings',
   '/settings/billing',
   '/settings/staff',
+  '/settings/warehouses',
+  '/inventory/transfers',
+  '/inventory/transfers/new',
   '/terms',
   '/privacy',
 ]

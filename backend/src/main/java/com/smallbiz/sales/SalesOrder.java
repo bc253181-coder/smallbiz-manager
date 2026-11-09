@@ -35,6 +35,10 @@ public class SalesOrder extends TenantScopedEntity {
     @Column(name = "customer_name_snapshot", length = 100)
     private String customerName;
 
+    /** 出货仓库。 */
+    @Column(name = "warehouse_id", nullable = false)
+    private Long warehouseId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "price_tier", nullable = false, length = 20)
     private Customer.PriceTier priceTier;
@@ -202,6 +206,14 @@ public class SalesOrder extends TenantScopedEntity {
     /** 毛利 = 实收 − 成本。 */
     public BigDecimal grossProfit() {
         return totalAmount.subtract(totalCost);
+    }
+
+    public void setWarehouseId(Long warehouseId) {
+        this.warehouseId = warehouseId;
+    }
+
+    public Long getWarehouseId() {
+        return warehouseId;
     }
 
     public void setCustomer(Long customerId, String customerName) {
