@@ -58,7 +58,8 @@ public final class AuthDtos {
         }
     }
 
-    public record TenantSummary(Long id, String name, MemberRole role) {
+    /** accessible = false：员工所在店铺的专业版已到期，暂时不能进入（店主续费后恢复）。 */
+    public record TenantSummary(Long id, String name, MemberRole role, boolean accessible) {
     }
 
     public record CurrentTenantView(

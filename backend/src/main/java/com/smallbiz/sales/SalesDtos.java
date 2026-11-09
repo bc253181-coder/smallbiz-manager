@@ -57,6 +57,9 @@ public final class SalesDtos {
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal lineTotal) {
     }
 
+    public record Creator(Long id, String name) {
+    }
+
     public record SaleSummary(
             Long id,
             String orderNo,
@@ -68,12 +71,14 @@ public final class SalesDtos {
             int totalQuantity,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal totalAmount,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal paidAmount,
-            SalesOrder.PaymentStatus paymentStatus) {
+            SalesOrder.PaymentStatus paymentStatus,
+            Long createdBy,
+            String createdByName) {
 
-        static SaleSummary of(SalesOrder o) {
+        static SaleSummary of(SalesOrder o, String createdByName) {
             return new SaleSummary(o.getId(), o.getOrderNo(), o.getCustomerId(), o.getCustomerName(), o.getStatus(),
                     o.getOrderDate(), o.getItemCount(), o.getTotalQuantity(), o.getTotalAmount(), o.getPaidAmount(),
-                    o.getPaymentStatus());
+                    o.getPaymentStatus(), o.getCreatedBy(), createdByName);
         }
     }
 

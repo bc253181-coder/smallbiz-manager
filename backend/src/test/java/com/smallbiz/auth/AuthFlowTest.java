@@ -283,6 +283,7 @@ class AuthFlowTest extends IntegrationTest {
         Session owner = registerWithTenant("boss", "老板的店");
         Long tenantId = currentTenantId(owner, mvc);
         Session staff = register("staff");
+        allowStaff(tenantId);
         members.save(new TenantMember(tenantId, staff.userId(), MemberRole.STAFF));
 
         String body = mvc.perform(withAuth(post("/api/v1/tenants/" + tenantId + "/switch"), staff))

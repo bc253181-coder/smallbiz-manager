@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { ChevronRight, CreditCard } from 'lucide-react'
+import { ChevronRight, CreditCard, Lock, Users } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -11,8 +12,8 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/form'
 import { authApi, tenantApi } from '@/features/auth/api'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { BUSINESS_TYPE_LABELS, PLAN_LABELS, type BusinessType } from '@/features/auth/types'
-import { usePlan } from '@/features/billing/api'
+import { BUSINESS_TYPE_LABELS, PLAN_LABELS, ROLE_LABELS, type BusinessType } from '@/features/auth/types'
+import { useFeature, usePlan } from '@/features/billing/api'
 import { applySession, errorMessage, fieldErrors } from '@/lib/api'
 
 const TIMEZONES = [
@@ -35,6 +36,7 @@ export function SettingsPage() {
         <p className="mt-1 text-sm text-slate-500">管理店铺资料和个人账号</p>
       </div>
       <PlanLink />
+      <MembershipLink />
       <StoreSettings />
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileSettings />
@@ -61,6 +63,67 @@ function PlanLink() {
       </span>
       <ChevronRight className="size-5 text-slate-400" aria-hidden />
     </Link>
+  )
+}
+
+// ---------------- 员工管理（店主）/ 退出店铺（员工） ----------------
+
+function MembershipLink() {
+  const { session, leaveTenant } = useAuth()
+  const navigate = useNavigate()
+  const staffAllowed = useFeature('STAFF_ACCOUNTS')
+  const [confirming, setConfirming] = useState(false)
+  const [leaving, setLeaving] = useState(false)
+  const tenant = session?.currentTenant
+  if (!tenant) return null
+
+  if (tenant.role === 'OWNER') {
+    return (
+      <Link to="/settings/staff" className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:bg-slate-50">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+          <Users className="size-5" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2 font-medium text-slate-900">
+            员工管理
+            {!staffAllowed && <Lock className="size-3.5 text-slate-400" aria-label="需要专业版" />}
+          </span>
+          <span className="block text-sm text-slate-500">邀请员工用自己的账号登录，设置店员或管理员权限</span>
+        </span>
+        <ChevronRight className="size-5 text-slate-400" aria-hidden />
+      </Link>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+      <span className="min-w-0 flex-1 text-sm text-slate-600">
+        你在「{tenant.name}」的身份：<span className="font-medium text-slate-900">{ROLE_LABELS[tenant.role]}</span>
+      </span>
+      <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setConfirming(true)}>
+        退出这家店铺
+      </Button>
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={`退出「${tenant.name}」？`}
+        description="退出后不能再进入这家店铺，需要店主重新邀请。你开过的单会保留。"
+        confirmText="退出店铺"
+        danger
+        loading={leaving}
+        onConfirm={async () => {
+          setLeaving(true)
+          try {
+            const s = await leaveTenant(tenant.id)
+            toast.success(`已退出「${tenant.name}」`)
+            navigate(s.tenants.length > 0 ? '/select-tenant' : '/onboarding', { replace: true })
+          } catch (e) {
+            toast.error(errorMessage(e))
+            setLeaving(false)
+          }
+        }}
+      />
+    </div>
   )
 }
 

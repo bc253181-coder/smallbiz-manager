@@ -17,6 +17,8 @@ export interface SaleSummary {
   totalAmount: string
   paidAmount: string
   paymentStatus: PaymentStatus
+  createdBy: number | null
+  createdByName: string | null
 }
 
 export interface SaleItem {
@@ -86,6 +88,8 @@ export interface SaleQuery {
   customerId?: number
   from?: string
   to?: string
+  /** 开单人（用户 id） */
+  createdBy?: number
   page?: number
   size?: number
 }
@@ -98,6 +102,8 @@ export const saleApi = {
       })
       .then((r) => r.data),
   get: (id: number) => api.get<SaleDetail>(`/sales-orders/${id}`).then((r) => r.data),
+  /** 开过单的人（开单人筛选，店主/管理员） */
+  creators: () => api.get<{ id: number; name: string }[]>('/sales-orders/creators').then((r) => r.data),
   create: (body: SaleInput) => api.post<SaleDetail>('/sales-orders', body).then((r) => r.data),
   cancel: (id: number, reason: string) => api.post<SaleDetail>(`/sales-orders/${id}/cancel`, { reason }).then((r) => r.data),
   customerStats: (customerId: number) => api.get<CustomerStats>(`/customers/${customerId}/stats`).then((r) => r.data),

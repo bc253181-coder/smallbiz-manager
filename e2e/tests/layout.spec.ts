@@ -23,6 +23,7 @@ const PAGES = [
   '/receivables',
   '/settings',
   '/settings/billing',
+  '/settings/staff',
   '/terms',
   '/privacy',
 ]

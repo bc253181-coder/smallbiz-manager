@@ -15,6 +15,7 @@ import com.smallbiz.auth.AuthDtos.SessionResponse;
 import com.smallbiz.auth.AuthDtos.TenantSummary;
 import com.smallbiz.auth.AuthDtos.UpdateProfileRequest;
 import com.smallbiz.auth.AuthDtos.UserView;
+import com.smallbiz.billing.PlanPolicy;
 import com.smallbiz.common.ApiException;
 import com.smallbiz.security.SecurityProperties;
 import com.smallbiz.security.TokenService;
@@ -93,7 +94,7 @@ public class AuthService {
         syncPlatformAdmin(user);
 
         List<TenantMember> memberships = activeMemberships(user.getId());
-        Long tenantId = memberships.size() == 1 ? memberships.get(0).getTenantId() : null;
+        Long tenantId = memberships.size() == 1 && canEnter(memberships.get(0)) ? memberships.get(0).getTenantId() : null;
         return issue(user, tenantId);
     }
 
@@ -121,8 +122,8 @@ public class AuthService {
                 .orElseThrow(() -> ApiException.unauthorized("REFRESH_INVALID", "登录已过期，请重新登录"));
         Long tenantId = token.getCurrentTenantId();
         if (tenantId != null && members.findByTenantIdAndUserIdAndStatus(tenantId, user.getId(),
-                TenantMember.Status.ACTIVE).isEmpty()) {
-            tenantId = null; // 已被移出该商户
+                TenantMember.Status.ACTIVE).filter(this::canEnter).isEmpty()) {
+            tenantId = null; // 已被移出该商户，或员工所在店铺的专业版已到期
         }
         // 平台管理员名单改了配置后，在下次刷新令牌时生效（无需重新登录）
         syncPlatformAdmin(user);
@@ -141,8 +142,11 @@ public class AuthService {
     /** 切换到用户所属的另一个商户；不是成员时返回 404（不暴露商户是否存在）。 */
     @Transactional
     public IssuedSession switchTenant(Long userId, Long tenantId, String currentRefreshToken) {
-        members.findByTenantIdAndUserIdAndStatus(tenantId, userId, TenantMember.Status.ACTIVE)
+        TenantMember m = members.findByTenantIdAndUserIdAndStatus(tenantId, userId, TenantMember.Status.ACTIVE)
                 .orElseThrow(() -> ApiException.notFound("TENANT_NOT_FOUND", "店铺不存在"));
+        if (!canEnter(m)) {
+            throw storePlanExpired();
+        }
         logout(currentRefreshToken);
         return issue(loadUser(userId), tenantId);
     }
@@ -181,19 +185,30 @@ public class AuthService {
     }
 
     private SessionResponse buildResponse(User user, Long tenantId, String refreshTokenOrNull) {
+        Instant now = Instant.now();
         List<TenantMember> memberships = activeMemberships(user.getId());
+        java.util.Map<Long, Tenant> byId = new java.util.HashMap<>();
+        tenants.findAllById(memberships.stream().map(TenantMember::getTenantId).toList())
+                .forEach(t -> byId.put(t.getId(), t));
         List<TenantSummary> summaries = memberships.stream()
-                .map(m -> new TenantSummary(m.getTenantId(),
-                        tenants.findById(m.getTenantId()).map(Tenant::getName).orElse(""), m.getRole()))
+                .filter(m -> byId.containsKey(m.getTenantId()))
+                .map(m -> {
+                    Tenant t = byId.get(m.getTenantId());
+                    return new TenantSummary(t.getId(), t.getName(), m.getRole(),
+                            PlanPolicy.memberCanEnter(t.effectivePlan(now), m.getRole()));
+                })
                 .toList();
 
         CurrentTenantView current = null;
         TenantMember currentMember = tenantId == null ? null
-                : memberships.stream().filter(m -> m.getTenantId().equals(tenantId)).findFirst().orElse(null);
+                : memberships.stream()
+                        .filter(m -> m.getTenantId().equals(tenantId) && byId.containsKey(tenantId)
+                                && PlanPolicy.memberCanEnter(byId.get(tenantId).effectivePlan(now), m.getRole()))
+                        .findFirst().orElse(null);
         if (currentMember != null) {
-            Tenant t = tenants.findById(tenantId).orElseThrow();
+            Tenant t = byId.get(tenantId);
             current = new CurrentTenantView(t.getId(), t.getName(), t.getBusinessType(), currentMember.getRole(),
-                    t.effectivePlan(Instant.now()), t.getPlanExpiresAt(), t.getCurrency(), t.getTimezone());
+                    t.effectivePlan(now), t.getPlanExpiresAt(), t.getCurrency(), t.getTimezone());
         }
 
         String accessToken = null;
@@ -214,6 +229,17 @@ public class AuthService {
         if (user.isPlatformAdmin() != shouldBe) {
             user.setPlatformAdmin(shouldBe);
         }
+    }
+
+    /** 店主总能进入；员工需要店铺当前套餐包含员工账号。 */
+    private boolean canEnter(TenantMember m) {
+        return tenants.findById(m.getTenantId())
+                .map(t -> PlanPolicy.memberCanEnter(t.effectivePlan(Instant.now()), m.getRole()))
+                .orElse(false);
+    }
+
+    public static ApiException storePlanExpired() {
+        return ApiException.forbidden("STORE_PLAN_EXPIRED", "这家店铺的专业版已到期，员工暂时不能进入，请联系店主续费");
     }
 
     private List<TenantMember> activeMemberships(Long userId) {

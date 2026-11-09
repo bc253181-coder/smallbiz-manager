@@ -53,7 +53,11 @@ public class SalesService {
 
     public static final String REF_TYPE = "SALES_ORDER";
 
-    public record Filter(String q, SalesOrder.Status status, Long customerId, LocalDate from, LocalDate to) {
+    public record Filter(String q, SalesOrder.Status status, Long customerId, LocalDate from, LocalDate to,
+            Long createdBy) {
+        public Filter(String q, SalesOrder.Status status, Long customerId, LocalDate from, LocalDate to) {
+            this(q, status, customerId, from, to, null);
+        }
     }
 
     private final SalesOrderRepository orders;
@@ -111,7 +115,24 @@ public class SalesService {
             Instant end = f.to().plusDays(1).atStartOfDay(zone).toInstant();
             spec = spec.and((root, q, cb) -> cb.lessThan(root.get("orderDate"), end));
         }
-        return PageResponse.of(orders.findAll(spec, pageable), SaleSummary::of);
+        if (f.createdBy() != null) {
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("createdBy"), f.createdBy()));
+        }
+        var page = orders.findAll(spec, pageable);
+        java.util.Map<Long, String> names = new java.util.HashMap<>();
+        users.findAllById(page.getContent().stream().map(SalesOrder::getCreatedBy)
+                .filter(java.util.Objects::nonNull).distinct().toList())
+                .forEach(u -> names.put(u.getId(), u.getDisplayName()));
+        return PageResponse.of(page, o -> SaleSummary.of(o, names.get(o.getCreatedBy())));
+    }
+
+    /** 开单人筛选的选项：开过单的人（含已离开店铺的员工），按姓名排序。 */
+    @Transactional(readOnly = true)
+    public java.util.List<SalesDtos.Creator> creators() {
+        return users.findAllById(orders.findCreatorIds()).stream()
+                .map(u -> new SalesDtos.Creator(u.getId(), u.getDisplayName()))
+                .sorted(java.util.Comparator.comparing(SalesDtos.Creator::name))
+                .toList();
     }
 
     @Transactional(readOnly = true)

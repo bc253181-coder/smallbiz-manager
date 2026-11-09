@@ -165,6 +165,7 @@ class ReportApiTest extends IntegrationTest {
         Fixture f = fixture("rp-iso");
         Long tenantId = currentTenantId(f.s(), mvc);
         Session staff = register("rp-staff");
+        allowStaff(tenantId);
         members.save(new TenantMember(tenantId, staff.userId(), MemberRole.STAFF));
         MockHttpServletResponse sw = send(post("/api/v1/tenants/" + tenantId + "/switch"), staff, null);
         Session st = new Session(staff.email(), staff.password(), read(sw, "$.accessToken"), null, staff.userId());

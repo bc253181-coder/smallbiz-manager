@@ -22,6 +22,10 @@ export const tenantApi = {
 
   switchTo: (tenantId: number) => api.post<SessionResponse>(`/tenants/${tenantId}/switch`).then((r) => r.data),
 
+  leave: (tenantId: number) => api.post<SessionResponse>(`/tenants/${tenantId}/leave`).then((r) => r.data),
+
+  acceptInvitation: (token: string) => api.post<SessionResponse>('/invitations/accept', { token }).then((r) => r.data),
+
   current: () => api.get<TenantView>('/tenant').then((r) => r.data),
 
   update: (body: Omit<TenantView, 'id' | 'currency' | 'plan' | 'planExpiresAt'>) =>

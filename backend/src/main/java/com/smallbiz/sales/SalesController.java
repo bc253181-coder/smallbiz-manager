@@ -52,12 +52,20 @@ public class SalesController {
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Long createdBy,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) String sort) {
         Long tenantId = CurrentUser.requireTenantId();
-        return service.list(tenantId, new SalesService.Filter(q, status, customerId, from, to),
+        return service.list(tenantId, new SalesService.Filter(q, status, customerId, from, to, createdBy),
                 Paging.of(page, size, sort, SORTABLE, Sort.by(Sort.Direction.DESC, "orderDate", "id")));
+    }
+
+    @GetMapping("/sales-orders/creators")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public java.util.List<SalesDtos.Creator> creators() {
+        CurrentUser.requireTenantId();
+        return service.creators();
     }
 
     @GetMapping("/sales-orders/{id}")

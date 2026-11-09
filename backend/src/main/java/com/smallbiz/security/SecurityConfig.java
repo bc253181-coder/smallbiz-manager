@@ -54,6 +54,8 @@ public class SecurityConfig {
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/logout").permitAll()
                 .requestMatchers("/error").permitAll()
+                // 员工邀请链接预览（令牌为 256 位随机数，按 IP 限速）
+                .requestMatchers(HttpMethod.GET, "/api/v1/invitations/preview").permitAll()
                 // 健康检查（只暴露 health；Nginx 不对外转发 /actuator）
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 // 客服机器人：未登录访客也可以提问（按 IP 限速）

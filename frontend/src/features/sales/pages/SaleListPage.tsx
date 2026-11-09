@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/form'
+import { Input, Select } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
 import { formatDateTime, useMoney } from '@/lib/format'
-import { useDebouncedValue } from '@/lib/hooks'
+import { useCanManage, useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { saleApi, type SaleStatus } from '../api'
 import { SaleStatusBadge } from '../SaleStatusBadge'
@@ -28,6 +28,11 @@ export function SaleListPage() {
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
   const page = Number(params.get('page') ?? 0)
+  const createdBy = params.get('createdBy') ? Number(params.get('createdBy')) : undefined
+  const canManage = useCanManage()
+  // 只有一个人开过单时不显示开单人筛选和列
+  const creators = useQuery({ queryKey: ['sales', 'creators'], queryFn: saleApi.creators, enabled: canManage })
+  const showCreator = canManage && (creators.data?.length ?? 0) > 1
 
   const [search, setSearch] = useState(q)
   const debounced = useDebouncedValue(search)
@@ -47,12 +52,12 @@ export function SaleListPage() {
 
   const invalidRange = !!(from && to && from > to)
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['sales', { q, status, from, to, page }],
-    queryFn: () => saleApi.list({ q, status, from, to, page, size: 20 }),
+    queryKey: ['sales', { q, status, from, to, createdBy, page }],
+    queryFn: () => saleApi.list({ q, status, from, to, createdBy, page, size: 20 }),
     placeholderData: keepPreviousData,
     enabled: !invalidRange,
   })
-  const filtered = !!(q || status || from || to)
+  const filtered = !!(q || status || from || to || createdBy)
 
   return (
     <div>
@@ -85,11 +90,21 @@ export function SaleListPage() {
               </button>
             ))}
           </div>
-          <div className="grid gap-2 sm:grid-cols-[1fr_10rem_10rem]">
-            <div className="relative">
+          <div className={cn('grid gap-2', showCreator ? 'sm:grid-cols-2 lg:grid-cols-[1fr_9rem_10rem_10rem]' : 'sm:grid-cols-[1fr_10rem_10rem]')}>
+            <div className={cn('relative', showCreator && 'sm:col-span-2 lg:col-span-1')}>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
               <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索单号或客户" className="pl-9" aria-label="搜索销售单" />
             </div>
+            {showCreator && (
+              <Select aria-label="开单人" value={createdBy ?? ''} onChange={(e) => update({ createdBy: e.target.value || null })}>
+                <option value="">全部开单人</option>
+                {creators.data?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            )}
             <Input type="date" aria-label="开始日期" value={from} max={to || undefined} onChange={(e) => update({ from: e.target.value || null })} />
             <Input type="date" aria-label="结束日期" value={to} min={from || undefined} onChange={(e) => update({ to: e.target.value || null })} />
           </div>
@@ -126,6 +141,7 @@ export function SaleListPage() {
                     <th className="px-4 py-3">单号</th>
                     <th className="px-4 py-3">客户</th>
                     <th className="px-4 py-3">时间</th>
+                    {showCreator && <th className="px-4 py-3">开单人</th>}
                     <th className="px-4 py-3 text-right">商品数</th>
                     <th className="px-4 py-3 text-right">金额</th>
                     <th className="px-4 py-3">状态</th>
@@ -141,6 +157,7 @@ export function SaleListPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-700">{o.customerName ?? <span className="text-slate-400">散客</span>}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(o.orderDate)}</td>
+                      {showCreator && <td className="max-w-32 truncate px-4 py-3 text-slate-600">{o.createdByName ?? '—'}</td>}
                       <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{o.totalQuantity} 件</td>
                       <td className={cn('px-4 py-3 text-right font-medium tabular-nums', o.status === 'CANCELLED' && 'text-slate-400 line-through')}>
                         {money(o.totalAmount)}
@@ -160,6 +177,7 @@ export function SaleListPage() {
                         <p className="truncate font-medium text-slate-900">{o.customerName ?? '散客'}</p>
                         <p className="text-xs text-slate-500">
                           {o.orderNo} · {formatDateTime(o.orderDate)}
+                          {showCreator && o.createdByName && ` · ${o.createdByName}`}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1">

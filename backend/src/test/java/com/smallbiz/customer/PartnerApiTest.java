@@ -47,6 +47,7 @@ class PartnerApiTest extends IntegrationTest {
     private Session staffOf(Session owner) throws Exception {
         Long tenantId = currentTenantId(owner, mvc);
         Session staff = register("ptn-staff");
+        allowStaff(tenantId);
         members.save(new TenantMember(tenantId, staff.userId(), MemberRole.STAFF));
         MockHttpServletResponse sw = send(post("/api/v1/tenants/" + tenantId + "/switch"), staff, null);
         return new Session(staff.email(), staff.password(), read(sw, "$.accessToken"), null, staff.userId());

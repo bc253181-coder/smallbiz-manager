@@ -238,6 +238,7 @@ class ProductApiTest extends IntegrationTest {
         Long id = createProduct(owner, "商品", "PERM-1", null, 5);
 
         Session staff = register("p-staff");
+        allowStaff(tenantId);
         members.save(new TenantMember(tenantId, staff.userId(), MemberRole.STAFF));
         MockHttpServletResponse sw = send(post("/api/v1/tenants/" + tenantId + "/switch"), staff, null);
         Session staffIn = new Session(staff.email(), staff.password(), read(sw, "$.accessToken"), null, staff.userId());

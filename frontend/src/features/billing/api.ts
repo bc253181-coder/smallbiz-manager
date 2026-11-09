@@ -3,7 +3,15 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import type { Plan } from '@/features/auth/types'
 import { api } from '@/lib/api'
 
-export type Feature = 'CUSTOMERS' | 'SUPPLIERS' | 'PURCHASING' | 'WHOLESALE_PRICE' | 'FULL_REPORTS' | 'EXPORT' | 'RECEIVABLES'
+export type Feature =
+  | 'CUSTOMERS'
+  | 'SUPPLIERS'
+  | 'PURCHASING'
+  | 'WHOLESALE_PRICE'
+  | 'FULL_REPORTS'
+  | 'EXPORT'
+  | 'RECEIVABLES'
+  | 'STAFF_ACCOUNTS'
 export type Period = 'TRIAL_MONTH' | 'MONTH' | 'YEAR'
 export type PaymentStatus = 'AWAITING_PAYMENT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED'
 export type PlanSource = 'ACTIVATION_CODE' | 'MANUAL_PAYMENT' | 'ADMIN_MANUAL'
@@ -82,6 +90,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   FULL_REPORTS: '完整报表（不限时间范围）',
   EXPORT: '导出 Excel / CSV',
   RECEIVABLES: '应收账款（赊账、收款、对账单）',
+  STAFF_ACCOUNTS: '员工账号',
 }
 
 /** 开通各功能所需的最低套餐（与后端 PlanPolicy 一致）。 */
@@ -93,6 +102,7 @@ export const FEATURE_PLAN: Record<Feature, Plan> = {
   FULL_REPORTS: 'STANDARD',
   EXPORT: 'STANDARD',
   RECEIVABLES: 'PRO',
+  STAFF_ACCOUNTS: 'PRO',
 }
 
 export const PERIOD_LABELS: Record<Period, string> = {

@@ -91,6 +91,11 @@ public abstract class IntegrationTest {
         return s;
     }
 
+    /** 员工账号是专业版功能：直接插入员工的测试先把标准版店铺升为专业版（到期时间不变）。 */
+    protected void allowStaff(Long tenantId) {
+        jdbcTemplate.update("update tenants set plan = 'PRO' where id = ? and plan = 'STANDARD'", tenantId);
+    }
+
     /** 注册并创建免费版店铺。 */
     protected Session registerWithFreeTenant(String prefix, String tenantName) throws Exception {
         return createTenant(register(prefix), tenantName);
