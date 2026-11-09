@@ -50,6 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // 断网时打开的页面：恢复网络后再恢复登录状态（期间保持加载中，不会被当成未登录跳到登录页）
+  useEffect(() => {
+    if (status !== 'loading') return
+    const retry = () => void refreshSession()
+    window.addEventListener('online', retry)
+    return () => window.removeEventListener('online', retry)
+  }, [status])
+
   const accept = useCallback(
     (s: SessionResponse) => {
       // 换了用户或店铺：清空所有缓存数据，避免显示上一个店铺的数据
