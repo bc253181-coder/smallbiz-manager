@@ -27,6 +27,7 @@ import {
   InventoryPage,
   MovementsPage,
   PaymentPage,
+  MockCheckoutPage,
   ProductDetailPage,
   ProductFormPage,
   ProductListPage,
@@ -213,6 +214,8 @@ export const router = createBrowserRouter([
               { path: '/settings/billing', element: <BillingPage /> },
               { element: <RequireOwner />, children: [{ path: '/settings/staff', element: <StaffPage /> }] },
               { path: '/settings/billing/pay/:id', element: <PaymentPage /> },
+          // 模拟支付页面只在开发环境存在（正式构建不包含）
+          ...(import.meta.env.DEV ? [{ path: '/pay/mock/:orderNo', element: <MockCheckoutPage /> }] : []),
               { path: '*', element: <NotFoundPage /> },
             ],
           },

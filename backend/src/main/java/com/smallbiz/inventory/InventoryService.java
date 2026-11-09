@@ -133,8 +133,18 @@ public class InventoryService {
         return warehouseId;
     }
 
-    /** 加锁读取该仓库的最新库存（调用前商品行已加锁，同一商品的仓库库存不会并发修改）。 */
+    /**
+     * 加锁读取该仓库的最新库存（调用前商品行已加锁，同一商品的仓库库存不会并发修改）。
+     *
+     * <p>先确保这一行存在再加锁：对<b>不存在</b>的行 SELECT ... FOR UPDATE 会锁住唯一索引的间隙，
+     * 多家店同时新建商品时（新商品的行都落在同一个间隙）会互相等待插入而死锁。
+     * INSERT IGNORE 插入新行只需要插入意向锁（彼此不冲突）；行已存在时什么也不做，之后的 FOR UPDATE 只锁这一行。
+     */
     private int lockWarehouseQty(Long productId, Long warehouseId) {
+        em.createNativeQuery("""
+                INSERT IGNORE INTO product_stocks (tenant_id, product_id, warehouse_id, qty, created_at, updated_at)
+                SELECT p.tenant_id, p.id, :w, 0, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6) FROM products p WHERE p.id = :p
+                """).setParameter("p", productId).setParameter("w", warehouseId).executeUpdate();
         List<?> rows = em.createNativeQuery(
                 "SELECT qty FROM product_stocks WHERE product_id = :p AND warehouse_id = :w FOR UPDATE")
                 .setParameter("p", productId).setParameter("w", warehouseId).getResultList();

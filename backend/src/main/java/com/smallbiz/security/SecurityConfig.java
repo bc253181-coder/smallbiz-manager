@@ -60,6 +60,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 // 客服机器人：未登录访客也可以提问（按 IP 限速）
                 .requestMatchers("/api/v1/support/**").permitAll()
+                // 支付渠道的付款通知：不登录，靠签名校验
+                .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook/**").permitAll()
                 // 商品图片：文件名是不可猜测的随机 UUID，<img> 标签无法携带令牌，因此公开读取
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                 .requestMatchers("/api/**").authenticated()

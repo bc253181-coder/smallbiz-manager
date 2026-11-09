@@ -65,14 +65,32 @@ public final class BillingDtos {
             boolean hasProof,
             Instant createdAt,
             Long tenantId,
-            String tenantName) {
+            String tenantName,
+            /** 在线支付渠道（扫码付款时为空）。 */
+            String channel,
+            Instant paidAt,
+            String providerTxnId,
+            /** 继续付款的地址（只在待付款的在线付款单上有）。 */
+            String checkoutUrl,
+            String anomaly,
+            Instant anomalyResolvedAt) {
 
         public static PaymentOrderView of(PaymentOrder o, PaymentMethod m, String tenantName) {
             return new PaymentOrderView(o.getId(), o.getOrderNo(), o.getReferenceCode(), o.getPlan(), o.getPeriod(),
                     o.getDurationDays(), o.getCurrency(), o.getAmount(), o.getStatus(), m == null ? null : MethodView.of(m),
                     o.getExpiresAt(), o.getSubmittedAt(), o.getReviewedAt(), o.getRejectReason(), o.getTransactionRef(),
-                    o.getPayerNote(), o.getProofImagePath() != null, o.getCreatedAt(), o.getTenantId(), tenantName);
+                    o.getPayerNote(), o.getProofImagePath() != null, o.getCreatedAt(), o.getTenantId(), tenantName,
+                    o.getChannel(), o.getPaidAt(), o.getProviderTxnId(),
+                    o.getStatus() == PaymentOrder.Status.AWAITING_PAYMENT ? o.getCheckoutRef() : null, o.getAnomaly(),
+                    o.getAnomalyResolvedAt());
         }
+    }
+
+    public record OnlinePaymentRequest(@NotNull(message = "请选择套餐") Long priceId,
+            @NotBlank(message = "请选择支付方式") @Size(max = 30) String channel) {
+    }
+
+    public record OnlinePaymentStarted(PaymentOrderView order, String checkoutUrl) {
     }
 
     public record PlanLogView(Long id, PlanChangeLog.Source source, Plan oldPlan, Plan newPlan, Instant oldExpiresAt,

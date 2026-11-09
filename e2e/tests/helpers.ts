@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { expect, request, type Locator, type Page } from '@playwright/test'
 
 /** 平台管理员账号：优先读环境变量，否则读项目根目录 .env.dev 中的开发账号（不会打印出来）。 */
-function adminCredentials(): { email: string; password: string } {
+export function adminCredentials(): { email: string; password: string } {
   if (process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD) {
     return { email: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD }
   }

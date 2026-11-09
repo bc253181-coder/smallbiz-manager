@@ -16,3 +16,8 @@ smallbiz:
     admin-emails: admin@platform.test
     support-wechat-id: TEST_WECHAT
     payment-assets-dir: ../assets/payment
+  payment:
+    mock-enabled: true
+  # 定时任务（对账）在测试里直接调用
+  scheduling:
+    enabled: false

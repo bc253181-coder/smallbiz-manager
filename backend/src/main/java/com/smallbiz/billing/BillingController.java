@@ -26,6 +26,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.smallbiz.billing.BillingDtos.CreatePaymentRequest;
 import com.smallbiz.billing.BillingDtos.CurrentPlan;
 import com.smallbiz.billing.BillingDtos.MethodView;
+import com.smallbiz.billing.BillingDtos.OnlinePaymentRequest;
+import com.smallbiz.billing.BillingDtos.OnlinePaymentStarted;
+import com.smallbiz.billing.online.OnlinePaymentService;
 import com.smallbiz.billing.BillingDtos.PaymentOrderView;
 import com.smallbiz.billing.BillingDtos.PlanLogView;
 import com.smallbiz.billing.BillingDtos.PriceView;
@@ -52,11 +55,13 @@ public class BillingController {
     private final ActivationService activation;
     private final PaymentService payments;
     private final PlanService planService;
+    private final OnlinePaymentService online;
 
     public BillingController(TenantRepository tenants, ProductRepository products, PlanPriceRepository prices,
             PaymentMethodRepository methods, PlanChangeLogRepository logs, ActivationService activation,
-            PaymentService payments, PlanService planService) {
+            PaymentService payments, PlanService planService, OnlinePaymentService online) {
         this.planService = planService;
+        this.online = online;
         this.tenants = tenants;
         this.products = products;
         this.prices = prices;
@@ -105,6 +110,23 @@ public class BillingController {
     public CurrentPlan redeem(@Valid @RequestBody RedeemRequest req) {
         activation.redeem(CurrentUser.requireTenantId(), CurrentUser.userId(), req.code());
         return current();
+    }
+
+    // ---------------- 在线支付 ----------------
+
+    /** 某币种可用的在线支付渠道；为空时前端不显示在线支付。 */
+    @GetMapping("/online-channels")
+    public List<OnlinePaymentService.Channel> onlineChannels(@RequestParam(defaultValue = "CNY") String currency) {
+        CurrentUser.requireTenantId();
+        return online.channels(currency.toUpperCase());
+    }
+
+    @PostMapping("/online-payments")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<OnlinePaymentStarted> startOnline(@Valid @RequestBody OnlinePaymentRequest req) {
+        OnlinePaymentService.Started s = online.start(CurrentUser.requireTenantId(), CurrentUser.userId(), req.priceId(),
+                req.channel());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new OnlinePaymentStarted(view(s.order()), s.checkoutUrl()));
     }
 
     // ---------------- 扫码付款 ----------------
@@ -157,6 +179,7 @@ public class BillingController {
     }
 
     private PaymentOrderView view(PaymentOrder o) {
-        return PaymentOrderView.of(o, methods.findById(o.getPaymentMethodId()).orElse(null), null);
+        PaymentMethod m = o.getPaymentMethodId() == null ? null : methods.findById(o.getPaymentMethodId()).orElse(null);
+        return PaymentOrderView.of(o, m, null);
     }
 }

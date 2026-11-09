@@ -20,7 +20,7 @@ import jakarta.persistence.Table;
 @Table(name = "plan_change_logs")
 public class PlanChangeLog {
 
-    public enum Source { ACTIVATION_CODE, MANUAL_PAYMENT, ADMIN_MANUAL }
+    public enum Source { ACTIVATION_CODE, MANUAL_PAYMENT, ONLINE_PAYMENT, ADMIN_MANUAL }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
