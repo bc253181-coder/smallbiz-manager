@@ -66,6 +66,20 @@ public class ProductController {
                 Paging.of(page, size, sort, SORTABLE, Sort.by(Sort.Direction.DESC, "updatedAt", "id")), hideCost());
     }
 
+    /** 扫码：按条码（其次 SKU）精确查找。 */
+    @GetMapping("/lookup")
+    public ProductView lookup(@org.springframework.web.bind.annotation.RequestParam String code) {
+        CurrentUser.requireTenantId();
+        return service.lookup(code, hideCost());
+    }
+
+    /** 生成一个未被使用的店内码（只返回号码，保存商品时才写入）。 */
+    @PostMapping("/barcodes/generate")
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    public java.util.Map<String, String> generateBarcode() {
+        return java.util.Map.of("barcode", service.generateBarcode(CurrentUser.requireTenantId()));
+    }
+
     @GetMapping("/{id}")
     public ProductView get(@PathVariable Long id) {
         CurrentUser.requireTenantId();

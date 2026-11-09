@@ -20,6 +20,7 @@ import {
   AdminTenantsPage,
   BillingPage,
   CategoriesPage,
+  LabelsPage,
   CustomerDetailPage,
   CustomerListPage,
   DashboardPage,
@@ -153,6 +154,7 @@ export const router = createBrowserRouter([
                 children: [
                   { path: '/products/new', element: <ProductFormPage /> },
                   { path: '/products/:id/edit', element: <ProductFormPage /> },
+                  { element: <RequireFeature feature="LABEL_PRINTING" />, children: [{ path: '/products/labels', element: <LabelsPage /> }] },
                 ],
               },
               { path: '/products/:id', element: <ProductDetailPage /> },

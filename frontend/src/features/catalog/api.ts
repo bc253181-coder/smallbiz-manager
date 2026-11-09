@@ -39,6 +39,12 @@ export const productApi = {
   },
 
   deleteImage: (id: number) => api.delete<Product>(`/products/${id}/image`).then((r) => r.data),
+
+  /** 扫码：按条码（其次 SKU）精确查找；找不到时接口返回 404。 */
+  lookup: (code: string) => api.get<Product>('/products/lookup', { params: { code } }).then((r) => r.data),
+
+  /** 生成一个未被使用的 13 位店内码（保存商品时才写入）。 */
+  generateBarcode: () => api.post<{ barcode: string }>('/products/barcodes/generate').then((r) => r.data.barcode),
 }
 
 export const categoryApi = {

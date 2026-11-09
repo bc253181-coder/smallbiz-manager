@@ -13,7 +13,9 @@ public enum Feature {
     /** 专业版：邀请员工（店主以外最多 5 人）。 */
     STAFF_ACCOUNTS("员工账号"),
     /** 专业版：导出 Excel（.xlsx）。CSV 导出仍属于标准版的 EXPORT。 */
-    EXCEL_EXPORT("Excel 导出");
+    EXCEL_EXPORT("Excel 导出"),
+    /** 标准版：批量打印条码标签（扫码本身所有套餐可用）。 */
+    LABEL_PRINTING("打印条码标签");
 
     private final String label;
 

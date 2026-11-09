@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { FolderTree, Package, Plus, Search, X } from 'lucide-react'
+import { FolderTree, Package, Plus, Search, Tag, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Badge } from '@/components/ui/badge'
@@ -8,7 +8,11 @@ import { Card } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
+import { toast } from 'sonner'
+import { CameraScanButton } from '@/features/barcode/CameraScanButton'
+import { findByCode, looksLikeCode, vibrate } from '@/features/barcode/scan'
 import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
+import { errorMessage } from '@/lib/api'
 import { ImportButton } from '@/features/excel/ImportDialog'
 import { useMoney, formatQty } from '@/lib/format'
 import { useCanManage, useDebouncedValue } from '@/lib/hooks'
@@ -59,6 +63,22 @@ export function ProductListPage() {
 
   const filtered = !!(q || categoryId || status || lowStock)
 
+  /** quiet：回车时找不到就当普通搜索（可能是英文商品名），不提示。 */
+  async function openByCode(code: string, quiet = false) {
+    try {
+      const p = await findByCode(code)
+      if (p) {
+        vibrate()
+        navigate(`/products/${p.id}`)
+      } else {
+        setSearch(code.trim())
+        if (!quiet) toast.error(`没有条码为「${code.trim()}」的商品`)
+      }
+    } catch (e) {
+      toast.error(errorMessage(e, '查找失败'))
+    }
+  }
+
   const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoryApi.tree })
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['products', { q, categoryId, status, lowStock, sort, page }],
@@ -79,6 +99,12 @@ export function ProductListPage() {
               <FolderTree aria-hidden />
               商品分类
             </Link>
+            {canManage && (
+              <Link to="/products/labels" className={buttonVariants({ variant: 'secondary' })}>
+                <Tag aria-hidden />
+                打印标签
+              </Link>
+            )}
             <ImportButton type="products" />
             <ExcelExportButton
               path="/exports/products"
@@ -104,9 +130,14 @@ export function ProductListPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索商品名称、SKU 或条码"
-              className="pl-9"
+              className="pl-9 pr-11"
               aria-label="搜索商品"
+              onKeyDown={(e) => {
+                // 扫码枪扫完按回车：条码对应唯一商品时直接打开详情
+                if (e.key === 'Enter' && looksLikeCode(search)) void openByCode(search, true)
+              }}
             />
+            <CameraScanButton onCode={(code) => void openByCode(code)} />
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Select

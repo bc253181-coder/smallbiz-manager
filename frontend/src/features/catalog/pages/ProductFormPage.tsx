@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ImagePlus, Trash2 } from 'lucide-react'
+import { ImagePlus, ScanLine, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Field, FormError, Input, Select, Textarea } from '@/components/ui/form'
 import { ErrorState, PageHeader } from '@/components/ui/page'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { CameraScanner } from '@/features/barcode/CameraScanner'
 import { errorCode, errorMessage, fieldErrors } from '@/lib/api'
 import { categoryApi, flattenCategories, productApi } from '../api'
 import { COMMON_UNITS, type Product, type ProductInput } from '../types'
@@ -132,10 +133,17 @@ function ProductForm({ product }: { product?: Product }) {
 
   const { data: categories } = useQuery({ queryKey: ['categories'], queryFn: categoryApi.tree })
 
+  // 从「扫码找不到 → 用这个条码新建商品」过来时预填条码
+  const [searchParams] = useSearchParams()
+  const initialBarcode = searchParams.get('barcode') ?? ''
+  const [scanningBarcode, setScanningBarcode] = useState(false)
+  const [generating, setGenerating] = useState(false)
+
   const {
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -146,7 +154,7 @@ function ProductForm({ product }: { product?: Product }) {
           sku: '',
           categoryId: '',
           unit: '件',
-          barcode: '',
+          barcode: initialBarcode,
           description: '',
           costPrice: '',
           retailPrice: '',
@@ -197,6 +205,7 @@ function ProductForm({ product }: { product?: Product }) {
       Object.entries(fields).forEach(([k, msg]) => setError(k as keyof FormValues, { message: msg }))
       const code = errorCode(e)
       if (code === 'SKU_EXISTS') setError('sku', { message: errorMessage(e) })
+      else if (code === 'BARCODE_EXISTS') setError('barcode', { message: errorMessage(e) })
       else if (code === 'CONCURRENT_MODIFICATION') {
         setFormError('这个商品刚被其他人修改过。请刷新页面查看最新内容后再修改。')
       } else if (Object.keys(fields).length === 0) setFormError(errorMessage(e, '保存失败'))
@@ -246,8 +255,40 @@ function ProductForm({ product }: { product?: Product }) {
                   ))}
                 </datalist>
               </Field>
-              <Field label="条形码" htmlFor="barcode" error={errors.barcode?.message}>
-                <Input id="barcode" inputMode="numeric" invalid={!!errors.barcode} {...register('barcode')} />
+              <Field label="条形码" htmlFor="barcode" error={errors.barcode?.message} hint="可用扫码枪直接扫入；没有条码可生成店内码">
+                <div className="flex gap-2">
+                  <Input
+                    id="barcode"
+                    inputMode="numeric"
+                    invalid={!!errors.barcode}
+                    {...register('barcode')}
+                    onKeyDown={(e) => {
+                      // 扫码枪扫完会按回车：不要提交整个表单
+                      if (e.key === 'Enter') e.preventDefault()
+                    }}
+                  />
+                  <Button type="button" variant="secondary" className="shrink-0 px-3" aria-label="用摄像头扫条码" title="用摄像头扫条码" onClick={() => setScanningBarcode(true)}>
+                    <ScanLine aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="shrink-0"
+                    loading={generating}
+                    onClick={async () => {
+                      setGenerating(true)
+                      try {
+                        setValue('barcode', await productApi.generateBarcode(), { shouldDirty: true, shouldValidate: true })
+                      } catch (e) {
+                        toast.error(errorMessage(e, '生成失败'))
+                      } finally {
+                        setGenerating(false)
+                      }
+                    }}
+                  >
+                    生成店内码
+                  </Button>
+                </div>
               </Field>
               <Field label="商品描述" htmlFor="description" error={errors.description?.message} className="sm:col-span-2">
                 <Textarea id="description" rows={3} invalid={!!errors.description} {...register('description')} />
@@ -378,6 +419,13 @@ function ProductForm({ product }: { product?: Product }) {
           </div>
         </div>
       </form>
+      {scanningBarcode && (
+        <CameraScanner
+          title="扫商品条码"
+          onDetected={(code) => setValue('barcode', code, { shouldDirty: true, shouldValidate: true })}
+          onClose={() => setScanningBarcode(false)}
+        />
+      )}
     </div>
   )
 }

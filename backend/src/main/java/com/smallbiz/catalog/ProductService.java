@@ -129,6 +129,7 @@ public class ProductService {
         } else if (products.existsBySku(sku)) {
             throw ApiException.conflict("SKU_EXISTS", "SKU「" + sku + "」已被其他商品使用");
         }
+        checkBarcodeFree(req.barcode(), null);
         Product p = new Product(sku, req.name().trim(), userId);
         applyCommon(p, req.categoryId(), req.description(), req.unit(), req.barcode(), req.costPrice(),
                 req.retailPrice(), req.wholesalePrice(), req.lowStockThreshold(),
@@ -154,6 +155,7 @@ public class ProductService {
             });
             p.setSku(sku);
         }
+        checkBarcodeFree(req.barcode(), p.getId());
         p.setName(req.name().trim());
         applyCommon(p, req.categoryId(), req.description(), req.unit(), req.barcode(), req.costPrice(),
                 req.retailPrice(), req.wholesalePrice(), req.lowStockThreshold(), req.status());
@@ -187,6 +189,56 @@ public class ProductService {
         return toView(p, categoryNames(), false);
     }
 
+    // ---------------- 条码 ----------------
+
+    /** 扫码：按条码精确查找，其次按 SKU；找不到返回 404。 */
+    @Transactional(readOnly = true)
+    public ProductView lookup(String code, boolean hideCost) {
+        String c = code == null ? "" : code.trim();
+        if (c.isEmpty()) {
+            throw ApiException.notFound("PRODUCT_NOT_FOUND", "没有找到商品");
+        }
+        Product p = products.findFirstByBarcodeOrderByIdAsc(c).or(() -> products.findBySku(c))
+                .orElseThrow(() -> ApiException.notFound("PRODUCT_NOT_FOUND", "没有条码为「" + c + "」的商品"));
+        return toView(p, categoryNames(), hideCost);
+    }
+
+    /**
+     * 生成一个未被使用的 13 位店内码：20 + 10 位店铺内序号 + EAN-13 校验位。
+     * 以 20 开头的号段是国际上留给店内自用的，不会和商品包装上的条码冲突。
+     */
+    @Transactional
+    public String generateBarcode(Long tenantId) {
+        for (int i = 0; i < 20; i++) {
+            String body = String.format("20%010d", sequences.next(tenantId, "BARCODE"));
+            String code = body + ean13CheckDigit(body);
+            if (products.findFirstByBarcodeOrderByIdAsc(code).isEmpty()) {
+                return code;
+            }
+        }
+        throw ApiException.conflict("BARCODE_GENERATION_FAILED", "生成店内码失败，请稍后再试");
+    }
+
+    /** EAN-13 校验位：前 12 位从左起奇数位 ×1、偶数位 ×3 求和，补足到 10 的倍数。 */
+    public static int ean13CheckDigit(String first12) {
+        int sum = 0;
+        for (int i = 0; i < 12; i++) {
+            int d = first12.charAt(i) - '0';
+            sum += (i % 2 == 0) ? d : d * 3;
+        }
+        return (10 - sum % 10) % 10;
+    }
+
+    private void checkBarcodeFree(String barcode, Long selfId) {
+        String b = blankToNull(barcode);
+        if (b == null) {
+            return;
+        }
+        products.findFirstByBarcodeOrderByIdAsc(b).filter(other -> !other.getId().equals(selfId)).ifPresent(other -> {
+            throw ApiException.conflict("BARCODE_EXISTS", "条码「" + b + "」已被商品「" + other.getName() + "」使用");
+        });
+    }
+
     // ---------------- 内部 ----------------
 
     /** 加载当前店铺的商品；其他店铺的商品或已删除商品一律视为不存在（404）。 */
@@ -217,6 +269,9 @@ public class ProductService {
             return products.saveAndFlush(p);
         } catch (DataIntegrityViolationException e) {
             // 并发情况下唯一索引兜底
+            if (String.valueOf(e.getMessage()).contains("barcode")) {
+                throw ApiException.conflict("BARCODE_EXISTS", "条码「" + p.getBarcode() + "」已被其他商品使用");
+            }
             throw ApiException.conflict("SKU_EXISTS", "SKU「" + p.getSku() + "」已被其他商品使用");
         }
     }

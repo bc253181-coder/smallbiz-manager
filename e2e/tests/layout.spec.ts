@@ -11,6 +11,7 @@ const PAGES = [
   '/products',
   '/products/new',
   '/products/categories',
+  '/products/labels',
   '/inventory',
   '/inventory/movements',
   '/sales',

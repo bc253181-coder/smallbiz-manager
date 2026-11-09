@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { History, PackageX, Pencil, Trash2 } from 'lucide-react'
+import { History, PackageX, Pencil, Tag, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -96,6 +96,10 @@ export function ProductDetailPage() {
                 <Trash2 aria-hidden />
                 删除
               </Button>
+              <Link to={`/products/labels?ids=${p.id}`} className={buttonVariants({ variant: 'secondary' })}>
+                <Tag aria-hidden />
+                打印标签
+              </Link>
               <Link to={`/products/${p.id}/edit`} className={buttonVariants()}>
                 <Pencil aria-hidden />
                 编辑
