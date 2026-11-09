@@ -86,6 +86,20 @@ export function DashboardPage() {
         />
       </div>
 
+      {/* 以前开店时不能选币种：时区在马来西亚 / 新加坡但仍是人民币的店铺，提醒店主确认 */}
+      {tenant.role === 'OWNER' &&
+        detail.data &&
+        !detail.data.currencyConfirmed &&
+        detail.data.currency === 'CNY' &&
+        ['Asia/Kuala_Lumpur', 'Asia/Kuching', 'Asia/Singapore'].includes(detail.data.timezone) && (
+          <Link
+            to="/settings"
+            className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-900 hover:bg-blue-100"
+          >
+            <span className="flex-1">店铺币种目前是人民币（¥）。如果你用马币或新币收款，请到「设置 → 店铺资料」修改币种（只改显示符号，不换算金额）。</span>
+            <ChevronRight className="size-4 shrink-0" aria-hidden />
+          </Link>
+        )}
       {receivables.data && Number(receivables.data.totalOutstanding) > 0 && (
         <Link
           to="/receivables"

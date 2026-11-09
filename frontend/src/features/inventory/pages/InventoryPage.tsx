@@ -265,7 +265,7 @@ function Stat({
   tone?: 'amber' | 'red'
   onClick?: () => void
 }) {
-  const shown = text ?? (value === undefined ? undefined : value.toLocaleString('zh-CN'))
+  const shown = text ?? (value === undefined ? undefined : formatQty(value))
   const Tag = onClick ? 'button' : 'div'
   return (
     <Tag

@@ -6,7 +6,8 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import { AuthLayout } from '@/components/layout/AuthLayout'
 import { Button } from '@/components/ui/button'
-import { Field, FormError, Input } from '@/components/ui/form'
+import { Field, FormError, Input, Select } from '@/components/ui/form'
+import { CURRENCIES, guessCurrency } from '@/lib/currency'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { BUSINESS_TYPE_LABELS, type BusinessType } from '@/features/auth/types'
 import { errorMessage } from '@/lib/api'
@@ -23,6 +24,7 @@ const TYPES: { value: BusinessType; hint: string }[] = [
 const schema = z.object({
   name: z.string().trim().min(1, '请填写店铺名称').max(100, '店铺名称最多 100 字'),
   businessType: z.enum(['RETAIL', 'WHOLESALE', 'ECOMMERCE', 'TRADING', 'OTHER'], { message: '请选择经营类型' }),
+  currency: z.string().min(3),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -37,13 +39,13 @@ export function CreateStorePage({ firstStore }: { firstStore: boolean }) {
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { businessType: 'RETAIL' } })
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { businessType: 'RETAIL', currency: guessCurrency() } })
   const selected = watch('businessType')
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null)
     try {
-      const s = await createTenant(values.name, values.businessType)
+      const s = await createTenant(values.name, values.businessType, values.currency)
       toast.success(`店铺「${s.currentTenant?.name}」创建成功`)
       navigate('/', { replace: true })
     } catch (e) {
@@ -63,6 +65,16 @@ export function CreateStorePage({ firstStore }: { firstStore: boolean }) {
         <FormError message={formError} />
         <Field label="店铺名称" htmlFor="name" error={errors.name?.message} required>
           <Input id="name" placeholder="例如：小美饰品店" invalid={!!errors.name} {...register('name')} />
+        </Field>
+
+        <Field label="币种" htmlFor="currency" hint="店铺的所有金额都用这个币种显示。有了销售或采购记录后不能再修改。">
+          <Select id="currency" {...register('currency')}>
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name}（{c.code} {c.symbol.trim()}）
+              </option>
+            ))}
+          </Select>
         </Field>
 
         <fieldset>

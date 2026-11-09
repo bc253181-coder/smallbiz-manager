@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { downloadCsv } from '@/features/reports/api'
 import { errorMessage } from '@/lib/api'
-import { formatDateTime, useMoney } from '@/lib/format'
+import { formatDay, useMoney } from '@/lib/format'
 import { useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { receivableApi, type Aging, type ReceivableCustomerRow } from '../api'
@@ -161,7 +161,7 @@ export function ReceivablesPage() {
                         <td className="px-4 py-2.5 text-right font-semibold tabular-nums">{money(r.outstanding)}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{r.openOrderCount} 张</td>
                         <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">
-                          {formatDateTime(r.oldestOrderDate).slice(0, 10)}
+                          {formatDay(r.oldestOrderDate)}
                           <span className={cn('ml-1 text-xs', r.oldestDays > 30 ? 'text-red-600' : 'text-slate-400')}>（{r.oldestDays} 天）</span>
                         </td>
                         <td className={cn('px-4 py-2.5 text-right tabular-nums', over30 > 0 ? 'text-red-600' : 'text-slate-400')}>

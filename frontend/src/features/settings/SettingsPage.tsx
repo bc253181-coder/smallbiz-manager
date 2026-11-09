@@ -17,6 +17,8 @@ import { useFeature, usePlan } from '@/features/billing/api'
 import { useWarehouses } from '@/features/warehouse/api'
 import { useCanManage } from '@/lib/hooks'
 import { applySession, errorMessage, fieldErrors } from '@/lib/api'
+import { CURRENCIES } from '@/lib/currency'
+import { formatDay } from '@/lib/format'
 
 const TIMEZONES = [
   { value: 'Asia/Shanghai', label: '中国（北京时间 UTC+8）' },
@@ -26,6 +28,7 @@ const TIMEZONES = [
   { value: 'Asia/Taipei', label: '台湾（UTC+8）' },
   { value: 'Asia/Bangkok', label: '泰国（UTC+7）' },
   { value: 'Asia/Tokyo', label: '日本（UTC+9）' },
+  { value: 'America/New_York', label: '美国东部时间' },
 ]
 
 const phonePattern = /^[0-9+\- ]*$/
@@ -61,7 +64,7 @@ function PlanLink() {
       <span className="min-w-0 flex-1">
         <span className="block font-medium text-slate-900">套餐与续费</span>
         <span className="block text-sm text-slate-500">
-          {data ? `当前：${PLAN_LABELS[data.plan]}${data.expiresAt ? `，${new Date(data.expiresAt).toLocaleDateString('zh-CN')} 到期` : ''}` : '查看套餐、兑换激活码'}
+          {data ? `当前：${PLAN_LABELS[data.plan]}${data.expiresAt ? `，${formatDay(data.expiresAt)} 到期` : ''}` : '查看套餐、兑换激活码'}
         </span>
       </span>
       <ChevronRight className="size-5 text-slate-400" aria-hidden />
@@ -165,6 +168,7 @@ const storeSchema = z.object({
   contactPhone: z.string().trim().max(30, '电话最多 30 位').regex(phonePattern, '电话格式不正确'),
   address: z.string().trim().max(300, '地址最多 300 字'),
   allowNegativeStock: z.boolean(),
+  currency: z.string().min(3),
 })
 type StoreValues = z.infer<typeof storeSchema>
 
@@ -191,6 +195,7 @@ function StoreSettings() {
         contactPhone: data.contactPhone ?? '',
         address: data.address ?? '',
         allowNegativeStock: data.allowNegativeStock,
+        currency: data.currency,
       })
     }
   }, [data, reset])
@@ -199,10 +204,12 @@ function StoreSettings() {
     mutationFn: tenantApi.update,
     onSuccess: (updated) => {
       queryClient.setQueryData(['tenant'], updated)
+      // 币种影响套餐价格和所有金额显示
+      void queryClient.invalidateQueries({ queryKey: ['billing'] })
       patchSession((s) => ({
         ...s,
         currentTenant: s.currentTenant
-          ? { ...s.currentTenant, name: updated.name, businessType: updated.businessType, timezone: updated.timezone }
+          ? { ...s.currentTenant, name: updated.name, businessType: updated.businessType, timezone: updated.timezone, currency: updated.currency }
           : null,
         tenants: s.tenants.map((t) => (t.id === updated.id ? { ...t, name: updated.name } : t)),
       }))
@@ -247,6 +254,23 @@ function StoreSettings() {
               </Field>
               <Field label="联系电话" htmlFor="s-phone" error={errors.contactPhone?.message}>
                 <Input id="s-phone" type="tel" invalid={!!errors.contactPhone} {...register('contactPhone')} />
+              </Field>
+              <Field
+                label="币种"
+                htmlFor="s-currency"
+                hint={
+                  data?.currencyLocked
+                    ? '店铺已有销售、采购或收款记录，不能再修改币种'
+                    : '只改变金额显示的货币符号，不会换算已有金额'
+                }
+              >
+                <Select id="s-currency" disabled={data?.currencyLocked} {...register('currency')}>
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}（{c.code} {c.symbol.trim()}）
+                    </option>
+                  ))}
+                </Select>
               </Field>
               <Field label="时区" htmlFor="s-tz" hint="用于计算「今日」「本月」销售额">
                 <Select id="s-tz" {...register('timezone')}>

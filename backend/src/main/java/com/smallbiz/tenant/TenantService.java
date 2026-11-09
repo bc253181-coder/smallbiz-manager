@@ -47,7 +47,16 @@ public class TenantService {
         if (owned >= MAX_OWNED_TENANTS) {
             throw ApiException.conflict("TENANT_LIMIT_REACHED", "每个账号最多创建 " + MAX_OWNED_TENANTS + " 个店铺");
         }
-        Tenant tenant = tenants.save(new Tenant(req.name().trim(), req.businessType(), userId));
+        Tenant newTenant = new Tenant(req.name().trim(), req.businessType(), userId);
+        if (req.currency() != null && !req.currency().isBlank()) {
+            String currency = Currencies.require(req.currency());
+            newTenant.setCurrency(currency);
+            newTenant.setTimezone(Currencies.DEFAULT_TIMEZONE.get(currency));
+        }
+        if (req.timezone() != null && !req.timezone().isBlank()) {
+            newTenant.setTimezone(validTimezone(req.timezone()));
+        }
+        Tenant tenant = tenants.save(newTenant);
         members.save(new TenantMember(tenant.getId(), userId, MemberRole.OWNER));
         // 每家店一个默认仓库。当前会话的店铺 id 在请求开始时就确定了（那时还没有这家店），
         // 所以用原生 SQL 在同一事务里显式写入 tenant_id
@@ -62,7 +71,30 @@ public class TenantService {
 
     @Transactional(readOnly = true)
     public TenantView get(Long tenantId) {
-        return TenantView.of(load(tenantId), Instant.now());
+        Tenant t = load(tenantId);
+        return TenantView.of(t, Instant.now(), currencyLocked(t));
+    }
+
+    /** 已确认过币种、且已有销售 / 采购 / 收款记录：不能再改币种（否则历史金额的含义会变）。 */
+    private boolean currencyLocked(Tenant t) {
+        if (!t.isCurrencyConfirmed()) {
+            return false;
+        }
+        Number n = (Number) em.createNativeQuery("""
+                SELECT (SELECT COUNT(*) FROM sales_orders WHERE tenant_id = :t)
+                     + (SELECT COUNT(*) FROM purchase_orders WHERE tenant_id = :t)
+                     + (SELECT COUNT(*) FROM customer_payments WHERE tenant_id = :t)
+                """).setParameter("t", t.getId()).getSingleResult();
+        return n.longValue() > 0;
+    }
+
+    private static String validTimezone(String tz) {
+        try {
+            ZoneId.of(tz);
+            return tz;
+        } catch (DateTimeException e) {
+            throw ApiException.badRequest("INVALID_TIMEZONE", "时区不正确");
+        }
     }
 
     @Transactional
@@ -73,13 +105,24 @@ public class TenantService {
             throw ApiException.badRequest("INVALID_TIMEZONE", "时区不正确");
         }
         Tenant t = load(tenantId);
+        if (req.currency() != null && !req.currency().isBlank()) {
+            String currency = Currencies.require(req.currency());
+            if (!currency.equals(t.getCurrency())) {
+                if (currencyLocked(t)) {
+                    throw ApiException.conflict("CURRENCY_LOCKED", "店铺已有销售、采购或收款记录，不能再修改币种");
+                }
+                t.setCurrency(currency);
+            } else if (!t.isCurrencyConfirmed()) {
+                t.setCurrency(currency); // 店主确认了当前币种
+            }
+        }
         t.setName(req.name().trim());
         t.setBusinessType(req.businessType());
         t.setTimezone(req.timezone());
         t.setContactPhone(blankToNull(req.contactPhone()));
         t.setAddress(blankToNull(req.address()));
         t.setAllowNegativeStock(req.allowNegativeStock());
-        return TenantView.of(t, Instant.now());
+        return TenantView.of(t, Instant.now(), currencyLocked(t));
     }
 
     private Tenant load(Long tenantId) {

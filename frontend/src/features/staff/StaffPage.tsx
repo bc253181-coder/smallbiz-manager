@@ -13,7 +13,7 @@ import { FormDialog } from '@/components/ui/form-dialog'
 import { ErrorState, PageHeader } from '@/components/ui/page'
 import { ROLE_LABELS } from '@/features/auth/types'
 import { errorMessage } from '@/lib/api'
-import { formatDateTime } from '@/lib/format'
+import { formatDateTime, formatDay } from '@/lib/format'
 import { inviteLink, ROLE_DESCRIPTIONS, staffApi, type AssignableRole, type Member } from './api'
 
 const QUERY_KEY = ['members']
@@ -109,7 +109,7 @@ export function StaffPage() {
                       </p>
                       <p className="truncate text-xs text-slate-500">{m.email}</p>
                       <p className="text-xs text-slate-400">
-                        {formatDateTime(m.joinedAt).slice(0, 10)} 加入
+                        {formatDay(m.joinedAt)} 加入
                         {m.lastLoginAt && ` · 最近登录 ${formatDateTime(m.lastLoginAt)}`}
                       </p>
                     </div>

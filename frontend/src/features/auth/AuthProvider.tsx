@@ -12,7 +12,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<SessionResponse>
   register: (email: string, password: string, displayName: string) => Promise<SessionResponse>
   logout: () => Promise<void>
-  createTenant: (name: string, businessType: BusinessType) => Promise<SessionResponse>
+  createTenant: (name: string, businessType: BusinessType, currency?: string) => Promise<SessionResponse>
   switchTenant: (tenantId: number) => Promise<SessionResponse>
   /** 接受员工邀请：加入店铺并切换过去。 */
   acceptInvitation: (token: string) => Promise<SessionResponse>
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           applySession(null)
         }
       },
-      createTenant: async (name, businessType) => accept(await tenantApi.create({ name, businessType })),
+      createTenant: async (name, businessType, currency) => accept(await tenantApi.create({ name, businessType, currency })),
       switchTenant: async (tenantId) => accept(await tenantApi.switchTo(tenantId)),
       acceptInvitation: async (token) => accept(await tenantApi.acceptInvitation(token)),
       leaveTenant: async (tenantId) => accept(await tenantApi.leave(tenantId)),

@@ -48,6 +48,9 @@ export interface TenantView {
   planExpiresAt: string | null
   contactPhone: string | null
   address: string | null
+  /** 已有业务数据且币种已确认：不能再改币种 */
+  currencyLocked: boolean
+  currencyConfirmed: boolean
 }
 
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
