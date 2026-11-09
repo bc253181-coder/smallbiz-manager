@@ -18,13 +18,14 @@ import { formatDateTime, useMoney } from '@/lib/format'
 import { useCanManage } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 
+import { tr } from '@/lib/i18n'
 function greeting(): string {
   const h = new Date().getHours()
-  if (h < 6) return '夜深了'
-  if (h < 12) return '早上好'
-  if (h < 14) return '中午好'
-  if (h < 18) return '下午好'
-  return '晚上好'
+  if (h < 6) return tr('夜深了')
+  if (h < 12) return tr('早上好')
+  if (h < 14) return tr('中午好')
+  if (h < 18) return tr('下午好')
+  return tr('晚上好')
 }
 
 export function DashboardPage() {
@@ -57,30 +58,30 @@ export function DashboardPage() {
           <h1 className="text-2xl font-semibold text-slate-900">
             {greeting()}，{session.user.displayName}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">「{tenant.name}」经营概览{s ? ` · ${s.today.replaceAll('-', '/')}` : ''}</p>
+          <p className="mt-1 text-sm text-slate-500">「{tenant.name}{tr('」经营概览')}{s ? ` · ${s.today.replaceAll('-', '/')}` : ''}</p>
         </div>
         <Link to="/sales/new" className={cn(buttonVariants(), 'hidden sm:inline-flex')}>
           <Plus aria-hidden />
-          开单
+          {tr('开单')}
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <Stat label="今日销售额" value={s ? money(s.todaySales) : undefined} sub={s ? `${s.todayOrders} 笔订单` : undefined} to="/sales" />
-        <Stat label="本月销售额" value={s ? money(s.monthSales) : undefined} sub={s ? `${s.monthOrders} 笔订单` : undefined} to="/sales" />
+        <Stat label={tr('今日销售额')} value={s ? money(s.todaySales) : undefined} sub={s ? tr('{{todayOrders}} 笔订单', { todayOrders: s.todayOrders }) : undefined} to="/sales" />
+        <Stat label={tr('本月销售额')} value={s ? money(s.monthSales) : undefined} sub={s ? tr('{{monthOrders}} 笔订单', { monthOrders: s.monthOrders }) : undefined} to="/sales" />
         {canManage ? (
           <>
-            <Stat label="本月毛利" value={s?.monthGrossProfit != null ? money(s.monthGrossProfit) : undefined} sub="销售额 − 成本" to="/reports" />
-            <Stat label="本月采购" value={s?.monthPurchases != null ? money(s.monthPurchases) : undefined} sub="已收货的采购" to="/purchases" />
-            <Stat label="库存价值" value={inv?.inventoryValue != null ? money(inv.inventoryValue) : undefined} sub={inv ? `${inv.productCount} 种商品` : undefined} to="/inventory" />
+            <Stat label={tr('本月毛利')} value={s?.monthGrossProfit != null ? money(s.monthGrossProfit) : undefined} sub={tr('销售额 − 成本')} to="/reports" />
+            <Stat label={tr('本月采购')} value={s?.monthPurchases != null ? money(s.monthPurchases) : undefined} sub={tr('已收货的采购')} to="/purchases" />
+            <Stat label={tr('库存价值')} value={inv?.inventoryValue != null ? money(inv.inventoryValue) : undefined} sub={inv ? tr('{{productCount}} 种商品', { productCount: inv.productCount }) : undefined} to="/inventory" />
           </>
         ) : (
-          <Stat label="商品数" value={inv ? String(inv.productCount) : undefined} sub={inv ? `库存 ${inv.totalQty} 件` : undefined} to="/products" />
+          <Stat label={tr('商品数')} value={inv ? String(inv.productCount) : undefined} sub={inv ? tr('库存 {{totalQty}} 件', { totalQty: inv.totalQty }) : undefined} to="/products" />
         )}
         <Stat
-          label="低库存商品"
+          label={tr('低库存商品')}
           value={inv ? String(inv.lowStockCount) : undefined}
-          sub={inv ? (inv.outOfStockCount ? `其中缺货 ${inv.outOfStockCount}` : inv.lowStockCount ? '需要补货' : '库存充足') : undefined}
+          sub={inv ? (inv.outOfStockCount ? tr('其中缺货 {{outOfStockCount}}', { outOfStockCount: inv.outOfStockCount }) : inv.lowStockCount ? tr('需要补货') : tr('库存充足')) : undefined}
           to="/inventory?lowStock=true"
           tone={inv?.lowStockCount ? 'amber' : undefined}
         />
@@ -96,7 +97,7 @@ export function DashboardPage() {
             to="/settings"
             className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-900 hover:bg-blue-100"
           >
-            <span className="flex-1">店铺币种目前是人民币（¥）。如果你用马币或新币收款，请到「设置 → 店铺资料」修改币种（只改显示符号，不换算金额）。</span>
+            <span className="flex-1">{tr('店铺币种目前是人民币（¥）。如果你用马币或新币收款，请到「设置 → 店铺资料」修改币种（只改显示符号，不换算金额）。')}</span>
             <ChevronRight className="size-4 shrink-0" aria-hidden />
           </Link>
         )}
@@ -107,22 +108,22 @@ export function DashboardPage() {
         >
           <span className="flex items-center gap-2 font-medium">
             <HandCoins className="size-4" aria-hidden />
-            应收账款 <span className="tabular-nums">{money(receivables.data.totalOutstanding)}</span>
+            {tr('应收账款')} <span className="tabular-nums">{money(receivables.data.totalOutstanding)}</span>
           </span>
-          <span className="text-amber-800">{receivables.data.customerCount} 位客户欠款</span>
+          <span className="text-amber-800">{receivables.data.customerCount} {tr('位客户欠款')}</span>
           {Number(receivables.data.overdue30) > 0 && (
-            <span className="text-red-700">逾期 30 天以上 {money(receivables.data.overdue30)}</span>
+            <span className="text-red-700">{tr('逾期 30 天以上')} {money(receivables.data.overdue30)}</span>
           )}
           <ChevronRight className="ml-auto size-4" aria-hidden />
         </Link>
       )}
       {showGuide && (
         <Card>
-          <CardHeader title="开始使用" description="完成以下步骤，开始用 SmallBiz Manager 管理生意" />
+          <CardHeader title={tr('开始使用')} description={tr('完成以下步骤，开始用 SmallBiz Manager 管理生意')} />
           <ol className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            <Step done={profileDone} title="完善店铺资料" to="/settings" />
-            <Step done={hasProducts} title="添加第一个商品" to="/products/new" />
-            <Step done={hasSales} title="记录第一笔销售" to="/sales/new" />
+            <Step done={profileDone} title={tr('完善店铺资料')} to="/settings" />
+            <Step done={hasProducts} title={tr('添加第一个商品')} to="/products/new" />
+            <Step done={hasSales} title={tr('记录第一笔销售')} to="/sales/new" />
           </ol>
         </Card>
       )}
@@ -130,35 +131,35 @@ export function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-3 [&>*]:min-w-0">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="近 30 天销售额"
-            description={trend.data ? `合计 ${money(trend.data.total.amount)} · ${trend.data.total.orderCount} 笔订单` : undefined}
+            title={tr('近 30 天销售额')}
+            description={trend.data ? tr('合计 {{amount}} · {{orderCount}} 笔订单', { amount: money(trend.data.total.amount), orderCount: trend.data.total.orderCount }) : undefined}
             action={
               canManage && (
                 <Link to="/reports" className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
-                  查看报表
+                  {tr('查看报表')}
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
               )
             }
           />
           <CardBody>
-            {trend.data ? <TrendChart data={trend.data.points} label="销售额" /> : <div className="h-60 animate-pulse rounded-lg bg-slate-50" />}
+            {trend.data ? <TrendChart data={trend.data.points} label={tr('销售额')} /> : <div className="h-60 animate-pulse rounded-lg bg-slate-50" />}
           </CardBody>
         </Card>
 
         <Card>
           <CardHeader
-            title="需要补货"
+            title={tr('需要补货')}
             action={
               <Link to="/inventory?lowStock=true" className="whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
-                全部
+                {tr('全部')}
               </Link>
             }
           />
           {lowStock.data && lowStock.data.items.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-5 py-10 text-sm text-slate-500">
               <PackageCheck className="size-8 text-emerald-500" aria-hidden />
-              库存都很充足
+              {tr('库存都很充足')}
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -168,7 +169,7 @@ export function DashboardPage() {
                     <ProductThumb url={p.imageUrl} name={p.name} className="size-9" />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{p.name}</span>
                     <span className={cn('whitespace-nowrap text-sm font-semibold tabular-nums', p.stockQty <= 0 ? 'text-red-600' : 'text-amber-700')}>
-                      {p.stockQty <= 0 ? '缺货' : `剩 ${p.stockQty} ${p.unit}`}
+                      {p.stockQty <= 0 ? tr('缺货') : tr('剩 {{stockQty}} {{unit}}', { stockQty: p.stockQty, unit: p.unit })}
                     </span>
                   </Link>
                 </li>
@@ -178,7 +179,7 @@ export function DashboardPage() {
           {canManage && (lowStock.data?.count ?? 0) > 0 && (
             <div className="border-t border-slate-100 px-5 py-3">
               <Link to="/purchases/new" className="text-sm font-medium text-blue-600 hover:underline">
-                新建采购单补货 →
+                {tr('新建采购单补货 →')}
               </Link>
             </div>
           )}
@@ -187,22 +188,22 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader
-          title="最近销售"
+          title={tr('最近销售')}
           action={
             <Link to="/sales" className="whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
-              全部
+              {tr('全部')}
             </Link>
           }
         />
         {recent.data && recent.data.items.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-slate-500">还没有销售记录</p>
+          <p className="px-5 py-10 text-center text-sm text-slate-500">{tr('还没有销售记录')}</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {recent.data?.items.map((o) => (
               <li key={o.id}>
                 <Link to={`/sales/${o.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">{o.customerName ?? '散客'}</p>
+                    <p className="truncate text-sm font-medium text-slate-900">{o.customerName ?? tr('散客')}</p>
                     <p className="text-xs text-slate-500">
                       {o.orderNo} · {formatDateTime(o.orderDate)}
                     </p>
@@ -242,9 +243,9 @@ function Step({ done, title, to }: { done: boolean; title: string; to: string })
     <li>
       <Link to={to} className="flex items-center gap-3 px-5 py-4 hover:bg-slate-50">
         {done ? (
-          <CheckCircle2 className="size-5 shrink-0 text-emerald-500" aria-label="已完成" />
+          <CheckCircle2 className="size-5 shrink-0 text-emerald-500" aria-label={tr('已完成')} />
         ) : (
-          <Circle className="size-5 shrink-0 text-slate-300" aria-label="未完成" />
+          <Circle className="size-5 shrink-0 text-slate-300" aria-label={tr('未完成')} />
         )}
         <span className={done ? 'text-sm text-slate-500 line-through' : 'text-sm font-medium text-slate-900'}>{title}</span>
       </Link>

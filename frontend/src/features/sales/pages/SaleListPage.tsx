@@ -14,10 +14,11 @@ import { cn } from '@/lib/utils'
 import { saleApi, type SaleStatus } from '../api'
 import { SaleStatusBadge } from '../SaleStatusBadge'
 
+import { tr } from '@/lib/i18n'
 const TABS: { value: SaleStatus | ''; label: string }[] = [
-  { value: '', label: '全部' },
-  { value: 'COMPLETED', label: '已完成' },
-  { value: 'CANCELLED', label: '已取消' },
+  { value: '', label: tr('全部') },
+  { value: 'COMPLETED', label: tr('已完成') },
+  { value: 'CANCELLED', label: tr('已取消') },
 ]
 
 export function SaleListPage() {
@@ -63,25 +64,25 @@ export function SaleListPage() {
   return (
     <div>
       <PageHeader
-        title="销售"
-        description="开单记录。已取消的订单不计入任何统计。"
+        title={tr('销售')}
+        description={tr('开单记录。已取消的订单不计入任何统计。')}
         actions={
           <>
             <ExcelExportButton
               path="/exports/sales"
               params={{ q, status, from, to, createdBy }}
-              fallbackName="销售.xlsx"
+              fallbackName={tr('销售.xlsx')}
             />
             <Link to="/sales/new" className={buttonVariants()}>
               <Plus aria-hidden />
-              开单
+              {tr('开单')}
             </Link>
           </>
         }
       />
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4">
-          <div className="flex gap-1" role="tablist" aria-label="按状态筛选">
+          <div className="flex gap-1" role="tablist" aria-label={tr('按状态筛选')}>
             {TABS.map((t) => (
               <button
                 key={t.value || 'all'}
@@ -101,11 +102,11 @@ export function SaleListPage() {
           <div className={cn('grid gap-2', showCreator ? 'sm:grid-cols-2 lg:grid-cols-[1fr_9rem_10rem_10rem]' : 'sm:grid-cols-[1fr_10rem_10rem]')}>
             <div className={cn('relative', showCreator && 'sm:col-span-2 lg:col-span-1')}>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索单号或客户" className="pl-9" aria-label="搜索销售单" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr('搜索单号或客户')} className="pl-9" aria-label={tr('搜索销售单')} />
             </div>
             {showCreator && (
-              <Select aria-label="开单人" value={createdBy ?? ''} onChange={(e) => update({ createdBy: e.target.value || null })}>
-                <option value="">全部开单人</option>
+              <Select aria-label={tr('开单人')} value={createdBy ?? ''} onChange={(e) => update({ createdBy: e.target.value || null })}>
+                <option value="">{tr('全部开单人')}</option>
                 {creators.data?.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -113,29 +114,29 @@ export function SaleListPage() {
                 ))}
               </Select>
             )}
-            <Input type="date" aria-label="开始日期" value={from} max={to || undefined} onChange={(e) => update({ from: e.target.value || null })} />
-            <Input type="date" aria-label="结束日期" value={to} min={from || undefined} onChange={(e) => update({ to: e.target.value || null })} />
+            <Input type="date" aria-label={tr('开始日期')} value={from} max={to || undefined} onChange={(e) => update({ from: e.target.value || null })} />
+            <Input type="date" aria-label={tr('结束日期')} value={to} min={from || undefined} onChange={(e) => update({ to: e.target.value || null })} />
           </div>
         </div>
 
         {invalidRange ? (
-          <p className="p-6 text-center text-sm text-red-600">开始日期不能晚于结束日期</p>
+          <p className="p-6 text-center text-sm text-red-600">{tr('开始日期不能晚于结束日期')}</p>
         ) : isLoading ? (
           <div className="h-48 animate-pulse bg-slate-50" />
         ) : isError ? (
           <ErrorState onRetry={() => void refetch()} />
         ) : data && data.items.length === 0 ? (
           filtered ? (
-            <EmptyState icon={Search} title="没有符合条件的销售单" />
+            <EmptyState icon={Search} title={tr('没有符合条件的销售单')} />
           ) : (
             <EmptyState
               icon={ReceiptText}
-              title="还没有销售记录"
-              description="开单后库存会自动扣减，销售额和毛利会计入报表"
+              title={tr('还没有销售记录')}
+              description={tr('开单后库存会自动扣减，销售额和毛利会计入报表')}
               action={
                 <Link to="/sales/new" className={buttonVariants()}>
                   <Plus aria-hidden />
-                  开单
+                  {tr('开单')}
                 </Link>
               }
             />
@@ -146,13 +147,13 @@ export function SaleListPage() {
               <table className="hidden w-full text-sm md:table">
                 <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">单号</th>
-                    <th className="px-4 py-3">客户</th>
-                    <th className="px-4 py-3">时间</th>
-                    {showCreator && <th className="px-4 py-3">开单人</th>}
-                    <th className="px-4 py-3 text-right">商品数</th>
-                    <th className="px-4 py-3 text-right">金额</th>
-                    <th className="px-4 py-3">状态</th>
+                    <th className="px-4 py-3">{tr('单号')}</th>
+                    <th className="px-4 py-3">{tr('客户')}</th>
+                    <th className="px-4 py-3">{tr('时间')}</th>
+                    {showCreator && <th className="px-4 py-3">{tr('开单人')}</th>}
+                    <th className="px-4 py-3 text-right">{tr('商品数')}</th>
+                    <th className="px-4 py-3 text-right">{tr('金额')}</th>
+                    <th className="px-4 py-3">{tr('状态')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -163,10 +164,10 @@ export function SaleListPage() {
                           {o.orderNo}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-slate-700">{o.customerName ?? <span className="text-slate-400">散客</span>}</td>
+                      <td className="px-4 py-3 text-slate-700">{o.customerName ?? <span className="text-slate-400">{tr('散客')}</span>}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDateTime(o.orderDate)}</td>
                       {showCreator && <td className="max-w-32 truncate px-4 py-3 text-slate-600">{o.createdByName ?? '—'}</td>}
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{o.totalQuantity} 件</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-slate-600">{o.totalQuantity} {tr('件')}</td>
                       <td className={cn('px-4 py-3 text-right font-medium tabular-nums', o.status === 'CANCELLED' && 'text-slate-400 line-through')}>
                         {money(o.totalAmount)}
                       </td>
@@ -182,7 +183,7 @@ export function SaleListPage() {
                   <li key={o.id}>
                     <Link to={`/sales/${o.id}`} className="flex items-start justify-between gap-3 p-4 active:bg-slate-50">
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-slate-900">{o.customerName ?? '散客'}</p>
+                        <p className="truncate font-medium text-slate-900">{o.customerName ?? tr('散客')}</p>
                         <p className="text-xs text-slate-500">
                           {o.orderNo} · {formatDateTime(o.orderDate)}
                           {showCreator && o.createdByName && ` · ${o.createdByName}`}
@@ -199,7 +200,7 @@ export function SaleListPage() {
                 ))}
               </ul>
               <div className="border-t border-slate-100 px-4 py-3">
-                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit="张销售单" onChange={(p) => update({ page: String(p) }, false)} />
+                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit={tr('张销售单')} onChange={(p) => update({ page: String(p) }, false)} />
               </div>
             </div>
           )

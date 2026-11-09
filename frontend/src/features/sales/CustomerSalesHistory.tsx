@@ -11,6 +11,7 @@ import { cn, formatDate } from '@/lib/utils'
 import { saleApi } from './api'
 import { SaleStatusBadge } from './SaleStatusBadge'
 
+import { tr } from '@/lib/i18n'
 /** 客户详情页：累计消费 + 历史订单。 */
 export function CustomerSalesHistory({ customerId }: { customerId: number }) {
   const money = useMoney()
@@ -24,25 +25,25 @@ export function CustomerSalesHistory({ customerId }: { customerId: number }) {
   return (
     <>
       <CardHeader
-        title="购买记录"
+        title={tr('购买记录')}
         action={
           <Link to={`/sales/new?customerId=${customerId}`} className={buttonVariants({ size: 'sm' })}>
             <Plus aria-hidden />
-            给他开单
+            {tr('给他开单')}
           </Link>
         }
       />
       <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100 text-center">
-        <Stat label="订单数" value={stats.data ? String(stats.data.orderCount) : undefined} />
-        <Stat label="累计消费" value={stats.data ? money(stats.data.totalSpent) : undefined} />
-        <Stat label="最近购买" value={stats.data ? (stats.data.lastOrderAt ? formatDate(stats.data.lastOrderAt) : '—') : undefined} />
+        <Stat label={tr('订单数')} value={stats.data ? String(stats.data.orderCount) : undefined} />
+        <Stat label={tr('累计消费')} value={stats.data ? money(stats.data.totalSpent) : undefined} />
+        <Stat label={tr('最近购买')} value={stats.data ? (stats.data.lastOrderAt ? formatDate(stats.data.lastOrderAt) : '—') : undefined} />
       </div>
       {orders.isLoading ? (
         <div className="h-32 animate-pulse bg-slate-50" />
       ) : orders.isError ? (
         <ErrorState onRetry={() => void orders.refetch()} />
       ) : !orders.data || orders.data.items.length === 0 ? (
-        <EmptyState icon={ReceiptText} title="还没有购买记录" description="开单时选择这位客户，记录会显示在这里" />
+        <EmptyState icon={ReceiptText} title={tr('还没有购买记录')} description={tr('开单时选择这位客户，记录会显示在这里')} />
       ) : (
         <>
           <ul className="divide-y divide-slate-100">
@@ -52,7 +53,7 @@ export function CustomerSalesHistory({ customerId }: { customerId: number }) {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-900">{o.orderNo}</p>
                     <p className="text-xs text-slate-500">
-                      {formatDateTime(o.orderDate)} · {o.totalQuantity} 件
+                      {formatDateTime(o.orderDate)} · {o.totalQuantity} {tr('件')}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -66,11 +67,11 @@ export function CustomerSalesHistory({ customerId }: { customerId: number }) {
             ))}
           </ul>
           <div className="border-t border-slate-100 px-5 py-3">
-            <Pagination page={orders.data.page} totalPages={orders.data.totalPages} totalItems={orders.data.totalItems} unit="张" onChange={setPage} />
+            <Pagination page={orders.data.page} totalPages={orders.data.totalPages} totalItems={orders.data.totalItems} unit={tr('张')} onChange={setPage} />
           </div>
         </>
       )}
-      <p className="px-5 pb-4 text-xs text-slate-500">累计消费不含已取消的订单。</p>
+      <p className="px-5 pb-4 text-xs text-slate-500">{tr('累计消费不含已取消的订单。')}</p>
     </>
   )
 }

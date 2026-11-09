@@ -40,7 +40,9 @@ public class ImportController {
     public ResponseEntity<byte[]> template(@PathVariable String type) {
         Type t = parse(type);
         requirePlan(t);
-        return XlsxWriter.response(ImportService.label(t) + "导入模板.xlsx", service.template(t));
+        String name = ExcelI18n.en() ? ExcelI18n.t(ImportService.label(t)) + " import template.xlsx"
+                : ImportService.label(t) + "导入模板.xlsx";
+        return XlsxWriter.response(name, service.template(t));
     }
 
     @PostMapping("/{type}")

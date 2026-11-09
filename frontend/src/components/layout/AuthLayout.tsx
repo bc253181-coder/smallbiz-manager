@@ -2,7 +2,9 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { SupportWidget } from '@/features/support/SupportWidget'
 import { Brand } from './Brand'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
+import { tr } from '@/lib/i18n'
 /** 登录、注册、创建店铺等页面的居中布局。 */
 export function AuthLayout({ title, subtitle, children, wide }: {
   title: string
@@ -19,14 +21,15 @@ export function AuthLayout({ title, subtitle, children, wide }: {
           {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
           <div className="mt-6">{children}</div>
         </div>
-        <p className="mt-6 flex justify-center gap-4 text-xs text-slate-500">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
+          <LanguageSwitcher />
           <Link to="/terms" className="hover:text-slate-700 hover:underline">
-            用户协议
+            {tr('用户协议')}
           </Link>
           <Link to="/privacy" className="hover:text-slate-700 hover:underline">
-            隐私政策
+            {tr('隐私政策')}
           </Link>
-        </p>
+        </div>
       </div>
       <SupportWidget />
     </div>
@@ -35,7 +38,7 @@ export function AuthLayout({ title, subtitle, children, wide }: {
 
 export function FullPageSpinner() {
   return (
-    <div className="flex min-h-dvh items-center justify-center" role="status" aria-label="加载中">
+    <div className="flex min-h-dvh items-center justify-center" role="status" aria-label={tr('加载中')}>
       <div className="size-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
     </div>
   )

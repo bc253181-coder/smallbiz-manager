@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import type { Page } from '@/features/catalog/types'
 import type { PriceTier } from '@/features/partners/api'
 
+import { tr } from '@/lib/i18n'
 export type SaleStatus = 'COMPLETED' | 'CANCELLED'
 export type PaymentStatus = 'PAID' | 'PARTIAL' | 'UNPAID'
 
@@ -38,10 +39,10 @@ export interface SaleItem {
 export type PriceSource = 'RETAIL' | 'WHOLESALE' | 'CONTRACT' | 'MANUAL'
 
 export const PRICE_SOURCE_LABELS: Record<PriceSource, string> = {
-  RETAIL: '零售价',
-  WHOLESALE: '批发价',
-  CONTRACT: '协议价',
-  MANUAL: '手动改价',
+  RETAIL: tr('零售价'),
+  WHOLESALE: tr('批发价'),
+  CONTRACT: tr('协议价'),
+  MANUAL: tr('手动改价'),
 }
 
 export interface SaleDetail extends SaleSummary {
@@ -74,9 +75,9 @@ export interface SalePaymentLine {
 }
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  PAID: '已付清',
-  PARTIAL: '部分付款',
-  UNPAID: '未付款',
+  PAID: tr('已付清'),
+  PARTIAL: tr('部分付款'),
+  UNPAID: tr('未付款'),
 }
 
 export interface SaleInput {

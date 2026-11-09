@@ -87,6 +87,19 @@ export function tr(key: string, vars?: Record<string, string | number | null | u
   return s
 }
 
+/**
+ * 带语境的翻译：同一个中文词在不同位置英文不同时使用，例如 trc('单据', '客户') → Customer（菜单里的「客户」是 Customers）。
+ * 先找「语境|原文」，没有再按原文翻译。
+ */
+export function trc(context: string, key: string, vars?: Record<string, string | number | null | undefined>): string {
+  const withContext = `${context}|${key}`
+  if (lang !== 'zh-CN' && dict[withContext] !== undefined) {
+    const s = dict[withContext]
+    return vars ? s.replace(/\{\{(\w+)\}\}/g, (m, k: string) => (k in vars ? String(vars[k] ?? '') : m)) : s
+  }
+  return tr(key, vars)
+}
+
 /** 有没有这条翻译（用于后端错误提示：没有逐字翻译时退回按错误代码的通用提示）。 */
 export function hasTranslation(key: string): boolean {
   return lang === 'zh-CN' || dict[key] !== undefined

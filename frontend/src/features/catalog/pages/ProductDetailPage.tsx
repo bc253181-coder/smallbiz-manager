@@ -20,6 +20,8 @@ import { productApi } from '../api'
 import { ProductThumb } from '../components/ProductThumb'
 import { MOVEMENT_LABELS, STATUS_LABELS } from '../types'
 
+import { tr } from '@/lib/i18n'
+import { systemText } from '@/lib/systemText'
 export function ProductDetailPage() {
   const productId = Number(useParams().id)
   const navigate = useNavigate()
@@ -46,29 +48,29 @@ export function ProductDetailPage() {
       queryClient.removeQueries({ queryKey: ['product', productId] })
       await queryClient.invalidateQueries({ queryKey: ['products'] })
       await queryClient.invalidateQueries({ queryKey: ['categories'] })
-      toast.success('商品已删除')
+      toast.success(tr('商品已删除'))
       navigate('/products', { replace: true })
     },
     onError: (e) => {
       setConfirmDelete(false)
-      toast.error(errorMessage(e, '删除失败'))
+      toast.error(errorMessage(e, tr('删除失败')))
     },
   })
 
-  if (isLoading) return <div className="h-96 animate-pulse rounded-xl bg-slate-100" aria-label="加载中" />
+  if (isLoading) return <div className="h-96 animate-pulse rounded-xl bg-slate-100" aria-label={tr('加载中')} />
   if (isError || !p) {
     return (
       <div>
-        <PageHeader title="商品" back={{ to: '/products', label: '返回商品列表' }} />
+        <PageHeader title={tr('商品')} back={{ to: '/products', label: tr('返回商品列表') }} />
         <Card>
           {errorCode(error) === 'PRODUCT_NOT_FOUND' ? (
             <EmptyState
               icon={PackageX}
-              title="商品不存在"
-              description="它可能已被删除，或者不属于当前店铺"
+              title={tr('商品不存在')}
+              description={tr('它可能已被删除，或者不属于当前店铺')}
               action={
                 <Link to="/products" className={buttonVariants({ variant: 'secondary' })}>
-                  返回商品列表
+                  {tr('返回商品列表')}
                 </Link>
               }
             />
@@ -83,7 +85,7 @@ export function ProductDetailPage() {
   return (
     <div>
       <PageHeader
-        back={{ to: '/products', label: '返回商品列表' }}
+        back={{ to: '/products', label: tr('返回商品列表') }}
         title={
           <span className="flex flex-wrap items-center gap-2">
             {p.name}
@@ -96,15 +98,15 @@ export function ProductDetailPage() {
             <>
               <Button variant="secondary" onClick={() => setConfirmDelete(true)}>
                 <Trash2 aria-hidden />
-                删除
+                {tr('删除')}
               </Button>
               <Link to={`/products/labels?ids=${p.id}`} className={buttonVariants({ variant: 'secondary' })}>
                 <Tag aria-hidden />
-                打印标签
+                {tr('打印标签')}
               </Link>
               <Link to={`/products/${p.id}/edit`} className={buttonVariants()}>
                 <Pencil aria-hidden />
-                编辑
+                {tr('编辑')}
               </Link>
             </>
           )
@@ -116,15 +118,15 @@ export function ProductDetailPage() {
           <CardBody className="flex flex-col gap-6 sm:flex-row">
             <ProductThumb url={p.imageUrl} name={p.name} className="size-40 self-center rounded-xl sm:self-start" />
             <dl className="grid flex-1 grid-cols-2 gap-x-6 gap-y-4 text-sm">
-              <Item label="分类">{p.categoryName ?? '未分类'}</Item>
-              <Item label="单位">{p.unit}</Item>
-              <Item label="零售价">{money(p.retailPrice)}</Item>
-              <Item label="批发价">{p.wholesalePrice ? money(p.wholesalePrice) : '同零售价'}</Item>
-              {p.costPrice !== null && <Item label="进货成本">{money(p.costPrice)}</Item>}
-              <Item label="条形码">{p.barcode ?? '—'}</Item>
+              <Item label={tr('分类')}>{p.categoryName ?? tr('未分类')}</Item>
+              <Item label={tr('单位')}>{p.unit}</Item>
+              <Item label={tr('零售价')}>{money(p.retailPrice)}</Item>
+              <Item label={tr('批发价')}>{p.wholesalePrice ? money(p.wholesalePrice) : tr('同零售价')}</Item>
+              {p.costPrice !== null && <Item label={tr('进货成本')}>{money(p.costPrice)}</Item>}
+              <Item label={tr('条形码')}>{p.barcode ?? '—'}</Item>
               {p.description && (
                 <div className="col-span-2">
-                  <dt className="text-slate-500">描述</dt>
+                  <dt className="text-slate-500">{tr('描述')}</dt>
                   <dd className="mt-1 whitespace-pre-wrap text-slate-900">{p.description}</dd>
                 </div>
               )}
@@ -133,29 +135,29 @@ export function ProductDetailPage() {
         </Card>
 
         <Card>
-          <CardHeader title="库存" />
+          <CardHeader title={tr('库存')} />
           <CardBody className="space-y-4">
             <div>
-              <p className="text-sm text-slate-500">当前库存</p>
+              <p className="text-sm text-slate-500">{tr('当前库存')}</p>
               <p className={cn('mt-1 text-3xl font-semibold tabular-nums', p.lowStock ? 'text-amber-700' : 'text-slate-900')}>
                 {formatQty(p.stockQty)}
                 <span className="ml-1 text-base font-normal text-slate-500">{p.unit}</span>
               </p>
               {p.lowStock && (
                 <Badge tone="amber" className="mt-2">
-                  库存不高于预警值 {p.lowStockThreshold}，建议补货
+                  {tr('库存不高于预警值')} {p.lowStockThreshold}{tr('，建议补货')}
                 </Badge>
               )}
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500">低库存预警值</span>
+              <span className="text-slate-500">{tr('低库存预警值')}</span>
               <span className="font-medium">
                 {p.lowStockThreshold} {p.unit}
               </span>
             </div>
             {p.costPrice !== null && (
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">库存价值（按成本）</span>
+                <span className="text-slate-500">{tr('库存价值（按成本）')}</span>
                 <span className="font-medium">{money((Number(p.costPrice) * p.stockQty).toFixed(2))}</span>
               </div>
             )}
@@ -163,7 +165,7 @@ export function ProductDetailPage() {
               <div className="grid grid-cols-3 gap-2 pt-1">
                 {(['in', 'out', 'adjust'] as const).map((mode) => (
                   <Button key={mode} size="sm" variant="secondary" onClick={() => setStockMode(mode)}>
-                    {mode === 'in' ? '入库' : mode === 'out' ? '出库' : '盘点'}
+                    {mode === 'in' ? tr('入库') : mode === 'out' ? tr('出库') : tr('盘点')}
                   </Button>
                 ))}
               </div>
@@ -179,11 +181,11 @@ export function ProductDetailPage() {
 
       <Card className="mt-6">
         <CardHeader
-          title="库存变动记录"
-          description="每一次库存变化都会自动记录，不可修改"
+          title={tr('库存变动记录')}
+          description={tr('每一次库存变化都会自动记录，不可修改')}
           action={
             <Link to={`/inventory/movements?productId=${p.id}`} className="whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
-              按条件查看
+              {tr('按条件查看')}
             </Link>
           }
         />
@@ -192,7 +194,7 @@ export function ProductDetailPage() {
         ) : movements.isError ? (
           <ErrorState onRetry={() => void movements.refetch()} />
         ) : movements.data && movements.data.items.length === 0 ? (
-          <EmptyState icon={History} title="暂无库存变动" />
+          <EmptyState icon={History} title={tr('暂无库存变动')} />
         ) : (
           movements.data && (
             <>
@@ -200,12 +202,12 @@ export function ProductDetailPage() {
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                     <tr>
-                      <th className="px-4 py-3">时间</th>
-                      <th className="px-4 py-3">类型</th>
-                      <th className="px-4 py-3 text-right">变动</th>
-                      <th className="px-4 py-3 text-right">变动后</th>
-                      <th className="px-4 py-3">备注</th>
-                      <th className="px-4 py-3">操作人</th>
+                      <th className="px-4 py-3">{tr('时间')}</th>
+                      <th className="px-4 py-3">{tr('类型')}</th>
+                      <th className="px-4 py-3 text-right">{tr('变动')}</th>
+                      <th className="px-4 py-3 text-right">{tr('变动后')}</th>
+                      <th className="px-4 py-3">{tr('备注')}</th>
+                      <th className="px-4 py-3">{tr('操作人')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -222,7 +224,7 @@ export function ProductDetailPage() {
                           {m.qtyChange > 0 ? `+${m.qtyChange}` : m.qtyChange}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">{m.qtyAfter}</td>
-                        <td className="px-4 py-3 text-slate-600">{m.reason ?? '—'}</td>
+                        <td className="px-4 py-3 text-slate-600">{m.reason ? systemText(m.reason) : '—'}</td>
                         <td className="px-4 py-3 text-slate-600">{m.operatorName ?? '—'}</td>
                       </tr>
                     ))}
@@ -251,9 +253,9 @@ export function ProductDetailPage() {
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`删除「${p.name}」？`}
-        description="删除后商品将不再显示，SKU 可以被新商品使用。已有的库存记录会保留。"
-        confirmText="删除"
+        title={tr('删除「{{name}}」？', { name: p.name })}
+        description={tr('删除后商品将不再显示，SKU 可以被新商品使用。已有的库存记录会保留。')}
+        confirmText={tr('删除')}
         danger
         loading={remove.isPending}
         onConfirm={() => remove.mutate()}

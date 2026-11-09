@@ -14,6 +14,8 @@ import { errorMessage, fieldErrors } from '@/lib/api'
 import { formatQty, useMoney } from '@/lib/format'
 import { useWarehouses, warehouseApi, type Warehouse } from './api'
 
+import { tr } from '@/lib/i18n'
+import { warehouseName } from '@/lib/systemText'
 /** 设置 → 仓库（店主/管理员）。 */
 export function WarehousesPage() {
   const money = useMoney()
@@ -27,10 +29,10 @@ export function WarehousesPage() {
     mutationFn: (id: number) => warehouseApi.deactivate(id),
     onSuccess: async () => {
       await refresh()
-      toast.success(`已停用「${deactivating?.name}」`)
+      toast.success(tr('已停用「{{name}}」', { name: deactivating?.name }))
       setDeactivating(null)
     },
-    onError: (e) => toast.error(errorMessage(e, '停用失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('停用失败'))),
   })
 
   const activeCount = wh.active.length
@@ -39,14 +41,14 @@ export function WarehousesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="仓库"
-        description="有门店、仓库、档口等多个放货的地方时，可以分开记录库存并互相调拨。只有一个仓库时，其他页面不会显示仓库选择。"
-        back={{ to: '/settings', label: '设置' }}
+        title={tr('仓库')}
+        description={tr('有门店、仓库、档口等多个放货的地方时，可以分开记录库存并互相调拨。只有一个仓库时，其他页面不会显示仓库选择。')}
+        back={{ to: '/settings', label: tr('设置') }}
         actions={
           wh.data?.allowed && (
             <Button onClick={() => setEditing('new')} disabled={full}>
               <Plus aria-hidden />
-              新增仓库
+              {tr('新增仓库')}
             </Button>
           )
         }
@@ -60,19 +62,19 @@ export function WarehousesPage() {
         <>
           {!wh.data?.allowed ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-              <p className="font-medium">多仓库是专业版功能</p>
+              <p className="font-medium">{tr('多仓库是专业版功能')}</p>
               <p className="mt-1 text-amber-800">
-                专业版最多 5 个仓库，支持仓库间调拨、按仓库开单和盘点。
-                {wh.all.length > 1 && '专业版到期期间，主仓库照常使用；其他仓库只能把库存调拨出去，续费后恢复。'}
+                {tr('专业版最多 5 个仓库，支持仓库间调拨、按仓库开单和盘点。')}
+                {wh.all.length > 1 && tr('专业版到期期间，主仓库照常使用；其他仓库只能把库存调拨出去，续费后恢复。')}
               </p>
               <Link to="/settings/billing" className={buttonVariants({ size: 'sm', className: 'mt-3' })}>
-                查看套餐
+                {tr('查看套餐')}
               </Link>
             </div>
           ) : (
             <p className="text-sm text-slate-600">
-              已启用 <span className="font-semibold tabular-nums text-slate-900">{activeCount} / {wh.data.max}</span> 个仓库
-              {full && <span className="ml-2 text-amber-700">已达上限，可停用不用的仓库</span>}
+              {tr('已启用')} <span className="font-semibold tabular-nums text-slate-900">{activeCount} / {wh.data.max}</span> {tr('个仓库')}
+              {full && <span className="ml-2 text-amber-700">{tr('已达上限，可停用不用的仓库')}</span>}
             </p>
           )}
 
@@ -86,15 +88,15 @@ export function WarehousesPage() {
                     </span>
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">
-                        {w.name}
-                        {w.isDefault && <Badge tone="blue">默认</Badge>}
-                        {!w.active && <Badge>已停用</Badge>}
-                        {w.active && !w.usable && <Badge tone="amber">只能调出</Badge>}
+                        {warehouseName(w.name)}
+                        {w.isDefault && <Badge tone="blue">{tr('默认')}</Badge>}
+                        {!w.active && <Badge>{tr('已停用')}</Badge>}
+                        {w.active && !w.usable && <Badge tone="amber">{tr('只能调出')}</Badge>}
                       </p>
                       {w.address && <p className="truncate text-xs text-slate-500">{w.address}</p>}
                       <p className="text-xs text-slate-500">
-                        {w.productCount} 种商品 · 共 {formatQty(w.totalQty)} 件
-                        {w.stockValue !== null && ` · 价值 ${money(w.stockValue)}`}
+                        {w.productCount} {tr('种商品 · 共')} {formatQty(w.totalQty)} {tr('件')}
+                        {w.stockValue !== null && tr(' · 价值 {{stockValue}}', { stockValue: money(w.stockValue) })}
                       </p>
                     </div>
                   </div>
@@ -102,11 +104,11 @@ export function WarehousesPage() {
                     <div className="flex gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setEditing(w)}>
                         <Pencil aria-hidden />
-                        编辑
+                        {tr('编辑')}
                       </Button>
                       {!w.isDefault && (
                         <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setDeactivating(w)}>
-                          停用
+                          {tr('停用')}
                         </Button>
                       )}
                     </div>
@@ -122,9 +124,9 @@ export function WarehousesPage() {
       <ConfirmDialog
         open={!!deactivating}
         onOpenChange={(o) => !o && setDeactivating(null)}
-        title={`停用「${deactivating?.name ?? ''}」？`}
-        description="停用后不能再在这个仓库开单、入库或调入；历史记录保留。仓库里还有库存时不能停用，请先调拨到其他仓库或盘点为 0。"
-        confirmText="停用"
+        title={tr('停用「{{v0}}」？', { v0: deactivating?.name ?? '' })}
+        description={tr('停用后不能再在这个仓库开单、入库或调入；历史记录保留。仓库里还有库存时不能停用，请先调拨到其他仓库或盘点为 0。')}
+        confirmText={tr('停用')}
         danger
         loading={deactivate.isPending}
         onConfirm={() => deactivating && deactivate.mutate(deactivating.id)}
@@ -146,34 +148,34 @@ function WarehouseDialog({ warehouse, onClose, onSaved }: { warehouse: Warehouse
     },
     onSuccess: async () => {
       await onSaved()
-      toast.success(warehouse ? '仓库已保存' : `已新增仓库「${name.trim()}」`)
+      toast.success(warehouse ? tr('仓库已保存') : tr('已新增仓库「{{v0}}」', { v0: name.trim() }))
       onClose()
     },
     onError: (e) => {
       const f = fieldErrors(e)
-      setErrors(Object.keys(f).length ? f : { name: errorMessage(e, '保存失败') })
+      setErrors(Object.keys(f).length ? f : { name: errorMessage(e, tr('保存失败')) })
     },
   })
   return (
     <FormDialog
       open
       onClose={onClose}
-      title={warehouse ? '编辑仓库' : '新增仓库'}
-      submitText="保存"
+      title={warehouse ? tr('编辑仓库') : tr('新增仓库')}
+      submitText={tr('保存')}
       saving={save.isPending}
       onSubmit={(e) => {
         e.preventDefault()
-        if (!name.trim()) return setErrors({ name: '请填写仓库名称' })
+        if (!name.trim()) return setErrors({ name: tr('请填写仓库名称') })
         save.mutate()
       }}
     >
-      <Field label="仓库名称" htmlFor="wh-name" error={errors.name} required hint="例如：门店、东区仓库、批发市场档口">
+      <Field label={tr('仓库名称')} htmlFor="wh-name" error={errors.name} required hint={tr('例如：门店、东区仓库、批发市场档口')}>
         <Input id="wh-name" maxLength={50} value={name} onChange={(e) => setName(e.target.value)} invalid={!!errors.name} autoFocus />
       </Field>
-      <Field label="地址" htmlFor="wh-address" error={errors.address}>
+      <Field label={tr('地址')} htmlFor="wh-address" error={errors.address}>
         <Input id="wh-address" maxLength={300} value={address} onChange={(e) => setAddress(e.target.value)} />
       </Field>
-      <Field label="备注" htmlFor="wh-notes" error={errors.notes}>
+      <Field label={tr('备注')} htmlFor="wh-notes" error={errors.notes}>
         <Textarea id="wh-notes" rows={2} maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
     </FormDialog>

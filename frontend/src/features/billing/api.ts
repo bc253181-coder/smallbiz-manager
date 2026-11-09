@@ -3,6 +3,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import type { Plan } from '@/features/auth/types'
 import { api } from '@/lib/api'
 
+import { tr } from '@/lib/i18n'
 export type Feature =
   | 'CUSTOMERS'
   | 'SUPPLIERS'
@@ -87,18 +88,18 @@ export interface PlanLog {
 }
 
 export const FEATURE_LABELS: Record<Feature, string> = {
-  CUSTOMERS: '客户管理',
-  SUPPLIERS: '供应商管理',
-  PURCHASING: '采购入库',
-  WHOLESALE_PRICE: '批发价开单',
-  FULL_REPORTS: '完整报表（不限时间范围）',
-  EXPORT: '导出 Excel / CSV',
-  RECEIVABLES: '应收账款（赊账、收款、对账单）',
-  STAFF_ACCOUNTS: '员工账号',
-  EXCEL_EXPORT: '导出 Excel 表格',
-  LABEL_PRINTING: '打印条码标签',
-  CUSTOMER_PRICES: '客户协议价',
-  WAREHOUSES: '多仓库与调拨',
+  CUSTOMERS: tr('客户管理'),
+  SUPPLIERS: tr('供应商管理'),
+  PURCHASING: tr('采购入库'),
+  WHOLESALE_PRICE: tr('批发价开单'),
+  FULL_REPORTS: tr('完整报表（不限时间范围）'),
+  EXPORT: tr('导出 Excel / CSV'),
+  RECEIVABLES: tr('应收账款（赊账、收款、对账单）'),
+  STAFF_ACCOUNTS: tr('员工账号'),
+  EXCEL_EXPORT: tr('导出 Excel 表格'),
+  LABEL_PRINTING: tr('打印条码标签'),
+  CUSTOMER_PRICES: tr('客户协议价'),
+  WAREHOUSES: tr('多仓库与调拨'),
 }
 
 /** 开通各功能所需的最低套餐（与后端 PlanPolicy 一致）。 */
@@ -118,18 +119,18 @@ export const FEATURE_PLAN: Record<Feature, Plan> = {
 }
 
 export const PERIOD_LABELS: Record<Period, string> = {
-  TRIAL_MONTH: '首月体验',
-  MONTH: '月付',
-  YEAR: '年付',
+  TRIAL_MONTH: tr('首月体验'),
+  MONTH: tr('月付'),
+  YEAR: tr('年付'),
 }
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  AWAITING_PAYMENT: '待付款',
-  PENDING_REVIEW: '审核中',
-  APPROVED: '已开通',
-  REJECTED: '未通过',
-  EXPIRED: '已过期',
-  CANCELLED: '已取消',
+  AWAITING_PAYMENT: tr('待付款'),
+  PENDING_REVIEW: tr('审核中'),
+  APPROVED: tr('已开通'),
+  REJECTED: tr('未通过'),
+  EXPIRED: tr('已过期'),
+  CANCELLED: tr('已取消'),
 }
 
 export const PAYMENT_STATUS_TONES: Record<PaymentStatus, 'slate' | 'blue' | 'green' | 'amber' | 'red'> = {
@@ -142,9 +143,9 @@ export const PAYMENT_STATUS_TONES: Record<PaymentStatus, 'slate' | 'blue' | 'gre
 }
 
 export const SOURCE_LABELS: Record<PlanSource, string> = {
-  ACTIVATION_CODE: '激活码',
-  MANUAL_PAYMENT: '扫码付款',
-  ADMIN_MANUAL: '平台调整',
+  ACTIVATION_CODE: tr('激活码'),
+  MANUAL_PAYMENT: tr('扫码付款'),
+  ADMIN_MANUAL: tr('平台调整'),
 }
 
 export const billingApi = {

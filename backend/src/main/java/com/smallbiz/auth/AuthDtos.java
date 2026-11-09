@@ -52,10 +52,15 @@ public final class AuthDtos {
             @NotBlank(message = "请填写新密码") @Size(min = 8, max = 64, message = "密码长度需为 8–64 位") String newPassword) {
     }
 
-    public record UserView(Long id, String email, String displayName, String phone, boolean platformAdmin) {
+    /** locale：界面语言（zh-CN / en），为空表示按浏览器语言。 */
+    public record UserView(Long id, String email, String displayName, String phone, boolean platformAdmin, String locale) {
         static UserView of(User u) {
-            return new UserView(u.getId(), u.getEmail(), u.getDisplayName(), u.getPhone(), u.isPlatformAdmin());
+            return new UserView(u.getId(), u.getEmail(), u.getDisplayName(), u.getPhone(), u.isPlatformAdmin(),
+                    u.getLocale());
         }
+    }
+
+    public record LocaleRequest(@NotBlank @Pattern(regexp = "zh-CN|en", message = "不支持这种语言") String locale) {
     }
 
     /** accessible = false：员工所在店铺的专业版已到期，暂时不能进入（店主续费后恢复）。 */

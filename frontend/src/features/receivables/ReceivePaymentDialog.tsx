@@ -8,6 +8,7 @@ import { formatDateTime, useMoney } from '@/lib/format'
 import { fromCents, isMoney, toCents } from '@/lib/money'
 import { METHOD_LABELS, RECEIVABLE_QUERY_KEYS, receivableApi, type OpenOrder, type PaymentMethod } from './api'
 
+import { tr } from '@/lib/i18n'
 /** 本地时间 → datetime-local 输入框的值。 */
 function localInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -75,7 +76,7 @@ export function ReceivePaymentDialog({
       }),
     onSuccess: async (p) => {
       await Promise.all(RECEIVABLE_QUERY_KEYS.map((k) => queryClient.invalidateQueries({ queryKey: k })))
-      toast.success(`已收款 ${money(p.amount)}（${p.paymentNo}）`)
+      toast.success(tr('已收款 {{amount}}（{{paymentNo}}）', { amount: money(p.amount), paymentNo: p.paymentNo }))
       onClose()
     },
     onError: (e) => {
@@ -83,7 +84,7 @@ export function ReceivePaymentDialog({
       // 收款时间相关的错误显示在时间输入框下
       if (errorCode(e) === 'INVALID_RECEIVED_AT') fields.receivedAt = errorMessage(e)
       setErrors(fields)
-      toast.error(errorMessage(e, '收款失败'))
+      toast.error(errorMessage(e, tr('收款失败')))
     },
   })
 
@@ -91,16 +92,16 @@ export function ReceivePaymentDialog({
     <FormDialog
       open
       onClose={onClose}
-      title={`收款：${customerName}`}
-      description={salesOrderId ? '只冲抵这张销售单' : '按开单时间先欠先还'}
-      submitText="确认收款"
+      title={tr('收款：{{customerName}}', { customerName: customerName })}
+      description={salesOrderId ? tr('只冲抵这张销售单') : tr('按开单时间先欠先还')}
+      submitText={tr('确认收款')}
       saving={save.isPending}
       onSubmit={(e) => {
         e.preventDefault()
         const errs: Record<string, string> = {}
-        if (!isMoney(amountValue) || cents <= 0) errs.amount = '请输入正确的金额'
-        else if (cents > maxCents) errs.amount = `不能超过欠款 ${money(fromCents(maxCents))}`
-        if (receivedAt && new Date(receivedAt).getTime() > Date.now() + 60_000) errs.receivedAt = '收款时间不能晚于现在'
+        if (!isMoney(amountValue) || cents <= 0) errs.amount = tr('请输入正确的金额')
+        else if (cents > maxCents) errs.amount = tr('不能超过欠款 {{v0}}', { v0: money(fromCents(maxCents)) })
+        if (receivedAt && new Date(receivedAt).getTime() > Date.now() + 60_000) errs.receivedAt = tr('收款时间不能晚于现在')
         setErrors(errs)
         if (Object.keys(errs).length === 0) save.mutate()
       }}
@@ -108,13 +109,13 @@ export function ReceivePaymentDialog({
       {isLoading ? (
         <div className="h-24 animate-pulse rounded-lg bg-slate-100" />
       ) : maxCents === 0 ? (
-        <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">没有需要收款的欠款。</p>
+        <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{tr('没有需要收款的欠款。')}</p>
       ) : (
         <>
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            {salesOrderId ? '这张单' : '当前'}欠款 <span className="font-semibold tabular-nums">{money(fromCents(maxCents))}</span>
+            {salesOrderId ? tr('这张单') : tr('当前')}{tr('欠款')} <span className="font-semibold tabular-nums">{money(fromCents(maxCents))}</span>
           </p>
-          <Field label="收款金额" htmlFor="rp-amount" error={errors.amount} required>
+          <Field label={tr('收款金额')} htmlFor="rp-amount" error={errors.amount} required>
             <Input
               id="rp-amount"
               inputMode="decimal"
@@ -124,7 +125,7 @@ export function ReceivePaymentDialog({
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="收款方式" htmlFor="rp-method">
+            <Field label={tr('收款方式')} htmlFor="rp-method">
               <Select id="rp-method" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
                 {(Object.keys(METHOD_LABELS) as PaymentMethod[]).map((m) => (
                   <option key={m} value={m}>
@@ -133,7 +134,7 @@ export function ReceivePaymentDialog({
                 ))}
               </Select>
             </Field>
-            <Field label="收款时间" htmlFor="rp-time" error={errors.receivedAt}>
+            <Field label={tr('收款时间')} htmlFor="rp-time" error={errors.receivedAt}>
               <Input id="rp-time" type="datetime-local" value={receivedAt} onChange={(e) => {
                 setReceivedAt(e.target.value)
                 setTimeEdited(true)
@@ -141,12 +142,12 @@ export function ReceivePaymentDialog({
               />
             </Field>
           </div>
-          <Field label="备注" htmlFor="rp-notes">
+          <Field label={tr('备注')} htmlFor="rp-notes">
             <Textarea id="rp-notes" rows={2} maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
           {preview.length > 0 && (
             <div className="rounded-lg border border-slate-200 text-sm">
-              <p className="border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500">将冲抵以下销售单</p>
+              <p className="border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500">{tr('将冲抵以下销售单')}</p>
               <ul className="divide-y divide-slate-100">
                 {preview.map(({ order, part }) => (
                   <li key={order.id} className="flex items-center justify-between gap-3 px-3 py-2">
@@ -157,7 +158,7 @@ export function ReceivePaymentDialog({
                     <span className="shrink-0 text-right tabular-nums">
                       {money(fromCents(part))}
                       {part < (toCents(order.outstanding) ?? 0) && (
-                        <span className="block text-xs text-slate-500">仍欠 {money(fromCents((toCents(order.outstanding) ?? 0) - part))}</span>
+                        <span className="block text-xs text-slate-500">{tr('仍欠')} {money(fromCents((toCents(order.outstanding) ?? 0) - part))}</span>
                       )}
                     </span>
                   </li>

@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { CUSTOMER_TYPE_LABELS, PRICE_TIER_LABELS, customerApi, type CustomerType, type PriceTier } from '../api'
 import { CustomerFormDialog } from '../CustomerFormDialog'
 
+import { tr } from '@/lib/i18n'
 export function CustomerListPage() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
@@ -50,15 +51,15 @@ export function CustomerListPage() {
   return (
     <div>
       <PageHeader
-        title="客户"
-        description="管理客户资料和默认价格（零售 / 批发）"
+        title={tr('客户')}
+        description={tr('管理客户资料和默认价格（零售 / 批发）')}
         actions={
           <>
             <ImportButton type="customers" />
-            <ExcelExportButton path="/exports/customers" params={{ q, type, priceTier }} fallbackName="客户.xlsx" />
+            <ExcelExportButton path="/exports/customers" params={{ q, type, priceTier }} fallbackName={tr('客户.xlsx')} />
             <Button onClick={() => setCreating(true)}>
               <Plus aria-hidden />
-              新增客户
+              {tr('新增客户')}
             </Button>
           </>
         }
@@ -67,22 +68,22 @@ export function CustomerListPage() {
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索名称、电话或邮箱" className="pl-9" aria-label="搜索客户" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr('搜索名称、电话或邮箱')} className="pl-9" aria-label={tr('搜索客户')} />
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex">
-            <Select aria-label="客户类型" value={type ?? ''} onChange={(e) => update({ type: e.target.value || null })} className="sm:w-36">
-              <option value="">全部类型</option>
+            <Select aria-label={tr('客户类型')} value={type ?? ''} onChange={(e) => update({ type: e.target.value || null })} className="sm:w-36">
+              <option value="">{tr('全部类型')}</option>
               {(Object.keys(CUSTOMER_TYPE_LABELS) as CustomerType[]).map((k) => (
                 <option key={k} value={k}>
                   {CUSTOMER_TYPE_LABELS[k]}
                 </option>
               ))}
             </Select>
-            <Select aria-label="默认价格" value={priceTier ?? ''} onChange={(e) => update({ priceTier: e.target.value || null })} className="sm:w-36">
-              <option value="">全部价格</option>
+            <Select aria-label={tr('默认价格')} value={priceTier ?? ''} onChange={(e) => update({ priceTier: e.target.value || null })} className="sm:w-36">
+              <option value="">{tr('全部价格')}</option>
               {(Object.keys(PRICE_TIER_LABELS) as PriceTier[]).map((k) => (
                 <option key={k} value={k}>
-                  {PRICE_TIER_LABELS[k]}客户
+                  {PRICE_TIER_LABELS[k]}{tr('客户')}
                 </option>
               ))}
             </Select>
@@ -95,16 +96,16 @@ export function CustomerListPage() {
           <ErrorState onRetry={() => void refetch()} />
         ) : data && data.items.length === 0 ? (
           filtered ? (
-            <EmptyState icon={Search} title="没有符合条件的客户" description="换个关键词或筛选条件试试" />
+            <EmptyState icon={Search} title={tr('没有符合条件的客户')} description={tr('换个关键词或筛选条件试试')} />
           ) : (
             <EmptyState
               icon={Contact}
-              title="还没有客户"
-              description="添加常来往的客户，开单时可以直接选择，并自动带出零售价或批发价"
+              title={tr('还没有客户')}
+              description={tr('添加常来往的客户，开单时可以直接选择，并自动带出零售价或批发价')}
               action={
                 <Button onClick={() => setCreating(true)}>
                   <Plus aria-hidden />
-                  新增客户
+                  {tr('新增客户')}
                 </Button>
               }
             />
@@ -115,11 +116,11 @@ export function CustomerListPage() {
               <table className="hidden w-full text-sm md:table">
                 <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">客户</th>
-                    <th className="px-4 py-3">电话</th>
-                    <th className="px-4 py-3">类型</th>
-                    <th className="px-4 py-3">默认价格</th>
-                    <th className="hidden px-4 py-3 lg:table-cell">地址</th>
+                    <th className="px-4 py-3">{tr('客户')}</th>
+                    <th className="px-4 py-3">{tr('电话')}</th>
+                    <th className="px-4 py-3">{tr('类型')}</th>
+                    <th className="px-4 py-3">{tr('默认价格')}</th>
+                    <th className="hidden px-4 py-3 lg:table-cell">{tr('地址')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -158,7 +159,7 @@ export function CustomerListPage() {
                 ))}
               </ul>
               <div className="border-t border-slate-100 px-4 py-3">
-                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit="位客户" onChange={(p) => update({ page: String(p) }, false)} />
+                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit={tr('位客户')} onChange={(p) => update({ page: String(p) }, false)} />
               </div>
             </div>
           )

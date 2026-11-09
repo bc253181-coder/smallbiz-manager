@@ -2,16 +2,17 @@ import type { Page } from '@/features/catalog/types'
 import type { PaymentStatus } from '@/features/sales/api'
 import { api } from '@/lib/api'
 
+import { tr } from '@/lib/i18n'
 export type PaymentMethod = 'CASH' | 'WECHAT' | 'ALIPAY' | 'BANK' | 'TNG' | 'DUITNOW' | 'OTHER'
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
-  CASH: '现金',
-  WECHAT: '微信',
-  ALIPAY: '支付宝',
-  BANK: '银行转账',
+  CASH: tr('现金'),
+  WECHAT: tr('微信'),
+  ALIPAY: tr('支付宝'),
+  BANK: tr('银行转账'),
   TNG: "Touch 'n Go",
   DUITNOW: 'DuitNow',
-  OTHER: '其他',
+  OTHER: tr('其他'),
 }
 
 export interface Aging {

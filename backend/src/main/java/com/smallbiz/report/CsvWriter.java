@@ -16,12 +16,13 @@ public final class CsvWriter {
 
     public static ResponseEntity<byte[]> response(String filename, List<String> header, List<List<Object>> rows) {
         StringBuilder sb = new StringBuilder("﻿");
-        appendRow(sb, header.stream().map(h -> (Object) h).toList());
+        appendRow(sb, header.stream().map(h -> (Object) com.smallbiz.excel.ExcelI18n.t(h)).toList());
         rows.forEach(r -> appendRow(sb, r));
         byte[] body = sb.toString().getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                        ContentDisposition.attachment().filename(com.smallbiz.excel.ExcelI18n.filename(filename),
+                                StandardCharsets.UTF_8).build().toString())
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .body(body);
     }
@@ -40,7 +41,7 @@ public final class CsvWriter {
         if (value == null) {
             return "";
         }
-        String s = value.toString();
+        String s = value instanceof String str ? com.smallbiz.excel.ExcelI18n.t(str) : value.toString();
         // 以 = + - @ 开头的文本在 Excel 中会被当作公式执行：加单引号前缀
         if (!(value instanceof Number) && !s.isEmpty() && "=+-@\t\r".indexOf(s.charAt(0)) >= 0) {
             s = "'" + s;

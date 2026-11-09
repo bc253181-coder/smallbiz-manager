@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+import { tr } from '@/lib/i18n'
 /** 浏览器自带的条码识别（安卓 Chrome 等支持）；TypeScript 还没有内置类型。 */
 interface NativeDetector {
   detect(source: HTMLVideoElement): Promise<{ rawValue: string }[]>
@@ -27,7 +28,7 @@ export function CameraScanner({
   onDetected,
   onClose,
   continuous = false,
-  title = '扫码',
+  title = tr('扫码'),
 }: {
   onDetected: (code: string) => void
   onClose: () => void
@@ -66,7 +67,7 @@ export function CameraScanner({
 
     async function start() {
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-        setError('当前网页不能使用摄像头（需要 HTTPS 访问）。可以用扫码枪，或手动输入条码。')
+        setError(tr('当前网页不能使用摄像头（需要 HTTPS 访问）。可以用扫码枪，或手动输入条码。'))
         setStarting(false)
         return
       }
@@ -114,10 +115,10 @@ export function CameraScanner({
         const name = e instanceof DOMException ? e.name : ''
         setError(
           name === 'NotAllowedError'
-            ? '没有摄像头权限。请在浏览器设置中允许本网站使用摄像头。'
+            ? tr('没有摄像头权限。请在浏览器设置中允许本网站使用摄像头。')
             : name === 'NotFoundError'
-              ? '没有找到摄像头。可以用扫码枪，或手动输入条码。'
-              : '摄像头启动失败，请关闭其他正在使用摄像头的应用后重试。',
+              ? tr('没有找到摄像头。可以用扫码枪，或手动输入条码。')
+              : tr('摄像头启动失败，请关闭其他正在使用摄像头的应用后重试。'),
         )
       } finally {
         setStarting(false)
@@ -144,7 +145,7 @@ export function CameraScanner({
               <Camera className="size-4.5 text-slate-500" aria-hidden />
               {title}
             </Dialog.Title>
-            <Dialog.Close className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="关闭">
+            <Dialog.Close className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label={tr('关闭')}>
               <X className="size-5" />
             </Dialog.Close>
           </div>
@@ -155,15 +156,15 @@ export function CameraScanner({
               <video ref={videoRef} className="size-full object-cover" playsInline muted />
               {/* 取景框 */}
               <div className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-lg border-2 border-white/80" />
-              {starting && <p className="absolute inset-0 flex items-center justify-center text-sm text-white/80">正在打开摄像头…</p>}
+              {starting && <p className="absolute inset-0 flex items-center justify-center text-sm text-white/80">{tr('正在打开摄像头…')}</p>}
             </div>
           )}
           <p className={cn('mt-3 text-center text-sm', last ? 'text-emerald-700' : 'text-slate-500')} role="status">
-            {last ? `已扫到：${last}${continuous ? '，可以继续扫下一个' : ''}` : '把条码放进框里，保持稳定'}
+            {last ? tr('已扫到：{{last}}{{v1}}', { last: last, v1: continuous ? tr('，可以继续扫下一个') : '' }) : tr('把条码放进框里，保持稳定')}
           </p>
           {continuous && (
             <Button variant="secondary" className="mt-3 w-full" onClick={onClose}>
-              完成
+              {tr('完成')}
             </Button>
           )}
         </Dialog.Content>

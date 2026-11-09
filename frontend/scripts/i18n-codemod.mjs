@@ -2,14 +2,15 @@
 // 用法：node scripts/i18n-codemod.mjs [文件或目录...]（默认 src）
 import fs from 'node:fs'
 import path from 'node:path'
-import ts from 'typescript'
+import { createRequire } from 'node:module'
+// 项目用的是 TypeScript 7（没有 JS 语法树接口）：通过环境变量 TS_LIB 指向一份 TypeScript 5.x
+const ts = createRequire(import.meta.url)(process.env.TS_LIB ?? 'typescript')
 
 const HAN = /[㐀-鿿]/
 const SKIP_FILES = [
   /[\\/]features[\\/]admin[\\/]/, // 平台后台不翻译
   /[\\/]features[\\/]legal[\\/]/, // 协议单独写英文版
   /[\\/]lib[\\/]i18n\.ts$/,
-  /[\\/]lib[\\/]currency\.ts$/,
   /\.d\.ts$/,
 ]
 const SKIP_ATTRS = new Set(['key', 'className', 'id', 'value', 'name', 'type', 'htmlFor', 'to', 'href', 'role', 'data-testid'])
@@ -42,11 +43,11 @@ function shouldSkipString(node) {
   if (ts.isCaseClause(p)) return true
   if (ts.isBinaryExpression(p) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken].includes(p.operatorToken.kind)) return true
   if (ts.isElementAccessExpression(p) && p.argumentExpression === node) return true
-  // 已经在 tr(...) 或 console.xxx(...) 里
-  for (let a = p; a; a = a.parent) {
+  // 已经是 tr(...) 的第一个参数（翻译键），或在 console.xxx(...) 里；tr 的变量里的文字仍要翻译
+  for (let a = p, child = node; a; child = a, a = a.parent) {
     if (ts.isCallExpression(a)) {
       const e = a.expression
-      if (ts.isIdentifier(e) && e.text === 'tr') return true
+      if (ts.isIdentifier(e) && e.text === 'tr' && a.arguments[0] === child) return true
       if (ts.isPropertyAccessExpression(e) && ts.isIdentifier(e.expression) && e.expression.text === 'console') return true
     }
   }

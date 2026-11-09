@@ -10,6 +10,7 @@ import { formatDateTime, formatMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { receivableApi } from '../api'
 
+import { tr } from '@/lib/i18n'
 function ymd(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
@@ -39,21 +40,21 @@ export function StatementPage() {
     <div>
       <div className="print:hidden">
         <PageHeader
-          title={data ? `对账单 · ${data.customerName}` : '对账单'}
-          back={{ to: `/customers/${customerId}`, label: '客户详情' }}
+          title={data ? tr('对账单 · {{customerName}}', { customerName: data.customerName }) : tr('对账单')}
+          back={{ to: `/customers/${customerId}`, label: tr('客户详情') }}
           actions={
             <Button onClick={() => window.print()} disabled={!data}>
               <Printer aria-hidden />
-              打印
+              {tr('打印')}
             </Button>
           }
         />
         <Card className="mb-6">
           <CardBody className="flex flex-wrap items-center gap-2">
-            <Input type="date" aria-label="开始日期" value={from} max={to} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
-            <span className="text-slate-400">至</span>
-            <Input type="date" aria-label="结束日期" value={to} min={from} onChange={(e) => e.target.value && update({ to: e.target.value })} className="w-40" />
-            {from > to && <span className="text-sm text-red-600">开始日期不能晚于结束日期</span>}
+            <Input type="date" aria-label={tr('开始日期')} value={from} max={to} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
+            <span className="text-slate-400">{tr('至')}</span>
+            <Input type="date" aria-label={tr('结束日期')} value={to} min={from} onChange={(e) => e.target.value && update({ to: e.target.value })} className="w-40" />
+            {from > to && <span className="text-sm text-red-600">{tr('开始日期不能晚于结束日期')}</span>}
           </CardBody>
         </Card>
       </div>
@@ -68,46 +69,46 @@ export function StatementPage() {
         <Card className="print:border-0 print:shadow-none">
           <CardBody className="space-y-6 print:p-0">
             <header className="text-center">
-              <h1 className="text-xl font-bold text-slate-900">{data.storeName} · 客户对账单</h1>
+              <h1 className="text-xl font-bold text-slate-900">{data.storeName} {tr('· 客户对账单')}</h1>
               {(data.storePhone || data.storeAddress) && (
                 <p className="mt-1 text-sm text-slate-600">{[data.storePhone, data.storeAddress].filter(Boolean).join(' · ')}</p>
               )}
             </header>
             <div className="flex flex-wrap justify-between gap-2 text-sm">
               <p>
-                客户：<span className="font-medium">{data.customerName}</span>
+                {tr('客户：')}<span className="font-medium">{data.customerName}</span>
                 {data.customerPhone && <span className="text-slate-500">（{data.customerPhone}）</span>}
               </p>
               <p>
-                期间：{data.from} 至 {data.to}
+                {tr('期间：')}{data.from} {tr('至')} {data.to}
               </p>
             </div>
 
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 print:grid-cols-4">
-              <Total label="期初欠款" value={money(data.openingBalance)} />
-              <Total label="本期新增欠款" value={money(data.totalDebit)} />
-              <Total label="本期收款" value={money(data.totalCredit)} />
-              <Total label="期末欠款" value={money(data.closingBalance)} strong />
+              <Total label={tr('期初欠款')} value={money(data.openingBalance)} />
+              <Total label={tr('本期新增欠款')} value={money(data.totalDebit)} />
+              <Total label={tr('本期收款')} value={money(data.totalCredit)} />
+              <Total label={tr('期末欠款')} value={money(data.closingBalance)} strong />
             </dl>
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="border-y border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500 print:bg-transparent">
                   <tr>
-                    <th className="px-3 py-2">日期</th>
-                    <th className="px-3 py-2">单号</th>
-                    <th className="px-3 py-2">摘要</th>
-                    <th className="px-3 py-2 text-right">销售金额</th>
-                    <th className="px-3 py-2 text-right">当场付</th>
-                    <th className="px-3 py-2 text-right">新增欠款</th>
-                    <th className="px-3 py-2 text-right">收款</th>
-                    <th className="px-3 py-2 text-right">欠款余额</th>
+                    <th className="px-3 py-2">{tr('日期')}</th>
+                    <th className="px-3 py-2">{tr('单号')}</th>
+                    <th className="px-3 py-2">{tr('摘要')}</th>
+                    <th className="px-3 py-2 text-right">{tr('销售金额')}</th>
+                    <th className="px-3 py-2 text-right">{tr('当场付')}</th>
+                    <th className="px-3 py-2 text-right">{tr('新增欠款')}</th>
+                    <th className="px-3 py-2 text-right">{tr('收款')}</th>
+                    <th className="px-3 py-2 text-right">{tr('欠款余额')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   <tr className="text-slate-500">
                     <td className="px-3 py-2" colSpan={7}>
-                      期初欠款
+                      {tr('期初欠款')}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{money(data.openingBalance)}</td>
                   </tr>
@@ -134,7 +135,7 @@ export function StatementPage() {
                   {data.lines.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-3 py-6 text-center text-slate-500">
-                        本期间没有销售和收款
+                        {tr('本期间没有销售和收款')}
                       </td>
                     </tr>
                   )}
@@ -142,8 +143,8 @@ export function StatementPage() {
               </table>
             </div>
             <footer className="flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-4 text-xs text-slate-500">
-              <span>生成时间：{formatDateTime(data.generatedAt)}。已取消的销售单、已作废的收款不计入。</span>
-              <span className="hidden print:inline">客户确认签字：________________</span>
+              <span>{tr('生成时间：')}{formatDateTime(data.generatedAt)}{tr('。已取消的销售单、已作废的收款不计入。')}</span>
+              <span className="hidden print:inline">{tr('客户确认签字：________________')}</span>
             </footer>
           </CardBody>
         </Card>

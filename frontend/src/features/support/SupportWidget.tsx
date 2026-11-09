@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { api, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
+import { tr } from '@/lib/i18n'
 interface Handoff {
   wechatId: string
   tip: string
@@ -38,7 +39,7 @@ const supportApi = {
 }
 
 let nextId = 1
-const HUMAN = '人工客服'
+const HUMAN = tr('人工客服')
 
 /** 右下角客服：固定话术自动回答，答不上来时给出客服微信。 */
 export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
@@ -54,7 +55,7 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
   const reply = useMutation({
     mutationFn: (fn: () => Promise<Answer>) => fn(),
     onSuccess: (answer) => push({ role: 'bot', answer }),
-    onError: (e) => toast.error(errorMessage(e, '客服暂时无法回答，请稍后再试')),
+    onError: (e) => toast.error(errorMessage(e, tr('客服暂时无法回答，请稍后再试'))),
   })
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
 
   function human() {
     if (reply.isPending) return
-    push({ role: 'user', text: '联系人工客服' })
+    push({ role: 'user', text: tr('联系人工客服') })
     reply.mutate(async () => {
       const handoff = await supportApi.contact()
       return { matched: false, faqId: null, question: HUMAN, answer: null, actionLabel: null, actionPath: null, handoff }
@@ -95,7 +96,7 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
       {open && (
         <div
           role="dialog"
-          aria-label="在线客服"
+          aria-label={tr('在线客服')}
           className={cn(
             'fixed right-4 z-40 flex h-[min(34rem,72dvh)] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl',
             withTabBar ? 'bottom-36 lg:bottom-24' : 'bottom-24',
@@ -103,10 +104,10 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
         >
           <div className="flex items-center justify-between border-b border-slate-100 bg-blue-600 px-4 py-3 text-white">
             <div>
-              <p className="text-sm font-semibold">SmallBiz 小助手</p>
-              <p className="text-xs text-blue-100">自动回复 · 答不上来会转人工</p>
+              <p className="text-sm font-semibold">{tr('SmallBiz 小助手')}</p>
+              <p className="text-xs text-blue-100">{tr('自动回复 · 答不上来会转人工')}</p>
             </div>
-            <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-1.5 hover:bg-white/15" aria-label="关闭客服">
+            <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-1.5 hover:bg-white/15" aria-label={tr('关闭客服')}>
               <X className="size-5" />
             </button>
           </div>
@@ -131,13 +132,13 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
                     onClick={human}
                     className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100"
                   >
-                    人工客服
+                    {tr('人工客服')}
                   </button>
                 </div>
               </BotBubble>
             )}
             {welcome.isLoading && <BotBubble>…</BotBubble>}
-            {welcome.isError && <BotBubble>客服加载失败，请检查网络后重新打开。</BotBubble>}
+            {welcome.isError && <BotBubble>{tr('客服加载失败，请检查网络后重新打开。')}</BotBubble>}
 
             {messages.map((m) =>
               m.role === 'user' ? (
@@ -163,14 +164,14 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
                   {m.answer.faqId && (
                     <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
                       {m.feedback ? (
-                        <span>{m.feedback === 'up' ? '感谢反馈！' : '抱歉没帮上忙，可以点「人工客服」'}</span>
+                        <span>{m.feedback === 'up' ? tr('感谢反馈！') : tr('抱歉没帮上忙，可以点「人工客服」')}</span>
                       ) : (
                         <>
-                          有帮助吗？
-                          <button type="button" className="rounded p-1 hover:bg-slate-100 hover:text-slate-600" aria-label="有帮助" onClick={() => feedback(m, true)}>
+                          {tr('有帮助吗？')}
+                          <button type="button" className="rounded p-1 hover:bg-slate-100 hover:text-slate-600" aria-label={tr('有帮助')} onClick={() => feedback(m, true)}>
                             <ThumbsUp className="size-3.5" />
                           </button>
-                          <button type="button" className="rounded p-1 hover:bg-slate-100 hover:text-slate-600" aria-label="没帮助" onClick={() => feedback(m, false)}>
+                          <button type="button" className="rounded p-1 hover:bg-slate-100 hover:text-slate-600" aria-label={tr('没帮助')} onClick={() => feedback(m, false)}>
                             <ThumbsDown className="size-3.5" />
                           </button>
                         </>
@@ -180,7 +181,7 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
                 </BotBubble>
               ),
             )}
-            {reply.isPending && <BotBubble>正在查找答案…</BotBubble>}
+            {reply.isPending && <BotBubble>{tr('正在查找答案…')}</BotBubble>}
           </div>
 
           <form
@@ -194,15 +195,15 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               maxLength={300}
-              placeholder="输入你的问题，例如：怎么开单"
-              aria-label="输入问题"
+              placeholder={tr('输入你的问题，例如：怎么开单')}
+              aria-label={tr('输入问题')}
               className="h-10 min-w-0 flex-1 rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
             <button
               type="submit"
               disabled={!input.trim() || reply.isPending}
               className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-              aria-label="发送"
+              aria-label={tr('发送')}
             >
               <SendHorizontal className="size-4" />
             </button>
@@ -214,7 +215,7 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label={open ? '关闭客服' : '打开在线客服'}
+        aria-label={open ? tr('关闭客服') : tr('打开在线客服')}
         className={cn(
           'fixed right-4 z-40 flex size-13 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700',
           withTabBar ? 'bottom-20 lg:bottom-6' : 'bottom-6',
@@ -238,22 +239,22 @@ function HandoffCard({ handoff, unmatched }: { handoff: Handoff; unmatched: bool
   async function copy() {
     try {
       await navigator.clipboard.writeText(handoff.wechatId)
-      toast.success('微信号已复制')
+      toast.success(tr('微信号已复制'))
     } catch {
-      toast.error('复制失败，请手动输入')
+      toast.error(tr('复制失败，请手动输入'))
     }
   }
   return (
     <div>
-      <p>{unmatched ? '这个问题我还答不好，' : ''}可以添加客服微信，由人工为你解答：</p>
+      <p>{unmatched ? tr('这个问题我还答不好，') : ''}{tr('可以添加客服微信，由人工为你解答：')}</p>
       <p className="mt-1 text-xs text-slate-500">{handoff.tip}</p>
       <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
         <UserRound className="size-4 shrink-0 text-emerald-700" aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className="block text-xs text-emerald-700">客服微信</span>
+          <span className="block text-xs text-emerald-700">{tr('客服微信')}</span>
           <span className="block break-all font-mono font-semibold text-emerald-900">{handoff.wechatId}</span>
         </span>
-        <button type="button" onClick={() => void copy()} className="rounded p-1.5 text-emerald-700 hover:bg-emerald-100" aria-label="复制微信号">
+        <button type="button" onClick={() => void copy()} className="rounded p-1.5 text-emerald-700 hover:bg-emerald-100" aria-label={tr('复制微信号')}>
           <Copy className="size-4" />
         </button>
       </div>

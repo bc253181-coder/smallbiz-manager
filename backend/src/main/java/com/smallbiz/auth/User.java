@@ -26,6 +26,10 @@ public class User extends BaseEntity {
     @Column(name = "display_name", nullable = false, length = 100)
     private String displayName;
 
+    /** 界面语言：zh-CN / en；为空表示按浏览器语言。 */
+    @Column(length = 10)
+    private String locale;
+
     @Column(length = 30)
     private String phone;
 
@@ -68,6 +72,14 @@ public class User extends BaseEntity {
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public String getLocale() {
+        return locale;
+    }
+
+    public void setLocale(String locale) {
+        this.locale = locale;
     }
 
     public void setDisplayName(String displayName) {

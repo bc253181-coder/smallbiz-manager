@@ -10,7 +10,8 @@ import { SupplierFormDialog } from '../SupplierFormDialog'
 import { SupplierPurchaseHistory } from '@/features/purchasing/SupplierPurchaseHistory'
 import { NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
 
-const BACK = { to: '/suppliers', label: '返回供应商列表' }
+import { tr } from '@/lib/i18n'
+const BACK = { to: '/suppliers', label: tr('返回供应商列表') }
 
 export function SupplierDetailPage() {
   const id = Number(useParams().id)
@@ -25,21 +26,21 @@ export function SupplierDetailPage() {
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: ['supplier', id] })
       await queryClient.invalidateQueries({ queryKey: ['suppliers'] })
-      toast.success('供应商已删除')
+      toast.success(tr('供应商已删除'))
       navigate('/suppliers', { replace: true })
     },
     onError: (e) => {
       setDeleting(false)
-      toast.error(errorMessage(e, '删除失败'))
+      toast.error(errorMessage(e, tr('删除失败')))
     },
   })
 
-  if (isLoading) return <div className="h-80 animate-pulse rounded-xl bg-slate-100" aria-label="加载中" />
+  if (isLoading) return <div className="h-80 animate-pulse rounded-xl bg-slate-100" aria-label={tr('加载中')} />
   if (isError || !s) {
     return (
       <NotFoundCard
         back={BACK}
-        title="供应商"
+        title={tr('供应商')}
         error={errorMessage(error)}
         onRetry={() => void refetch()}
         notFound={errorCode(error) === 'SUPPLIER_NOT_FOUND'}
@@ -56,13 +57,13 @@ export function SupplierDetailPage() {
         onEdit={() => setEditing(true)}
         onDelete={() => setDeleting(true)}
         info={[
-          { label: '联系人', value: s.contactPerson },
-          { label: '联系电话', value: s.phone },
-          { label: '邮箱', value: s.email },
-          { label: '地址', value: s.address },
-          { label: '供应商品', value: s.suppliedProductsNote },
-          { label: '备注', value: s.notes },
-          { label: '添加时间', value: formatDateTime(s.createdAt) },
+          { label: tr('联系人'), value: s.contactPerson },
+          { label: tr('联系电话'), value: s.phone },
+          { label: tr('邮箱'), value: s.email },
+          { label: tr('地址'), value: s.address },
+          { label: tr('供应商品'), value: s.suppliedProductsNote },
+          { label: tr('备注'), value: s.notes },
+          { label: tr('添加时间'), value: formatDateTime(s.createdAt) },
         ]}
         history={<SupplierPurchaseHistory supplierId={s.id} />}
       />
@@ -70,9 +71,9 @@ export function SupplierDetailPage() {
       <ConfirmDialog
         open={deleting}
         onOpenChange={setDeleting}
-        title={`删除供应商「${s.name}」？`}
-        description="删除后不再出现在供应商列表中。已有采购单中的供应商信息会保留。"
-        confirmText="删除"
+        title={tr('删除供应商「{{name}}」？', { name: s.name })}
+        description={tr('删除后不再出现在供应商列表中。已有采购单中的供应商信息会保留。')}
+        confirmText={tr('删除')}
         danger
         loading={remove.isPending}
         onConfirm={() => remove.mutate()}

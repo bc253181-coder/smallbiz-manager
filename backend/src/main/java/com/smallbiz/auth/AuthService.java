@@ -165,6 +165,14 @@ public class AuthService {
         return UserView.of(user);
     }
 
+    /** 界面语言跟着账号走：换设备登录也是同一种语言。 */
+    @Transactional
+    public UserView updateLocale(Long userId, String locale) {
+        User user = loadUser(userId);
+        user.setLocale(locale);
+        return UserView.of(user);
+    }
+
     /** 修改密码后，所有设备上的登录（刷新令牌）全部失效。 */
     @Transactional
     public void changePassword(Long userId, ChangePasswordRequest req) {

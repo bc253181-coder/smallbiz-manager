@@ -14,6 +14,8 @@ import { formatDateTime, useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { inventoryApi } from '../api'
 
+import { tr } from '@/lib/i18n'
+import { systemText, warehouseName } from '@/lib/systemText'
 export function MovementsPage() {
   const [params, setParams] = useSearchParams()
   const money = useMoney()
@@ -54,11 +56,11 @@ export function MovementsPage() {
   return (
     <div>
       <PageHeader
-        title="库存流水"
-        description="每一次库存变动的记录，不可修改或删除"
-        back={{ to: '/inventory', label: '返回库存' }}
+        title={tr('库存流水')}
+        description={tr('每一次库存变动的记录，不可修改或删除')}
+        back={{ to: '/inventory', label: tr('返回库存') }}
         actions={
-          <ExcelExportButton path="/exports/movements" params={{ productId, warehouseId, type, from, to }} fallbackName="库存流水.xlsx" />
+          <ExcelExportButton path="/exports/movements" params={{ productId, warehouseId, type, from, to }} fallbackName={tr('库存流水.xlsx')} />
         }
       />
 
@@ -66,8 +68,8 @@ export function MovementsPage() {
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-end">
           {productId !== undefined && (
             <div className="flex h-10 items-center gap-2 rounded-lg bg-blue-50 px-3 text-sm text-blue-800">
-              <span className="max-w-56 truncate">商品：{product.data?.name ?? `#${productId}`}</span>
-              <button type="button" onClick={() => update({ productId: null })} aria-label="取消按商品筛选" className="rounded p-0.5 hover:bg-blue-100">
+              <span className="max-w-56 truncate">{tr('商品：')}{product.data?.name ?? `#${productId}`}</span>
+              <button type="button" onClick={() => update({ productId: null })} aria-label={tr('取消按商品筛选')} className="rounded p-0.5 hover:bg-blue-100">
                 <X className="size-4" />
               </button>
             </div>
@@ -75,21 +77,21 @@ export function MovementsPage() {
           <div className={cn('grid flex-1 grid-cols-1 gap-2', showWarehouse ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-3')}>
             {showWarehouse && (
               <label className="text-xs text-slate-500">
-                仓库
+                {tr('仓库')}
                 <Select value={warehouseId ?? ''} onChange={(e) => update({ warehouseId: e.target.value || null })} className="mt-1">
-                  <option value="">全部仓库</option>
+                  <option value="">{tr('全部仓库')}</option>
                   {wh.all.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name}
+                      {warehouseName(w.name)}
                     </option>
                   ))}
                 </Select>
               </label>
             )}
             <label className="text-xs text-slate-500">
-              类型
+              {tr('类型')}
               <Select value={type ?? ''} onChange={(e) => update({ type: e.target.value || null })} className="mt-1">
-                <option value="">全部类型</option>
+                <option value="">{tr('全部类型')}</option>
                 {(Object.keys(MOVEMENT_LABELS) as MovementType[]).map((t) => (
                   <option key={t} value={t}>
                     {MOVEMENT_LABELS[t]}
@@ -98,29 +100,29 @@ export function MovementsPage() {
               </Select>
             </label>
             <label className="text-xs text-slate-500">
-              开始日期
+              {tr('开始日期')}
               <Input type="date" value={from} max={to || undefined} onChange={(e) => update({ from: e.target.value || null })} className="mt-1" />
             </label>
             <label className="text-xs text-slate-500">
-              结束日期
+              {tr('结束日期')}
               <Input type="date" value={to} min={from || undefined} onChange={(e) => update({ to: e.target.value || null })} className="mt-1" />
             </label>
           </div>
           {filtered && (
             <Button variant="ghost" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
-              清除筛选
+              {tr('清除筛选')}
             </Button>
           )}
         </div>
 
         {invalidRange ? (
-          <p className="p-6 text-center text-sm text-red-600">开始日期不能晚于结束日期</p>
+          <p className="p-6 text-center text-sm text-red-600">{tr('开始日期不能晚于结束日期')}</p>
         ) : isLoading ? (
           <div className="h-48 animate-pulse bg-slate-50" />
         ) : isError ? (
           <ErrorState onRetry={() => void refetch()} />
         ) : data && data.items.length === 0 ? (
-          <EmptyState icon={History} title={filtered ? '没有符合条件的记录' : '还没有库存变动'} />
+          <EmptyState icon={History} title={filtered ? tr('没有符合条件的记录') : tr('还没有库存变动')} />
         ) : (
           data && (
             <div className={cn(isFetching && 'opacity-60')}>
@@ -128,15 +130,15 @@ export function MovementsPage() {
                 <table className="w-full min-w-[760px] text-sm">
                   <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                     <tr>
-                      <th className="px-4 py-3">时间</th>
-                      <th className="px-4 py-3">商品</th>
-                      {showWarehouse && <th className="px-4 py-3">仓库</th>}
-                      <th className="px-4 py-3">类型</th>
-                      <th className="px-4 py-3 text-right">变动</th>
-                      <th className="px-4 py-3 text-right">变动后</th>
-                      {showCost && <th className="px-4 py-3 text-right">单价</th>}
-                      <th className="px-4 py-3">备注</th>
-                      <th className="px-4 py-3">操作人</th>
+                      <th className="px-4 py-3">{tr('时间')}</th>
+                      <th className="px-4 py-3">{tr('商品')}</th>
+                      {showWarehouse && <th className="px-4 py-3">{tr('仓库')}</th>}
+                      <th className="px-4 py-3">{tr('类型')}</th>
+                      <th className="px-4 py-3 text-right">{tr('变动')}</th>
+                      <th className="px-4 py-3 text-right">{tr('变动后')}</th>
+                      {showCost && <th className="px-4 py-3 text-right">{tr('单价')}</th>}
+                      <th className="px-4 py-3">{tr('备注')}</th>
+                      <th className="px-4 py-3">{tr('操作人')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -152,14 +154,14 @@ export function MovementsPage() {
                             <span className="text-slate-400">{m.productName}</span>
                           )}
                         </td>
-                        {showWarehouse && <td className="whitespace-nowrap px-4 py-3 text-slate-600">{m.warehouseName}</td>}
+                        {showWarehouse && <td className="whitespace-nowrap px-4 py-3 text-slate-600">{warehouseName(m.warehouseName)}</td>}
                         <td className="whitespace-nowrap px-4 py-3">{MOVEMENT_LABELS[m.type]}</td>
                         <td className={cn('px-4 py-3 text-right font-medium tabular-nums', m.qtyChange > 0 ? 'text-emerald-700' : 'text-red-600')}>
                           {m.qtyChange > 0 ? `+${m.qtyChange}` : m.qtyChange}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">{m.qtyAfter}</td>
                         {showCost && <td className="px-4 py-3 text-right tabular-nums text-slate-600">{money(m.unitCost)}</td>}
-                        <td className="px-4 py-3 text-slate-600">{m.reason ?? '—'}</td>
+                        <td className="px-4 py-3 text-slate-600">{m.reason ? systemText(m.reason) : '—'}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{m.operatorName ?? '—'}</td>
                       </tr>
                     ))}
@@ -173,15 +175,15 @@ export function MovementsPage() {
                       <p className="truncate font-medium text-slate-900">{m.productName}</p>
                       <p className="text-xs text-slate-500">
                         {MOVEMENT_LABELS[m.type]}
-                        {showWarehouse && `· ${m.warehouseName}`} · {formatDateTime(m.createdAt)}
+                        {showWarehouse && `· ${warehouseName(m.warehouseName)}`} · {formatDateTime(m.createdAt)}
                       </p>
-                      {m.reason && <p className="mt-0.5 truncate text-xs text-slate-500">{m.reason}</p>}
+                      {m.reason && <p className="mt-0.5 truncate text-xs text-slate-500">{systemText(m.reason)}</p>}
                     </div>
                     <div className="text-right">
                       <p className={cn('font-semibold tabular-nums', m.qtyChange > 0 ? 'text-emerald-700' : 'text-red-600')}>
                         {m.qtyChange > 0 ? `+${m.qtyChange}` : m.qtyChange}
                       </p>
-                      <p className="text-xs text-slate-500">余 {m.qtyAfter}</p>
+                      <p className="text-xs text-slate-500">{tr('余')} {m.qtyAfter}</p>
                     </div>
                   </li>
                 ))}

@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { supplierApi } from '../api'
 import { SupplierFormDialog } from '../SupplierFormDialog'
 
+import { tr } from '@/lib/i18n'
 export function SupplierListPage() {
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
@@ -46,15 +47,15 @@ export function SupplierListPage() {
   return (
     <div>
       <PageHeader
-        title="供应商"
-        description="管理进货渠道和联系方式"
+        title={tr('供应商')}
+        description={tr('管理进货渠道和联系方式')}
         actions={
           <>
             <ImportButton type="suppliers" />
-            <ExcelExportButton path="/exports/suppliers" params={{ q }} fallbackName="供应商.xlsx" />
+            <ExcelExportButton path="/exports/suppliers" params={{ q }} fallbackName={tr('供应商.xlsx')} />
             <Button onClick={() => setCreating(true)}>
               <Plus aria-hidden />
-              新增供应商
+              {tr('新增供应商')}
             </Button>
           </>
         }
@@ -66,9 +67,9 @@ export function SupplierListPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索名称、联系人、电话或供应商品"
+              placeholder={tr('搜索名称、联系人、电话或供应商品')}
               className="pl-9"
-              aria-label="搜索供应商"
+              aria-label={tr('搜索供应商')}
             />
           </div>
         </div>
@@ -79,16 +80,16 @@ export function SupplierListPage() {
           <ErrorState onRetry={() => void refetch()} />
         ) : data && data.items.length === 0 ? (
           q ? (
-            <EmptyState icon={Search} title="没有符合条件的供应商" />
+            <EmptyState icon={Search} title={tr('没有符合条件的供应商')} />
           ) : (
             <EmptyState
               icon={Factory}
-              title="还没有供应商"
-              description="添加供应商后，采购时可以直接选择，并查看每个供应商的进货记录"
+              title={tr('还没有供应商')}
+              description={tr('添加供应商后，采购时可以直接选择，并查看每个供应商的进货记录')}
               action={
                 <Button onClick={() => setCreating(true)}>
                   <Plus aria-hidden />
-                  新增供应商
+                  {tr('新增供应商')}
                 </Button>
               }
             />
@@ -99,10 +100,10 @@ export function SupplierListPage() {
               <table className="hidden w-full text-sm md:table">
                 <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">供应商</th>
-                    <th className="px-4 py-3">联系人</th>
-                    <th className="px-4 py-3">电话</th>
-                    <th className="px-4 py-3">供应商品</th>
+                    <th className="px-4 py-3">{tr('供应商')}</th>
+                    <th className="px-4 py-3">{tr('联系人')}</th>
+                    <th className="px-4 py-3">{tr('电话')}</th>
+                    <th className="px-4 py-3">{tr('供应商品')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -126,15 +127,15 @@ export function SupplierListPage() {
                     <Link to={`/suppliers/${s.id}`} className="block p-4 active:bg-slate-50">
                       <p className="truncate font-medium text-slate-900">{s.name}</p>
                       <p className="truncate text-xs text-slate-500">
-                        {[s.contactPerson, s.phone].filter(Boolean).join(' · ') || '未填写联系方式'}
+                        {[s.contactPerson, s.phone].filter(Boolean).join(' · ') || tr('未填写联系方式')}
                       </p>
-                      {s.suppliedProductsNote && <p className="mt-0.5 truncate text-xs text-slate-500">供应：{s.suppliedProductsNote}</p>}
+                      {s.suppliedProductsNote && <p className="mt-0.5 truncate text-xs text-slate-500">{tr('供应：')}{s.suppliedProductsNote}</p>}
                     </Link>
                   </li>
                 ))}
               </ul>
               <div className="border-t border-slate-100 px-4 py-3">
-                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit="个供应商" onChange={(p) => update({ page: String(p) }, false)} />
+                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit={tr('个供应商')} onChange={(p) => update({ page: String(p) }, false)} />
               </div>
             </div>
           )

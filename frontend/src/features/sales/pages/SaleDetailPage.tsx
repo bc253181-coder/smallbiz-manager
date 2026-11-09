@@ -23,7 +23,9 @@ import { PAYMENT_STATUS_LABELS, PRICE_SOURCE_LABELS, saleApi } from '../api'
 import { useWarehouses } from '@/features/warehouse/api'
 import { SaleStatusBadge } from '../SaleStatusBadge'
 
-const BACK = { to: '/sales', label: '返回销售列表' }
+import { tr, trc } from '@/lib/i18n'
+import { warehouseName } from '@/lib/systemText'
+const BACK = { to: '/sales', label: tr('返回销售列表') }
 
 export function SaleDetailPage() {
   const id = Number(useParams().id)
@@ -50,27 +52,27 @@ export function SaleDetailPage() {
         ),
       )
       setCancelling(false)
-      toast.success('销售单已取消，库存已恢复')
+      toast.success(tr('销售单已取消，库存已恢复'))
     },
     onError: (e) => {
       setCancelling(false)
-      toast.error(errorMessage(e, '取消失败'))
+      toast.error(errorMessage(e, tr('取消失败')))
       void refetch()
     },
   })
 
-  if (isLoading) return <div className="h-96 animate-pulse rounded-xl bg-slate-100" aria-label="加载中" />
+  if (isLoading) return <div className="h-96 animate-pulse rounded-xl bg-slate-100" aria-label={tr('加载中')} />
   if (isError || !o) {
     return (
       <div>
-        <PageHeader title="销售单" back={BACK} />
+        <PageHeader title={tr('销售单')} back={BACK} />
         <Card>
           {errorCode(error) === 'SALE_NOT_FOUND' ? (
             <div className="flex flex-col items-center gap-3 py-14 text-center">
-              <p className="font-semibold text-slate-900">销售单不存在</p>
-              <p className="text-sm text-slate-500">它可能不属于当前店铺</p>
+              <p className="font-semibold text-slate-900">{tr('销售单不存在')}</p>
+              <p className="text-sm text-slate-500">{tr('它可能不属于当前店铺')}</p>
               <Link to="/sales" className={buttonVariants({ variant: 'secondary' })}>
-                返回销售列表
+                {tr('返回销售列表')}
               </Link>
             </div>
           ) : (
@@ -95,28 +97,28 @@ export function SaleDetailPage() {
               <SaleStatusBadge status={o.status} />
             </span>
           }
-          description={`${o.customerName ?? '散客'} · ${formatDateTime(o.orderDate)}`}
+          description={`${o.customerName ?? tr('散客')} · ${formatDateTime(o.orderDate)}`}
           actions={
             <>
               {owes && canCredit && o.customerId && (
                 <Button onClick={() => setReceiving(true)}>
                   <HandCoins aria-hidden />
-                  收款
+                  {tr('收款')}
                 </Button>
               )}
               {canManage && o.status === 'COMPLETED' && (
                 <Button variant="secondary" onClick={() => setCancelling(true)}>
                   <XCircle aria-hidden />
-                  取消订单
+                  {tr('取消订单')}
                 </Button>
               )}
               <Button variant="secondary" onClick={() => window.print()}>
                 <Printer aria-hidden />
-                打印
+                {tr('打印')}
               </Button>
               <Link to="/sales/new" className={buttonVariants()}>
                 <Plus aria-hidden />
-                再开一单
+                {tr('再开一单')}
               </Link>
             </>
           }
@@ -130,27 +132,27 @@ export function SaleDetailPage() {
           <p className="text-sm">{[shop?.contactPhone, shop?.address].filter(Boolean).join(' · ')}</p>
         )}
         <p className="mt-2 text-sm">
-          销售单 {o.orderNo} · {formatDateTime(o.orderDate)} · 客户：{o.customerName ?? '散客'}
+          {tr('销售单')} {o.orderNo} · {formatDateTime(o.orderDate)} {tr('· 客户：')}{o.customerName ?? tr('散客')}
         </p>
       </div>
 
       {o.status === 'CANCELLED' && (
         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {formatDateTime(o.cancelledAt)} 由 {o.cancelledByName ?? '—'} 取消，库存已恢复{o.cancelReason ? `。原因：${o.cancelReason}` : ''}。
+          {formatDateTime(o.cancelledAt)} {tr('由')} {o.cancelledByName ?? '—'} {tr('取消，库存已恢复')}{o.cancelReason ? tr('。原因：{{cancelReason}}', { cancelReason: o.cancelReason }) : ''}。
         </div>
       )}
 
       <div className="grid gap-6 xl:grid-cols-3 [&>*]:min-w-0 print:block">
         <Card className="xl:col-span-2 print:border-0 print:shadow-none">
-          <CardHeader title="商品明细" description={`${o.itemCount} 种，共 ${o.totalQuantity} 件 · ${PRICE_TIER_LABELS[o.priceTier]}`} />
+          <CardHeader title={tr('商品明细')} description={tr('{{itemCount}} 种，共 {{totalQuantity}} 件 · {{v2}}', { itemCount: o.itemCount, totalQuantity: o.totalQuantity, v2: PRICE_TIER_LABELS[o.priceTier] })} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">商品</th>
-                  <th className="px-4 py-3 text-right">数量</th>
-                  <th className="px-4 py-3 text-right">单价</th>
-                  <th className="px-4 py-3 text-right">小计</th>
+                  <th className="px-4 py-3">{tr('商品')}</th>
+                  <th className="px-4 py-3 text-right">{tr('数量')}</th>
+                  <th className="px-4 py-3 text-right">{tr('单价')}</th>
+                  <th className="px-4 py-3 text-right">{tr('小计')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -177,13 +179,13 @@ export function SaleDetailPage() {
                 ))}
               </tbody>
               <tfoot className="text-sm">
-                <AmountRow label="商品合计" value={money(o.subtotal)} />
-                {Number(o.discountAmount) > 0 && <AmountRow label="优惠" value={`−${money(o.discountAmount)}`} />}
-                <AmountRow label="应收" value={money(o.totalAmount)} strong />
+                <AmountRow label={tr('商品合计')} value={money(o.subtotal)} />
+                {Number(o.discountAmount) > 0 && <AmountRow label={tr('优惠')} value={`−${money(o.discountAmount)}`} />}
+                <AmountRow label={tr('应收')} value={money(o.totalAmount)} strong />
                 {o.paymentStatus !== 'PAID' && o.status === 'COMPLETED' && (
                   <>
-                    <AmountRow label="已收" value={money(o.paidAmount)} />
-                    <AmountRow label="未收" value={money(o.outstanding)} />
+                    <AmountRow label={tr('已收')} value={money(o.paidAmount)} />
+                    <AmountRow label={tr('未收')} value={money(o.outstanding)} />
                   </>
                 )}
               </tfoot>
@@ -192,31 +194,31 @@ export function SaleDetailPage() {
         </Card>
 
         <Card className="print:hidden">
-          <CardHeader title="单据信息" />
+          <CardHeader title={tr('单据信息')} />
           <CardBody>
             <dl className="space-y-3 text-sm">
-              <Row label="客户">
+              <Row label={trc('单据', '客户')}>
                 {o.customerId ? (
                   <Link to={`/customers/${o.customerId}`} className="text-blue-600 hover:underline">
                     {o.customerName}
                   </Link>
                 ) : (
-                  '散客'
+                  tr('散客')
                 )}
               </Row>
-              <Row label="开单人">{o.createdByName ?? '—'}</Row>
-              {wh.all.length > 1 && o.warehouseName && <Row label="出货仓库">{o.warehouseName}</Row>}
-              <Row label="收款">
+              <Row label={tr('开单人')}>{o.createdByName ?? '—'}</Row>
+              {wh.all.length > 1 && o.warehouseName && <Row label={tr('出货仓库')}>{warehouseName(o.warehouseName)}</Row>}
+              <Row label={trc('单据', '收款')}>
                 <Badge tone={o.paymentStatus === 'PAID' ? 'green' : o.paymentStatus === 'PARTIAL' ? 'amber' : 'red'}>
                   {PAYMENT_STATUS_LABELS[o.paymentStatus]}
                 </Badge>
               </Row>
               {o.paymentStatus !== 'PAID' || o.payments.length > 0 ? (
                 <>
-                  <Row label="开单时实收">{money(o.paidAtSale)}</Row>
-                  <Row label="已收合计">{money(o.paidAmount)}</Row>
+                  <Row label={tr('开单时实收')}>{money(o.paidAtSale)}</Row>
+                  <Row label={tr('已收合计')}>{money(o.paidAmount)}</Row>
                   {o.status === 'COMPLETED' && (
-                    <Row label="未收">
+                    <Row label={tr('未收')}>
                       <span className={owes ? 'text-red-600' : undefined}>{money(o.outstanding)}</span>
                     </Row>
                   )}
@@ -224,13 +226,13 @@ export function SaleDetailPage() {
               ) : null}
               {showCost && (
                 <>
-                  <Row label="成本">{money(o.totalCost)}</Row>
-                  <Row label="毛利">
+                  <Row label={tr('成本')}>{money(o.totalCost)}</Row>
+                  <Row label={tr('毛利')}>
                     <span className={Number(o.grossProfit) < 0 ? 'text-red-600' : 'text-emerald-700'}>{money(o.grossProfit)}</span>
                   </Row>
                 </>
               )}
-              {o.notes && <Row label="备注">{o.notes}</Row>}
+              {o.notes && <Row label={tr('备注')}>{o.notes}</Row>}
             </dl>
           </CardBody>
         </Card>
@@ -238,7 +240,7 @@ export function SaleDetailPage() {
 
       {o.payments.length > 0 && (
         <Card className="mt-6 print:hidden">
-          <CardHeader title="收款记录" description="收款按开单时间先欠先还，冲抵到这张单的金额" />
+          <CardHeader title={tr('收款记录')} description={tr('收款按开单时间先欠先还，冲抵到这张单的金额')} />
           <ul className="divide-y divide-slate-100">
             {o.payments.map((p) => (
               <li key={p.paymentId} className={cn('flex items-center justify-between gap-3 px-5 py-3 text-sm', p.status === 'VOIDED' && 'text-slate-400')}>
@@ -246,7 +248,7 @@ export function SaleDetailPage() {
                   <span className="block font-mono text-xs">{p.paymentNo}</span>
                   <span className="block text-xs text-slate-500">
                     {formatDateTime(p.receivedAt)} · {METHOD_LABELS[p.method as PaymentMethod] ?? p.method}
-                    {p.status === 'VOIDED' && ' · 已作废'}
+                    {p.status === 'VOIDED' && tr(' · 已作废')}
                   </span>
                 </span>
                 <span className={cn('tabular-nums', p.status === 'VOIDED' ? 'line-through' : 'font-medium text-emerald-700')}>{money(p.amount)}</span>
@@ -271,17 +273,17 @@ export function SaleDetailPage() {
       <FormDialog
         open={cancelling}
         onClose={() => setCancelling(false)}
-        title="取消这张销售单？"
-        description="取消后商品库存会恢复，这笔销售不再计入统计。此操作不能撤销。"
-        submitText="确认取消"
+        title={tr('取消这张销售单？')}
+        description={tr('取消后商品库存会恢复，这笔销售不再计入统计。此操作不能撤销。')}
+        submitText={tr('确认取消')}
         saving={cancel.isPending}
         onSubmit={(e) => {
           e.preventDefault()
           cancel.mutate()
         }}
       >
-        <Field label="取消原因（选填）" htmlFor="sale-cancel-reason">
-          <Input id="sale-cancel-reason" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder="例如：客户退货" />
+        <Field label={tr('取消原因（选填）')} htmlFor="sale-cancel-reason">
+          <Input id="sale-cancel-reason" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} placeholder={tr('例如：客户退货')} />
         </Field>
       </FormDialog>
     </div>

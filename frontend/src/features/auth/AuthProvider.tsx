@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { applySession, onSessionChange, refreshSession } from '@/lib/api'
+import { getLang, syncLangFromAccount } from '@/lib/i18n'
 import { authApi, tenantApi } from './api'
 import type { BusinessType, SessionResponse } from './types'
 
@@ -31,6 +32,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onSessionChange((s) => {
+      // 界面语言跟着账号：账号上的语言与本机不同时以账号为准（刷新页面）；账号还没设置时记下当前语言
+      if (s?.user) {
+        if (syncLangFromAccount(s.user.locale)) {
+          window.location.reload()
+          return
+        }
+        if (!s.user.locale) void authApi.updateLocale(getLang()).catch(() => undefined)
+      }
       setSession(s)
       setStatus(s ? 'authenticated' : 'anonymous')
     })

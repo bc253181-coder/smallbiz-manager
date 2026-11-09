@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { PURCHASE_STATUS_LABELS, purchaseApi, type PurchaseStatus } from '../api'
 import { PurchaseStatusBadge } from '../PurchaseStatusBadge'
 
+import { tr } from '@/lib/i18n'
 const TABS: (PurchaseStatus | '')[] = ['', 'DRAFT', 'ORDERED', 'RECEIVED', 'CANCELLED']
 
 export function PurchaseListPage() {
@@ -50,21 +51,21 @@ export function PurchaseListPage() {
   return (
     <div>
       <PageHeader
-        title="采购"
-        description="向供应商下单进货，确认收货后自动入库并更新成本"
+        title={tr('采购')}
+        description={tr('向供应商下单进货，确认收货后自动入库并更新成本')}
         actions={
           <>
-            <ExcelExportButton path="/exports/purchases" params={{ q, status }} fallbackName="采购.xlsx" />
+            <ExcelExportButton path="/exports/purchases" params={{ q, status }} fallbackName={tr('采购.xlsx')} />
             <Link to="/purchases/new" className={buttonVariants()}>
               <Plus aria-hidden />
-              新建采购单
+              {tr('新建采购单')}
             </Link>
           </>
         }
       />
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4">
-          <div className="-mx-1 flex gap-1 overflow-x-auto px-1" role="tablist" aria-label="按状态筛选">
+          <div className="-mx-1 flex gap-1 overflow-x-auto px-1" role="tablist" aria-label={tr('按状态筛选')}>
             {TABS.map((t) => (
               <button
                 key={t || 'all'}
@@ -77,13 +78,13 @@ export function PurchaseListPage() {
                   (status ?? '') === t ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100',
                 )}
               >
-                {t ? PURCHASE_STATUS_LABELS[t] : '全部'}
+                {t ? PURCHASE_STATUS_LABELS[t] : tr('全部')}
               </button>
             ))}
           </div>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
-            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索单号或供应商" className="pl-9" aria-label="搜索采购单" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr('搜索单号或供应商')} className="pl-9" aria-label={tr('搜索采购单')} />
           </div>
         </div>
 
@@ -93,16 +94,16 @@ export function PurchaseListPage() {
           <ErrorState onRetry={() => void refetch()} />
         ) : data && data.items.length === 0 ? (
           q || status ? (
-            <EmptyState icon={Search} title="没有符合条件的采购单" />
+            <EmptyState icon={Search} title={tr('没有符合条件的采购单')} />
           ) : (
             <EmptyState
               icon={Truck}
-              title="还没有采购单"
-              description="向供应商进货时新建采购单。到货后点「确认收货」，库存会自动增加。"
+              title={tr('还没有采购单')}
+              description={tr('向供应商进货时新建采购单。到货后点「确认收货」，库存会自动增加。')}
               action={
                 <Link to="/purchases/new" className={buttonVariants()}>
                   <Plus aria-hidden />
-                  新建采购单
+                  {tr('新建采购单')}
                 </Link>
               }
             />
@@ -113,12 +114,12 @@ export function PurchaseListPage() {
               <table className="hidden w-full text-sm md:table">
                 <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">单号</th>
-                    <th className="px-4 py-3">供应商</th>
-                    <th className="px-4 py-3">下单日期</th>
-                    <th className="px-4 py-3 text-right">商品数</th>
-                    <th className="px-4 py-3 text-right">金额</th>
-                    <th className="px-4 py-3">状态</th>
+                    <th className="px-4 py-3">{tr('单号')}</th>
+                    <th className="px-4 py-3">{tr('供应商')}</th>
+                    <th className="px-4 py-3">{tr('下单日期')}</th>
+                    <th className="px-4 py-3 text-right">{tr('商品数')}</th>
+                    <th className="px-4 py-3 text-right">{tr('金额')}</th>
+                    <th className="px-4 py-3">{tr('状态')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -132,7 +133,7 @@ export function PurchaseListPage() {
                       <td className="px-4 py-3 text-slate-700">{o.supplierName}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-600">{formatDate(o.orderDate)}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-slate-600">
-                        {o.itemCount} 种 / {o.totalQuantity} 件
+                        {o.itemCount} {tr('种 /')} {o.totalQuantity} {tr('件')}
                       </td>
                       <td className="px-4 py-3 text-right font-medium tabular-nums">{money(o.totalAmount)}</td>
                       <td className="px-4 py-3">
@@ -152,7 +153,7 @@ export function PurchaseListPage() {
                           {o.orderNo} · {formatDate(o.orderDate)}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {o.itemCount} 种 / {o.totalQuantity} 件
+                          {o.itemCount} {tr('种 /')} {o.totalQuantity} {tr('件')}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -164,7 +165,7 @@ export function PurchaseListPage() {
                 ))}
               </ul>
               <div className="border-t border-slate-100 px-4 py-3">
-                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit="张采购单" onChange={(p) => update({ page: String(p) }, false)} />
+                <Pagination page={data.page} totalPages={data.totalPages} totalItems={data.totalItems} unit={tr('张采购单')} onChange={(p) => update({ page: String(p) }, false)} />
               </div>
             </div>
           )

@@ -1,3 +1,4 @@
+import { tr } from '@/lib/i18n'
 export type ProductStatus = 'ACTIVE' | 'INACTIVE'
 
 export type MovementType =
@@ -80,20 +81,20 @@ export interface Page<T> {
 }
 
 export const STATUS_LABELS: Record<ProductStatus, string> = {
-  ACTIVE: '在售',
-  INACTIVE: '已下架',
+  ACTIVE: tr('在售'),
+  INACTIVE: tr('已下架'),
 }
 
 export const MOVEMENT_LABELS: Record<MovementType, string> = {
-  INITIAL: '初始库存',
-  STOCK_IN: '入库',
-  STOCK_OUT: '出库',
-  ADJUSTMENT: '盘点调整',
-  SALE: '销售',
-  SALE_CANCEL: '销售取消',
-  PURCHASE_RECEIVE: '采购收货',
-  TRANSFER_OUT: '调拨调出',
-  TRANSFER_IN: '调拨调入',
+  INITIAL: tr('初始库存'),
+  STOCK_IN: tr('入库'),
+  STOCK_OUT: tr('出库'),
+  ADJUSTMENT: tr('盘点调整'),
+  SALE: tr('销售'),
+  SALE_CANCEL: tr('销售取消'),
+  PURCHASE_RECEIVE: tr('采购收货'),
+  TRANSFER_OUT: tr('调拨调出'),
+  TRANSFER_IN: tr('调拨调入'),
 }
 
-export const COMMON_UNITS = ['件', '个', '台', '套', '盒', '箱', '包', '双', '条', '瓶', '支', '袋', '张', '本', '米', '公斤']
+export const COMMON_UNITS = [tr('件'), tr('个'), tr('台'), tr('套'), tr('盒'), tr('箱'), tr('包'), tr('双'), tr('条'), tr('瓶'), tr('支'), tr('袋'), tr('张'), tr('本'), tr('米'), tr('公斤')]

@@ -6,6 +6,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 
+import { tr } from '@/lib/i18n'
 /** 客户 / 供应商详情页的共用骨架。 */
 export function PartnerDetailLayout({
   back,
@@ -41,11 +42,11 @@ export function PartnerDetailLayout({
             <>
               <Button variant="secondary" onClick={onDelete}>
                 <Trash2 aria-hidden />
-                删除
+                {tr('删除')}
               </Button>
               <Button onClick={onEdit}>
                 <Pencil aria-hidden />
-                编辑
+                {tr('编辑')}
               </Button>
             </>
           )
@@ -53,7 +54,7 @@ export function PartnerDetailLayout({
       />
       <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <Card>
-          <CardHeader title="基本资料" />
+          <CardHeader title={tr('基本资料')} />
           <CardBody>
             <dl className="space-y-4 text-sm">
               {info.map((i) => (
@@ -76,7 +77,7 @@ export function HistoryComingSoon({ title, icon, description }: { title: string;
   return (
     <>
       <CardHeader title={title} />
-      <EmptyState icon={icon} title="暂无记录" description={description} />
+      <EmptyState icon={icon} title={tr('暂无记录')} description={description} />
     </>
   )
 }
@@ -94,8 +95,8 @@ export function NotFoundCard({ back, title, error, onRetry, notFound }: {
       <Card>
         {notFound ? (
           <div className="flex flex-col items-center gap-3 py-14 text-center">
-            <p className="font-semibold text-slate-900">{title}不存在</p>
-            <p className="text-sm text-slate-500">它可能已被删除，或者不属于当前店铺</p>
+            <p className="font-semibold text-slate-900">{title}{tr('不存在')}</p>
+            <p className="text-sm text-slate-500">{tr('它可能已被删除，或者不属于当前店铺')}</p>
             <Link to={back.to} className={buttonVariants({ variant: 'secondary' })}>
               {back.label}
             </Link>

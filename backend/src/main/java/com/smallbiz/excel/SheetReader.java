@@ -228,7 +228,8 @@ public final class SheetReader {
         while (s.endsWith("*") || s.endsWith("＊")) {
             s = s.substring(0, s.length() - 1).trim();
         }
-        return s;
+        // 英文模板的表头也能识别
+        return ExcelI18n.headerToChinese(s);
     }
 
     private static ApiException tooManyRows() {

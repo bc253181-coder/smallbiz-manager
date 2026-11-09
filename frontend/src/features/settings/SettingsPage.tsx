@@ -20,15 +20,16 @@ import { applySession, errorMessage, fieldErrors } from '@/lib/api'
 import { CURRENCIES } from '@/lib/currency'
 import { formatDay } from '@/lib/format'
 
+import { tr } from '@/lib/i18n'
 const TIMEZONES = [
-  { value: 'Asia/Shanghai', label: '中国（北京时间 UTC+8）' },
-  { value: 'Asia/Kuala_Lumpur', label: '马来西亚（UTC+8）' },
-  { value: 'Asia/Singapore', label: '新加坡（UTC+8）' },
-  { value: 'Asia/Hong_Kong', label: '香港（UTC+8）' },
-  { value: 'Asia/Taipei', label: '台湾（UTC+8）' },
-  { value: 'Asia/Bangkok', label: '泰国（UTC+7）' },
-  { value: 'Asia/Tokyo', label: '日本（UTC+9）' },
-  { value: 'America/New_York', label: '美国东部时间' },
+  { value: 'Asia/Shanghai', label: tr('中国（北京时间 UTC+8）') },
+  { value: 'Asia/Kuala_Lumpur', label: tr('马来西亚（UTC+8）') },
+  { value: 'Asia/Singapore', label: tr('新加坡（UTC+8）') },
+  { value: 'Asia/Hong_Kong', label: tr('香港（UTC+8）') },
+  { value: 'Asia/Taipei', label: tr('台湾（UTC+8）') },
+  { value: 'Asia/Bangkok', label: tr('泰国（UTC+7）') },
+  { value: 'Asia/Tokyo', label: tr('日本（UTC+9）') },
+  { value: 'America/New_York', label: tr('美国东部时间') },
 ]
 
 const phonePattern = /^[0-9+\- ]*$/
@@ -37,8 +38,8 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">设置</h1>
-        <p className="mt-1 text-sm text-slate-500">管理店铺资料和个人账号</p>
+        <h1 className="text-2xl font-semibold text-slate-900">{tr('设置')}</h1>
+        <p className="mt-1 text-sm text-slate-500">{tr('管理店铺资料和个人账号')}</p>
       </div>
       <PlanLink />
       <MembershipLink />
@@ -62,9 +63,9 @@ function PlanLink() {
         <CreditCard className="size-5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-medium text-slate-900">套餐与续费</span>
+        <span className="block font-medium text-slate-900">{tr('套餐与续费')}</span>
         <span className="block text-sm text-slate-500">
-          {data ? `当前：${PLAN_LABELS[data.plan]}${data.expiresAt ? `，${formatDay(data.expiresAt)} 到期` : ''}` : '查看套餐、兑换激活码'}
+          {data ? tr('当前：{{v0}}{{v1}}', { v0: PLAN_LABELS[data.plan], v1: data.expiresAt ? tr('，{{expiresAt}} 到期', { expiresAt: formatDay(data.expiresAt) }) : '' }) : tr('查看套餐、兑换激活码')}
         </span>
       </span>
       <ChevronRight className="size-5 text-slate-400" aria-hidden />
@@ -91,10 +92,10 @@ function MembershipLink() {
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2 font-medium text-slate-900">
-            员工管理
-            {!staffAllowed && <Lock className="size-3.5 text-slate-400" aria-label="需要专业版" />}
+            {tr('员工管理')}
+            {!staffAllowed && <Lock className="size-3.5 text-slate-400" aria-label={tr('需要专业版')} />}
           </span>
-          <span className="block text-sm text-slate-500">邀请员工用自己的账号登录，设置店员或管理员权限</span>
+          <span className="block text-sm text-slate-500">{tr('邀请员工用自己的账号登录，设置店员或管理员权限')}</span>
         </span>
         <ChevronRight className="size-5 text-slate-400" aria-hidden />
       </Link>
@@ -104,24 +105,24 @@ function MembershipLink() {
   return (
     <div className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
       <span className="min-w-0 flex-1 text-sm text-slate-600">
-        你在「{tenant.name}」的身份：<span className="font-medium text-slate-900">{ROLE_LABELS[tenant.role]}</span>
+        {tr('你在「')}{tenant.name}{tr('」的身份：')}<span className="font-medium text-slate-900">{ROLE_LABELS[tenant.role]}</span>
       </span>
       <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => setConfirming(true)}>
-        退出这家店铺
+        {tr('退出这家店铺')}
       </Button>
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
-        title={`退出「${tenant.name}」？`}
-        description="退出后不能再进入这家店铺，需要店主重新邀请。你开过的单会保留。"
-        confirmText="退出店铺"
+        title={tr('退出「{{name}}」？', { name: tenant.name })}
+        description={tr('退出后不能再进入这家店铺，需要店主重新邀请。你开过的单会保留。')}
+        confirmText={tr('退出店铺')}
         danger
         loading={leaving}
         onConfirm={async () => {
           setLeaving(true)
           try {
             const s = await leaveTenant(tenant.id)
-            toast.success(`已退出「${tenant.name}」`)
+            toast.success(tr('已退出「{{name}}」', { name: tenant.name }))
             navigate(s.tenants.length > 0 ? '/select-tenant' : '/onboarding', { replace: true })
           } catch (e) {
             toast.error(errorMessage(e))
@@ -147,11 +148,11 @@ function WarehouseLink() {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2 font-medium text-slate-900">
-          仓库
-          {!allowed && <Lock className="size-3.5 text-slate-400" aria-label="需要专业版" />}
+          {tr('仓库')}
+          {!allowed && <Lock className="size-3.5 text-slate-400" aria-label={tr('需要专业版')} />}
         </span>
         <span className="block text-sm text-slate-500">
-          {wh.multi ? `已启用 ${wh.active.length} 个仓库，可分开记录库存、互相调拨` : '有门店和仓库等多个放货地点时，分开记录库存'}
+          {wh.multi ? tr('已启用 {{length}} 个仓库，可分开记录库存、互相调拨', { length: wh.active.length }) : tr('有门店和仓库等多个放货地点时，分开记录库存')}
         </span>
       </span>
       <ChevronRight className="size-5 text-slate-400" aria-hidden />
@@ -162,11 +163,11 @@ function WarehouseLink() {
 // ---------------- 店铺资料 ----------------
 
 const storeSchema = z.object({
-  name: z.string().trim().min(1, '请填写店铺名称').max(100, '店铺名称最多 100 字'),
+  name: z.string().trim().min(1, tr('请填写店铺名称')).max(100, tr('店铺名称最多 100 字')),
   businessType: z.enum(['RETAIL', 'WHOLESALE', 'ECOMMERCE', 'TRADING', 'OTHER']),
-  timezone: z.string().min(1, '请选择时区'),
-  contactPhone: z.string().trim().max(30, '电话最多 30 位').regex(phonePattern, '电话格式不正确'),
-  address: z.string().trim().max(300, '地址最多 300 字'),
+  timezone: z.string().min(1, tr('请选择时区')),
+  contactPhone: z.string().trim().max(30, tr('电话最多 30 位')).regex(phonePattern, tr('电话格式不正确')),
+  address: z.string().trim().max(300, tr('地址最多 300 字')),
   allowNegativeStock: z.boolean(),
   currency: z.string().min(3),
 })
@@ -213,37 +214,37 @@ function StoreSettings() {
           : null,
         tenants: s.tenants.map((t) => (t.id === updated.id ? { ...t, name: updated.name } : t)),
       }))
-      toast.success('店铺资料已保存')
+      toast.success(tr('店铺资料已保存'))
     },
     onError: (e) => {
       Object.entries(fieldErrors(e)).forEach(([k, msg]) => setError(k as keyof StoreValues, { message: msg }))
-      toast.error(errorMessage(e, '保存失败'))
+      toast.error(errorMessage(e, tr('保存失败')))
     },
   })
 
   return (
     <Card>
       <CardHeader
-        title="店铺资料"
-        description={isOwner ? '联系电话和地址会显示在打印的单据上' : '只有店主可以修改店铺资料'}
+        title={tr('店铺资料')}
+        description={isOwner ? tr('联系电话和地址会显示在打印的单据上') : tr('只有店主可以修改店铺资料')}
       />
       <CardBody>
         {isLoading ? (
           <div className="h-40 animate-pulse rounded-lg bg-slate-100" />
         ) : isError ? (
           <div className="flex items-center gap-3 text-sm text-slate-600">
-            加载失败
+            {tr('加载失败')}
             <Button variant="secondary" size="sm" onClick={() => void refetch()}>
-              重试
+              {tr('重试')}
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4" noValidate>
             <fieldset disabled={!isOwner} className="grid gap-4 sm:grid-cols-2">
-              <Field label="店铺名称" htmlFor="s-name" error={errors.name?.message} required>
+              <Field label={tr('店铺名称')} htmlFor="s-name" error={errors.name?.message} required>
                 <Input id="s-name" invalid={!!errors.name} {...register('name')} />
               </Field>
-              <Field label="经营类型" htmlFor="s-type">
+              <Field label={tr('经营类型')} htmlFor="s-type">
                 <Select id="s-type" {...register('businessType')}>
                   {(Object.keys(BUSINESS_TYPE_LABELS) as BusinessType[]).map((k) => (
                     <option key={k} value={k}>
@@ -252,16 +253,16 @@ function StoreSettings() {
                   ))}
                 </Select>
               </Field>
-              <Field label="联系电话" htmlFor="s-phone" error={errors.contactPhone?.message}>
+              <Field label={tr('联系电话')} htmlFor="s-phone" error={errors.contactPhone?.message}>
                 <Input id="s-phone" type="tel" invalid={!!errors.contactPhone} {...register('contactPhone')} />
               </Field>
               <Field
-                label="币种"
+                label={tr('币种')}
                 htmlFor="s-currency"
                 hint={
                   data?.currencyLocked
-                    ? '店铺已有销售、采购或收款记录，不能再修改币种'
-                    : '只改变金额显示的货币符号，不会换算已有金额'
+                    ? tr('店铺已有销售、采购或收款记录，不能再修改币种')
+                    : tr('只改变金额显示的货币符号，不会换算已有金额')
                 }
               >
                 <Select id="s-currency" disabled={data?.currencyLocked} {...register('currency')}>
@@ -272,7 +273,7 @@ function StoreSettings() {
                   ))}
                 </Select>
               </Field>
-              <Field label="时区" htmlFor="s-tz" hint="用于计算「今日」「本月」销售额">
+              <Field label={tr('时区')} htmlFor="s-tz" hint={tr('用于计算「今日」「本月」销售额')}>
                 <Select id="s-tz" {...register('timezone')}>
                   {TIMEZONES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -281,15 +282,15 @@ function StoreSettings() {
                   ))}
                 </Select>
               </Field>
-              <Field label="地址" htmlFor="s-addr" error={errors.address?.message} className="sm:col-span-2">
+              <Field label={tr('地址')} htmlFor="s-addr" error={errors.address?.message} className="sm:col-span-2">
                 <Input id="s-addr" invalid={!!errors.address} {...register('address')} />
               </Field>
               <label className="flex items-start gap-3 sm:col-span-2">
                 <input type="checkbox" className="mt-1 size-4 accent-blue-600" {...register('allowNegativeStock')} />
                 <span>
-                  <span className="block text-sm font-medium text-slate-700">允许负库存</span>
+                  <span className="block text-sm font-medium text-slate-700">{tr('允许负库存')}</span>
                   <span className="block text-xs text-slate-500">
-                    开启后，库存不足时仍可开单（库存会变为负数）。适合先卖后补货的情况。
+                    {tr('开启后，库存不足时仍可开单（库存会变为负数）。适合先卖后补货的情况。')}
                   </span>
                 </span>
               </label>
@@ -297,7 +298,7 @@ function StoreSettings() {
             {isOwner && (
               <div className="flex justify-end">
                 <Button type="submit" loading={mutation.isPending} disabled={!isDirty}>
-                  保存
+                  {tr('保存')}
                 </Button>
               </div>
             )}
@@ -311,8 +312,8 @@ function StoreSettings() {
 // ---------------- 个人资料 ----------------
 
 const profileSchema = z.object({
-  displayName: z.string().trim().min(1, '请填写昵称').max(100, '昵称最多 100 字'),
-  phone: z.string().trim().max(30, '手机号最多 30 位').regex(phonePattern, '手机号格式不正确'),
+  displayName: z.string().trim().min(1, tr('请填写昵称')).max(100, tr('昵称最多 100 字')),
+  phone: z.string().trim().max(30, tr('手机号最多 30 位')).regex(phonePattern, tr('手机号格式不正确')),
 })
 type ProfileValues = z.infer<typeof profileSchema>
 
@@ -333,25 +334,25 @@ function ProfileSettings() {
     onSuccess: (user) => {
       patchSession((s) => ({ ...s, user }))
       reset({ displayName: user.displayName, phone: user.phone ?? '' })
-      toast.success('个人资料已保存')
+      toast.success(tr('个人资料已保存'))
     },
-    onError: (e) => toast.error(errorMessage(e, '保存失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('保存失败'))),
   })
 
   return (
     <Card>
-      <CardHeader title="个人资料" description={session?.user.email} />
+      <CardHeader title={tr('个人资料')} description={session?.user.email} />
       <CardBody>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4" noValidate>
-          <Field label="昵称" htmlFor="p-name" error={errors.displayName?.message} required>
+          <Field label={tr('昵称')} htmlFor="p-name" error={errors.displayName?.message} required>
             <Input id="p-name" invalid={!!errors.displayName} {...register('displayName')} />
           </Field>
-          <Field label="手机号" htmlFor="p-phone" error={errors.phone?.message}>
+          <Field label={tr('手机号')} htmlFor="p-phone" error={errors.phone?.message}>
             <Input id="p-phone" type="tel" invalid={!!errors.phone} {...register('phone')} />
           </Field>
           <div className="flex justify-end">
             <Button type="submit" loading={mutation.isPending} disabled={!isDirty}>
-              保存
+              {tr('保存')}
             </Button>
           </div>
         </form>
@@ -364,11 +365,11 @@ function ProfileSettings() {
 
 const passwordSchema = z
   .object({
-    oldPassword: z.string().min(1, '请填写原密码'),
-    newPassword: z.string().min(8, '新密码至少 8 位').max(64, '新密码最多 64 位'),
-    confirmPassword: z.string().min(1, '请再次输入新密码'),
+    oldPassword: z.string().min(1, tr('请填写原密码')),
+    newPassword: z.string().min(8, tr('新密码至少 8 位')).max(64, tr('新密码最多 64 位')),
+    confirmPassword: z.string().min(1, tr('请再次输入新密码')),
   })
-  .refine((v) => v.newPassword === v.confirmPassword, { path: ['confirmPassword'], message: '两次输入的密码不一致' })
+  .refine((v) => v.newPassword === v.confirmPassword, { path: ['confirmPassword'], message: tr('两次输入的密码不一致') })
 type PasswordValues = z.infer<typeof passwordSchema>
 
 function PasswordSettings() {
@@ -383,34 +384,34 @@ function PasswordSettings() {
   const mutation = useMutation({
     mutationFn: (v: PasswordValues) => authApi.changePassword({ oldPassword: v.oldPassword, newPassword: v.newPassword }),
     onSuccess: () => {
-      toast.success('密码已修改，请用新密码重新登录')
+      toast.success(tr('密码已修改，请用新密码重新登录'))
       applySession(null)
       navigate('/login', { replace: true })
     },
     onError: (e) => {
       const fields = fieldErrors(e)
       Object.entries(fields).forEach(([k, msg]) => setError(k as keyof PasswordValues, { message: msg }))
-      if (Object.keys(fields).length === 0) setError('oldPassword', { message: errorMessage(e, '修改失败') })
+      if (Object.keys(fields).length === 0) setError('oldPassword', { message: errorMessage(e, tr('修改失败')) })
     },
   })
 
   return (
     <Card>
-      <CardHeader title="修改密码" description="修改后，所有设备都需要重新登录" />
+      <CardHeader title={tr('修改密码')} description={tr('修改后，所有设备都需要重新登录')} />
       <CardBody>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4" noValidate>
-          <Field label="原密码" htmlFor="pw-old" error={errors.oldPassword?.message}>
+          <Field label={tr('原密码')} htmlFor="pw-old" error={errors.oldPassword?.message}>
             <Input id="pw-old" type="password" autoComplete="current-password" invalid={!!errors.oldPassword} {...register('oldPassword')} />
           </Field>
-          <Field label="新密码" htmlFor="pw-new" error={errors.newPassword?.message} hint="至少 8 位">
+          <Field label={tr('新密码')} htmlFor="pw-new" error={errors.newPassword?.message} hint={tr('至少 8 位')}>
             <Input id="pw-new" type="password" autoComplete="new-password" invalid={!!errors.newPassword} {...register('newPassword')} />
           </Field>
-          <Field label="确认新密码" htmlFor="pw-confirm" error={errors.confirmPassword?.message}>
+          <Field label={tr('确认新密码')} htmlFor="pw-confirm" error={errors.confirmPassword?.message}>
             <Input id="pw-confirm" type="password" autoComplete="new-password" invalid={!!errors.confirmPassword} {...register('confirmPassword')} />
           </Field>
           <div className="flex justify-end">
             <Button type="submit" loading={mutation.isPending}>
-              修改密码
+              {tr('修改密码')}
             </Button>
           </div>
         </form>

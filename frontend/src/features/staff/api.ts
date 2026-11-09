@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type { MemberRole } from '@/features/auth/types'
 
+import { tr } from '@/lib/i18n'
 export type AssignableRole = Exclude<MemberRole, 'OWNER'>
 
 export interface Member {
@@ -41,8 +42,8 @@ export interface InvitationPreview {
 
 /** 各角色能做什么（显示在邀请弹窗和员工列表中）。 */
 export const ROLE_DESCRIPTIONS: Record<AssignableRole, string> = {
-  STAFF: '开单、查看商品和库存、登记客户和收款；看不到进货成本和利润，不能取消订单、不能采购',
-  ADMIN: '除店铺设置、员工管理、套餐续费外的全部操作，包括看成本利润、采购、取消订单',
+  STAFF: tr('开单、查看商品和库存、登记客户和收款；看不到进货成本和利润，不能取消订单、不能采购'),
+  ADMIN: tr('除店铺设置、员工管理、套餐续费外的全部操作，包括看成本利润、采购、取消订单'),
 }
 
 export function inviteLink(token: string) {

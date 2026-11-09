@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type { Page } from '@/features/catalog/types'
 
+import { tr } from '@/lib/i18n'
 export type PurchaseStatus = 'DRAFT' | 'ORDERED' | 'RECEIVED' | 'CANCELLED'
 
 export interface PurchaseSummary {
@@ -62,10 +63,10 @@ export interface SuppliedProduct {
 }
 
 export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
-  DRAFT: '草稿',
-  ORDERED: '已下单',
-  RECEIVED: '已收货',
-  CANCELLED: '已取消',
+  DRAFT: tr('草稿'),
+  ORDERED: tr('已下单'),
+  RECEIVED: tr('已收货'),
+  CANCELLED: tr('已取消'),
 }
 
 export const PURCHASE_STATUS_TONES = {

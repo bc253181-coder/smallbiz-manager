@@ -93,14 +93,15 @@ public final class XlsxWriter {
             text.setDataFormat(wb.createDataFormat().getFormat("@"));
 
             for (SheetData sd : sheets) {
-                Sheet sheet = wb.createSheet(sd.name());
+                Sheet sheet = wb.createSheet(ExcelI18n.t(sd.name()));
                 int[] widths = new int[sd.columns().size()];
                 Row hr = sheet.createRow(0);
                 for (int c = 0; c < sd.columns().size(); c++) {
                     Cell cell = hr.createCell(c);
-                    cell.setCellValue(sd.columns().get(c).header());
+                    String h = ExcelI18n.t(sd.columns().get(c).header());
+                    cell.setCellValue(h);
                     cell.setCellStyle(header);
-                    widths[c] = displayWidth(sd.columns().get(c).header());
+                    widths[c] = displayWidth(h);
                 }
                 int r = 1;
                 for (List<Object> values : sd.rows()) {
@@ -126,7 +127,7 @@ public final class XlsxWriter {
                                 cell.setCellValue(v instanceof LocalDate d ? d : toLocalDateTime(v).toLocalDate());
                                 cell.setCellStyle(date);
                             }
-                            case TEXT -> cell.setCellValue(safeText(v.toString()));
+                            case TEXT -> cell.setCellValue(safeText(ExcelI18n.t(v.toString())));
                         }
                         widths[c] = Math.max(widths[c], kind == Kind.DATETIME ? 17 : kind == Kind.DATE ? 11
                                 : displayWidth(v instanceof BigDecimal b ? b.toPlainString() : v.toString()));
@@ -155,8 +156,8 @@ public final class XlsxWriter {
 
     public static ResponseEntity<byte[]> response(String filename, byte[] body) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(ExcelI18n.filename(filename), StandardCharsets.UTF_8).build().toString())
                 .contentType(XLSX)
                 .body(body);
     }

@@ -63,7 +63,9 @@ public class TenantService {
         em.createNativeQuery("""
                 INSERT INTO warehouses (tenant_id, name, is_default, active, sort_order, version, created_at, updated_at)
                 VALUES (:t, :n, TRUE, TRUE, 0, 0, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
-                """).setParameter("t", tenant.getId()).setParameter("n", com.smallbiz.warehouse.DefaultWarehouse.DEFAULT_NAME)
+                """).setParameter("t", tenant.getId())
+                // 英文界面的店主开店：默认仓库用英文名
+                .setParameter("n", "en".equals(user.getLocale()) ? "Main warehouse" : com.smallbiz.warehouse.DefaultWarehouse.DEFAULT_NAME)
                 .executeUpdate();
         authService.logout(currentRefreshToken);
         return authService.issue(user, tenant.getId());

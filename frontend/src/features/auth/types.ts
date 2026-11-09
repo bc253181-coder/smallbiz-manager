@@ -1,3 +1,4 @@
+import { tr } from '@/lib/i18n'
 export type MemberRole = 'OWNER' | 'ADMIN' | 'STAFF'
 export type Plan = 'FREE' | 'STANDARD' | 'PRO'
 export type BusinessType = 'WHOLESALE' | 'RETAIL' | 'TRADING' | 'ECOMMERCE' | 'OTHER'
@@ -8,6 +9,8 @@ export interface UserView {
   displayName: string
   phone: string | null
   platformAdmin: boolean
+  /** 界面语言（zh-CN / en），为空表示按浏览器语言 */
+  locale: string | null
 }
 
 export interface TenantSummary {
@@ -54,21 +57,21 @@ export interface TenantView {
 }
 
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
-  RETAIL: '零售店',
-  WHOLESALE: '批发商',
-  TRADING: '贸易公司',
-  ECOMMERCE: '电商/网店',
-  OTHER: '其他',
+  RETAIL: tr('零售店'),
+  WHOLESALE: tr('批发商'),
+  TRADING: tr('贸易公司'),
+  ECOMMERCE: tr('电商/网店'),
+  OTHER: tr('其他'),
 }
 
 export const ROLE_LABELS: Record<MemberRole, string> = {
-  OWNER: '店主',
-  ADMIN: '管理员',
-  STAFF: '店员',
+  OWNER: tr('店主'),
+  ADMIN: tr('管理员'),
+  STAFF: tr('店员'),
 }
 
 export const PLAN_LABELS: Record<Plan, string> = {
-  FREE: '免费版',
-  STANDARD: '标准版',
-  PRO: '专业版',
+  FREE: tr('免费版'),
+  STANDARD: tr('标准版'),
+  PRO: tr('专业版'),
 }

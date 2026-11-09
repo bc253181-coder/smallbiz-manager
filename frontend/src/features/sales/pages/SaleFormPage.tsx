@@ -23,6 +23,8 @@ import { readLastWarehouse, saveLastWarehouse, useWarehouses, warehouseApi } fro
 import { customerPriceApi } from '@/features/partners/customerPrices'
 import { saleApi } from '../api'
 
+import { tr } from '@/lib/i18n'
+import { warehouseName } from '@/lib/systemText'
 interface Line {
   productId: number
   name: string
@@ -158,19 +160,19 @@ export function SaleFormPage() {
 
   const qtyOf = (l: Line) => (/^\d+$/.test(l.quantity) ? Number(l.quantity) : 0)
   const lineErrors = lines.map((l) => ({
-    quantity: /^\d+$/.test(l.quantity) && Number(l.quantity) >= 1 && Number(l.quantity) <= 1_000_000 ? null : '请填写 1 以上的整数',
-    unitPrice: isMoney(l.unitPrice) ? null : '金额格式不正确',
+    quantity: /^\d+$/.test(l.quantity) && Number(l.quantity) >= 1 && Number(l.quantity) <= 1_000_000 ? null : tr('请填写 1 以上的整数'),
+    unitPrice: isMoney(l.unitPrice) ? null : tr('金额格式不正确'),
   }))
   const subtotalCents = lines.reduce((s, l) => s + (toCents(l.unitPrice) ?? 0) * qtyOf(l), 0)
   const discountCents = discount.trim() ? toCents(discount) : 0
   const discountError =
-    discountCents === null ? '金额格式不正确' : discountCents > subtotalCents ? '优惠不能超过商品合计' : null
+    discountCents === null ? tr('金额格式不正确') : discountCents > subtotalCents ? tr('优惠不能超过商品合计') : null
   const totalCents = subtotalCents - (discountCents ?? 0)
   const totalQty = lines.reduce((s, l) => s + qtyOf(l), 0)
   // 赊账（专业版）：只有选了客户才显示「本次实收」；留空 = 全额
   const creditEnabled = canCustomers && canCredit && !!customerId
   const paidCents = creditEnabled && paid.trim() ? toCents(paid) : null
-  const paidError = !creditEnabled || !paid.trim() ? null : paidCents === null ? '金额格式不正确' : paidCents > Math.max(totalCents, 0) ? '实收不能超过应收' : null
+  const paidError = !creditEnabled || !paid.trim() ? null : paidCents === null ? tr('金额格式不正确') : paidCents > Math.max(totalCents, 0) ? tr('实收不能超过应收') : null
   const owedCents = paidCents === null ? 0 : Math.max(totalCents, 0) - paidCents
   const customerDebt = useQuery({
     queryKey: ['customer-receivable', Number(customerId)],
@@ -182,9 +184,9 @@ export function SaleFormPage() {
     if (saving) return
     setShowErrors(true)
     setFormError(null)
-    if (lines.length === 0) return setFormError('请至少添加一个商品')
-    if (lineErrors.some((x) => x.quantity || x.unitPrice) || discountError || paidError) return setFormError('请修正标红的内容')
-    if (notes.length > 500) return setFormError('备注最多 500 字')
+    if (lines.length === 0) return setFormError(tr('请至少添加一个商品'))
+    if (lineErrors.some((x) => x.quantity || x.unitPrice) || discountError || paidError) return setFormError(tr('请修正标红的内容'))
+    if (notes.length > 500) return setFormError(tr('备注最多 500 字'))
 
     setSaving(true)
     try {
@@ -206,8 +208,8 @@ export function SaleFormPage() {
       )
       toast.success(
         Number(sale.outstanding) > 0
-          ? `开单成功：${sale.orderNo}，实收 ${money(sale.paidAmount)}，欠款 ${money(sale.outstanding)}`
-          : `开单成功：${sale.orderNo}，实收 ${money(sale.totalAmount)}`,
+          ? tr('开单成功：{{orderNo}}，实收 {{paidAmount}}，欠款 {{outstanding}}', { orderNo: sale.orderNo, paidAmount: money(sale.paidAmount), outstanding: money(sale.outstanding) })
+          : tr('开单成功：{{orderNo}}，实收 {{totalAmount}}', { orderNo: sale.orderNo, totalAmount: money(sale.totalAmount) }),
       )
       navigate(`/sales/${sale.id}`, { replace: true })
     } catch (err) {
@@ -215,9 +217,9 @@ export function SaleFormPage() {
       if (code === 'INSUFFICIENT_STOCK' && err instanceof AxiosError) {
         const d = (err.response?.data as ApiErrorBody).details as { productId?: number; available?: number } | undefined
         const line = lines.find((l) => l.productId === d?.productId)
-        setFormError(`「${line?.name ?? '商品'}」${wh.multi ? '该仓库' : ''}库存不足，当前只有 ${d?.available ?? 0} ${line?.unit ?? ''}。请减少数量，或先入库${wh.multi ? ' / 调拨' : ''}。`)
+        setFormError(tr('「{{v0}}」{{v1}}库存不足，当前只有 {{v2}} {{v3}}。请减少数量，或先入库{{v4}}。', { v0: line?.name ?? tr('商品'), v1: wh.multi ? tr('该仓库') : '', v2: d?.available ?? 0, v3: line?.unit ?? '', v4: wh.multi ? tr(' / 调拨') : '' }))
       } else {
-        setFormError(errorMessage(err, '开单失败'))
+        setFormError(errorMessage(err, tr('开单失败')))
       }
     } finally {
       setSaving(false)
@@ -226,23 +228,23 @@ export function SaleFormPage() {
 
   return (
     <div>
-      <PageHeader title="开单" description="开单后立即扣减库存" back={{ to: '/sales', label: '返回销售列表' }} />
+      <PageHeader title={tr('开单')} description={tr('开单后立即扣减库存')} back={{ to: '/sales', label: tr('返回销售列表') }} />
       {/* 开单会立即扣库存：只允许点击按钮提交，输入框里按回车不会误开单 */}
       <form onSubmit={(e) => e.preventDefault()} noValidate className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-6 lg:col-span-2">
           <FormError message={formError} />
           <Card>
-            <CardHeader title="商品" description={`${lines.length} 种，共 ${totalQty} 件`} />
+            <CardHeader title={tr('商品')} description={tr('{{length}} 种，共 {{totalQty}} 件', { length: lines.length, totalQty: totalQty })} />
             <CardBody className="space-y-4">
               <ProductPicker
                 activeOnly
                 onPick={addProduct}
-                placeholder="搜索商品名称、SKU 或扫码输入条码"
-                renderMeta={(p) => `零售 ${money(p.retailPrice)}${p.wholesalePrice ? ` / 批发 ${money(p.wholesalePrice)}` : ''}`}
+                placeholder={tr('搜索商品名称、SKU 或扫码输入条码')}
+                renderMeta={(p) => tr('零售 {{retailPrice}}{{v1}}', { retailPrice: money(p.retailPrice), v1: p.wholesalePrice ? tr(' / 批发 {{wholesalePrice}}', { wholesalePrice: money(p.wholesalePrice) }) : '' })}
               />
               {lines.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">
-                  搜索商品添加到订单。再次选择同一商品会增加数量。
+                  {tr('搜索商品添加到订单。再次选择同一商品会增加数量。')}
                 </p>
               ) : (
                 <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
@@ -256,28 +258,28 @@ export function SaleFormPage() {
                         <div className="col-span-full min-w-0">
                           <p className="truncate text-sm font-medium text-slate-900">{l.name}</p>
                           <p className={cn('text-xs', short ? 'font-medium text-amber-700' : 'text-slate-500')}>
-                            {l.sku} · {wh.multi ? '该仓库' : ''}库存 {stockOf(l)} {l.unit}
-                            {short && '（库存不足）'}
+                            {l.sku} · {wh.multi ? tr('该仓库') : ''}{tr('库存')} {stockOf(l)} {l.unit}
+                            {short && tr('（库存不足）')}
                           </p>
                         </div>
                         <label className="text-xs text-slate-500">
-                          数量（{l.unit}）
+                          {tr('数量（')}{l.unit}）
                           <Input
                             inputMode="numeric"
                             value={l.quantity}
                             onChange={(e) => updateLine(idx, { quantity: e.target.value.trim() })}
                             invalid={!!err.quantity}
                             className="mt-1 h-9"
-                            aria-label={`${l.name} 数量`}
+                            aria-label={tr('{{name}} 数量', { name: l.name })}
                           />
                           {err.quantity && <span className="mt-1 block text-red-600">{err.quantity}</span>}
                         </label>
                         <label className="text-xs text-slate-500">
-                          单价
+                          {tr('单价')}
                           {l.priceEdited ? (
-                            '（已改价）'
+                            tr('（已改价）')
                           ) : l.contract ? (
-                            <span className="ml-1 rounded bg-violet-50 px-1 py-px text-[11px] font-medium text-violet-700">协议价</span>
+                            <span className="ml-1 rounded bg-violet-50 px-1 py-px text-[11px] font-medium text-violet-700">{tr('协议价')}</span>
                           ) : null}
                           <Input
                             inputMode="decimal"
@@ -285,19 +287,19 @@ export function SaleFormPage() {
                             onChange={(e) => updateLine(idx, { unitPrice: e.target.value, priceEdited: true })}
                             invalid={!!err.unitPrice}
                             className="mt-1 h-9"
-                            aria-label={`${l.name} 单价`}
+                            aria-label={tr('{{name}} 单价', { name: l.name })}
                           />
                           {err.unitPrice && <span className="mt-1 block text-red-600">{err.unitPrice}</span>}
                         </label>
                         <div className="text-xs text-slate-500">
-                          小计
+                          {tr('小计')}
                           <p className="mt-1 flex h-9 items-center text-sm font-medium tabular-nums text-slate-900">{sub ? money(sub) : '—'}</p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="mt-5 size-9 hover:text-red-600"
-                          aria-label={`移除 ${l.name}`}
+                          aria-label={tr('移除 {{name}}', { name: l.name })}
                           onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}
                         >
                           <Trash2 />
@@ -310,7 +312,7 @@ export function SaleFormPage() {
               {lines.some((l) => qtyOf(l) > stockOf(l)) && (
                 <p className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
                   <AlertTriangle className="size-4 shrink-0" aria-hidden />
-                  有商品库存不足。除非在「设置」中开启了负库存，否则开单会失败。
+                  {tr('有商品库存不足。除非在「设置」中开启了负库存，否则开单会失败。')}
                 </p>
               )}
             </CardBody>
@@ -319,14 +321,14 @@ export function SaleFormPage() {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="客户与价格" />
+            <CardHeader title={tr('客户与价格')} />
             <CardBody className="space-y-4">
               {wh.multi && (
-                <Field label="出货仓库" htmlFor="sale-warehouse">
+                <Field label={tr('出货仓库')} htmlFor="sale-warehouse">
                   <Select id="sale-warehouse" value={warehouseId ?? ''} onChange={(e) => setPickedWarehouse(Number(e.target.value))}>
                     {wh.usable.map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.name}
+                        {warehouseName(w.name)}
                       </option>
                     ))}
                   </Select>
@@ -334,32 +336,32 @@ export function SaleFormPage() {
               )}
               {!canCustomers && (
                 <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                  免费版开单按散客零售价。升级标准版可记录客户、使用批发价。{' '}
+                  {tr('免费版开单按散客零售价。升级标准版可记录客户、使用批发价。')}{' '}
                   <Link to="/settings/billing" className="font-medium text-blue-600 hover:underline">
-                    查看套餐
+                    {tr('查看套餐')}
                   </Link>
                 </p>
               )}
               {canCustomers && (<>
-              <Field label="客户" htmlFor="so-customer">
+              <Field label={tr('客户')} htmlFor="so-customer">
                 <Select id="so-customer" value={customerId} onChange={(e) => changeCustomer(e.target.value)}>
-                  <option value="">散客（不记录客户）</option>
+                  <option value="">{tr('散客（不记录客户）')}</option>
                   {customers.data?.items.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
-                      {c.priceTier === 'WHOLESALE' ? '（批发）' : ''}
+                      {c.priceTier === 'WHOLESALE' ? tr('（批发）') : ''}
                     </option>
                   ))}
                 </Select>
               </Field>
               <button type="button" onClick={() => setNewCustomer(true)} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline">
                 <Plus className="size-4" aria-hidden />
-                新增客户
+                {tr('新增客户')}
               </button>
               </>)}
               {canWholesale && (
               <fieldset>
-                <legend className="mb-1.5 text-sm font-medium text-slate-700">价格</legend>
+                <legend className="mb-1.5 text-sm font-medium text-slate-700">{tr('价格')}</legend>
                 <div className="grid grid-cols-2 gap-2">
                   {(['RETAIL', 'WHOLESALE'] as PriceTier[]).map((t) => (
                     <button
@@ -376,7 +378,7 @@ export function SaleFormPage() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-1 text-xs text-slate-500">切换后，未手动改过的单价会自动更新</p>
+                <p className="mt-1 text-xs text-slate-500">{tr('切换后，未手动改过的单价会自动更新')}</p>
               </fieldset>
               )}
             </CardBody>
@@ -385,36 +387,36 @@ export function SaleFormPage() {
           <Card>
             <CardBody className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">商品合计</span>
+                <span className="text-slate-500">{tr('商品合计')}</span>
                 <span className="tabular-nums">{money(fromCents(subtotalCents))}</span>
               </div>
-              <Field label="整单优惠" htmlFor="so-discount" error={showErrors || discountCents !== 0 ? (discountError ?? undefined) : undefined}>
+              <Field label={tr('整单优惠')} htmlFor="so-discount" error={showErrors || discountCents !== 0 ? (discountError ?? undefined) : undefined}>
                 <Input id="so-discount" inputMode="decimal" placeholder="0.00" value={discount} onChange={(e) => setDiscount(e.target.value)} invalid={!!discountError && discount !== ''} />
               </Field>
               <div className="flex items-end justify-between border-t border-slate-100 pt-3">
-                <span className="text-sm text-slate-500">应收</span>
+                <span className="text-sm text-slate-500">{tr('应收')}</span>
                 <span className="text-2xl font-semibold tabular-nums text-slate-900">{money(fromCents(Math.max(totalCents, 0)))}</span>
               </div>
               {creditEnabled && (
                 <div className="space-y-1">
-                  <Field label="本次实收" htmlFor="so-paid" hint="留空 = 全额收款；少收的部分记为客户欠款" error={showErrors || paid ? (paidError ?? undefined) : undefined}>
+                  <Field label={tr('本次实收')} htmlFor="so-paid" hint={tr('留空 = 全额收款；少收的部分记为客户欠款')} error={showErrors || paid ? (paidError ?? undefined) : undefined}>
                     <Input id="so-paid" inputMode="decimal" placeholder={fromCents(Math.max(totalCents, 0))} value={paid} onChange={(e) => setPaid(e.target.value)} invalid={!!paidError} />
                   </Field>
                   {owedCents > 0 && !paidError && (
                     <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                      本单欠款 <span className="font-semibold tabular-nums">{money(fromCents(owedCents))}</span>
+                      {tr('本单欠款')} <span className="font-semibold tabular-nums">{money(fromCents(owedCents))}</span>
                       {customerDebt.data && Number(customerDebt.data.outstanding) > 0 && (
-                        <>，该客户原有欠款 {money(customerDebt.data.outstanding)}</>
+                        <>{tr('，该客户原有欠款')} {money(customerDebt.data.outstanding)}</>
                       )}
                     </p>
                   )}
                 </div>
               )}
-              <Field label="备注" htmlFor="so-notes" error={notes.length > 500 ? '最多 500 字' : undefined}>
+              <Field label={tr('备注')} htmlFor="so-notes" error={notes.length > 500 ? tr('最多 500 字') : undefined}>
                 <Textarea id="so-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
               </Field>
               <Button size="lg" className="w-full" loading={saving} onClick={() => void submit()}>
-                完成开单
+                {tr('完成开单')}
               </Button>
             </CardBody>
           </Card>

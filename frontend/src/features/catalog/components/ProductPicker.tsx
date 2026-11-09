@@ -12,6 +12,7 @@ import { productApi } from '../api'
 import type { Product } from '../types'
 import { ProductThumb } from './ProductThumb'
 
+import { tr } from '@/lib/i18n'
 /**
  * 商品搜索选择器：输入名称 / SKU / 条码，回车或点击选择。
  * 扫码枪：输入像条码的内容后回车，立即按条码精确查找（不等搜索结果）；
@@ -21,7 +22,7 @@ import { ProductThumb } from './ProductThumb'
 export function ProductPicker({
   onPick,
   excludeIds = [],
-  placeholder = '搜索商品名称、SKU 或条码添加商品',
+  placeholder = tr('搜索商品名称、SKU 或条码添加商品'),
   activeOnly = false,
   renderMeta,
 }: {
@@ -65,9 +66,9 @@ export function ProductPicker({
   }
 
   function notFound(code: string) {
-    toast.error(`没有条码为「${code}」的商品`, {
+    toast.error(tr('没有条码为「{{code}}」的商品', { code: code }), {
       action: canManage
-        ? { label: '用这个条码新建商品', onClick: () => window.open(`/products/new?barcode=${encodeURIComponent(code)}`, '_blank') }
+        ? { label: tr('用这个条码新建商品'), onClick: () => window.open(`/products/new?barcode=${encodeURIComponent(code)}`, '_blank') }
         : undefined,
     })
   }
@@ -89,14 +90,14 @@ export function ProductPicker({
         return false
       }
       if (activeOnly && p.status === 'INACTIVE') {
-        toast.error(`「${p.name}」已下架，不能添加`)
+        toast.error(tr('「{{name}}」已下架，不能添加', { name: p.name }))
         return false
       }
       vibrate()
       pick(p)
       return true
     } catch (e) {
-      toast.error(errorMessage(e, '查找商品失败'))
+      toast.error(errorMessage(e, tr('查找商品失败')))
       return false
     } finally {
       setLooking(false)
@@ -150,8 +151,8 @@ export function ProductPicker({
         type="button"
         onClick={() => setScanning(true)}
         className="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-        aria-label="用摄像头扫码"
-        title="用摄像头扫码"
+        aria-label={tr('用摄像头扫码')}
+        title={tr('用摄像头扫码')}
       >
         <ScanLine className="size-4.5" />
       </button>
@@ -163,7 +164,7 @@ export function ProductPicker({
         >
           {results.length === 0 ? (
             <li className="px-3 py-3 text-sm text-slate-500">
-              {isFetching || looking ? '搜索中…' : q ? (looksLikeCode(q) ? '按回车按条码查找' : '没有找到匹配的商品') : '没有可添加的商品'}
+              {isFetching || looking ? tr('搜索中…') : q ? (looksLikeCode(q) ? tr('按回车按条码查找') : tr('没有找到匹配的商品')) : tr('没有可添加的商品')}
             </li>
           ) : (
             results.map((p, i) => (
@@ -178,9 +179,9 @@ export function ProductPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-slate-900">{p.name}</span>
                     <span className="block truncate text-xs text-slate-500">
-                      {p.sku} · 库存 {p.stockQty} {p.unit}
+                      {p.sku} {tr('· 库存')} {p.stockQty} {p.unit}
                       {renderMeta ? ` · ${renderMeta(p)}` : ''}
-                      {p.status === 'INACTIVE' && ' · 已下架'}
+                      {p.status === 'INACTIVE' && tr(' · 已下架')}
                     </span>
                   </span>
                 </button>
@@ -192,7 +193,7 @@ export function ProductPicker({
       {scanning && (
         <CameraScanner
           continuous
-          title="扫码添加商品"
+          title={tr('扫码添加商品')}
           onDetected={(code) => void scan(code)}
           onClose={() => setScanning(false)}
         />

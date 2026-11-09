@@ -22,6 +22,7 @@ import {
   type PaymentOrder,
 } from '../api'
 
+import { tr } from '@/lib/i18n'
 const MAX_BYTES = 5 * 1024 * 1024
 const ACCEPT = ['image/jpeg', 'image/png', 'image/webp']
 
@@ -42,7 +43,7 @@ export function PaymentPage() {
     if (prevStatus.current && prevStatus.current !== 'APPROVED' && data.status === 'APPROVED') {
       void queryClient.invalidateQueries({ queryKey: ['billing'] })
       void refreshSession()
-      toast.success('付款已确认，套餐已开通')
+      toast.success(tr('付款已确认，套餐已开通'))
     }
     prevStatus.current = data.status
   }, [data, queryClient])
@@ -50,15 +51,15 @@ export function PaymentPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader
-        title="扫码付款"
-        description={data ? `付款单 ${data.orderNo}` : undefined}
-        back={{ to: '/settings/billing', label: '套餐与续费' }}
+        title={tr('扫码付款')}
+        description={data ? tr('付款单 {{orderNo}}', { orderNo: data.orderNo }) : undefined}
+        back={{ to: '/settings/billing', label: tr('套餐与续费') }}
       />
       {isLoading ? (
         <div className="h-96 animate-pulse rounded-xl bg-slate-100" />
       ) : isError || !data ? (
         <Card>
-          <ErrorState onRetry={() => void refetch()} message="付款单不存在或加载失败" />
+          <ErrorState onRetry={() => void refetch()} message={tr('付款单不存在或加载失败')} />
         </Card>
       ) : (
         <PaymentBody order={data} />
@@ -74,7 +75,7 @@ function PaymentBody({ order }: { order: PaymentOrder }) {
         <CardBody className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm text-slate-500">
-              {PLAN_LABELS[order.plan]} · {PERIOD_LABELS[order.period]}（{order.durationDays} 天）
+              {PLAN_LABELS[order.plan]} · {PERIOD_LABELS[order.period]}（{order.durationDays} {tr('天）')}
             </p>
             <p className="text-3xl font-semibold tabular-nums text-slate-900">{formatMoney(order.amount, order.currency)}</p>
           </div>
@@ -86,32 +87,32 @@ function PaymentBody({ order }: { order: PaymentOrder }) {
 
       {order.status === 'AWAITING_PAYMENT' && <AwaitingPayment order={order} />}
       {order.status === 'PENDING_REVIEW' && (
-        <StatusCard icon={Clock} tone="blue" title="已提交，等待人工核对">
-          我们会核对到账金额和付款备注，通常几小时内开通（夜间可能顺延到第二天）。开通后刷新页面即可使用标准版功能。
+        <StatusCard icon={Clock} tone="blue" title={tr('已提交，等待人工核对')}>
+          {tr('我们会核对到账金额和付款备注，通常几小时内开通（夜间可能顺延到第二天）。开通后刷新页面即可使用标准版功能。')}
           <ProofSummary order={order} />
         </StatusCard>
       )}
       {order.status === 'APPROVED' && (
-        <StatusCard icon={CircleCheck} tone="green" title="付款已确认，套餐已开通">
+        <StatusCard icon={CircleCheck} tone="green" title={tr('付款已确认，套餐已开通')}>
           <Link to="/" className={cn(buttonVariants({ size: 'sm' }), 'mt-3')}>
-            开始使用
+            {tr('开始使用')}
           </Link>
         </StatusCard>
       )}
       {order.status === 'REJECTED' && (
-        <StatusCard icon={TriangleAlert} tone="red" title="付款未通过核对">
-          原因：{order.rejectReason}
-          <p className="mt-2">如果你确实已付款，请通过右下角客服联系我们并提供付款截图，我们会尽快处理。</p>
+        <StatusCard icon={TriangleAlert} tone="red" title={tr('付款未通过核对')}>
+          {tr('原因：')}{order.rejectReason}
+          <p className="mt-2">{tr('如果你确实已付款，请通过右下角客服联系我们并提供付款截图，我们会尽快处理。')}</p>
           <Link to="/settings/billing" className={cn(buttonVariants({ size: 'sm', variant: 'secondary' }), 'mt-3')}>
-            重新下单
+            {tr('重新下单')}
           </Link>
         </StatusCard>
       )}
       {(order.status === 'EXPIRED' || order.status === 'CANCELLED') && (
-        <StatusCard icon={Clock} tone="slate" title={order.status === 'EXPIRED' ? '付款单已过期' : '付款单已取消'}>
-          {order.status === 'EXPIRED' && '付款单在 24 小时内有效。如果你已经付款，请联系客服处理。'}
+        <StatusCard icon={Clock} tone="slate" title={order.status === 'EXPIRED' ? tr('付款单已过期') : tr('付款单已取消')}>
+          {order.status === 'EXPIRED' && tr('付款单在 24 小时内有效。如果你已经付款，请联系客服处理。')}
           <Link to="/settings/billing" className={cn(buttonVariants({ size: 'sm', variant: 'secondary' }), 'mt-3')}>
-            重新下单
+            {tr('重新下单')}
           </Link>
         </StatusCard>
       )}
@@ -171,19 +172,19 @@ function ProofSummary({ order }: { order: PaymentOrder }) {
 
   return (
     <dl className="mt-3 grid gap-x-4 gap-y-1 sm:grid-cols-[auto_1fr]">
-      <dt className="text-slate-500">提交时间</dt>
+      <dt className="text-slate-500">{tr('提交时间')}</dt>
       <dd>{formatDateTime(order.submittedAt)}</dd>
       {order.transactionRef && (
         <>
-          <dt className="text-slate-500">交易单号</dt>
+          <dt className="text-slate-500">{tr('交易单号')}</dt>
           <dd className="break-all font-mono">{order.transactionRef}</dd>
         </>
       )}
       {url && (
         <>
-          <dt className="text-slate-500">付款截图</dt>
+          <dt className="text-slate-500">{tr('付款截图')}</dt>
           <dd>
-            <img src={url} alt="付款截图" className="mt-1 max-h-48 rounded-lg border border-slate-200" />
+            <img src={url} alt={tr('付款截图')} className="mt-1 max-h-48 rounded-lg border border-slate-200" />
           </dd>
         </>
       )}
@@ -198,10 +199,10 @@ function useCountdown(iso: string) {
     return () => clearInterval(t)
   }, [])
   const ms = new Date(iso).getTime() - now
-  if (ms <= 0) return '已到期'
+  if (ms <= 0) return tr('已到期')
   const h = Math.floor(ms / 3_600_000)
   const m = Math.floor((ms % 3_600_000) / 60_000)
-  return h > 0 ? `${h} 小时 ${m} 分钟` : `${m} 分钟`
+  return h > 0 ? tr('{{h}} 小时 {{m}} 分钟', { h: h, m: m }) : tr('{{m}} 分钟', { m: m })
 }
 
 function AwaitingPayment({ order }: { order: PaymentOrder }) {
@@ -227,29 +228,29 @@ function AwaitingPayment({ order }: { order: PaymentOrder }) {
     mutationFn: () => billingApi.submitProof(order.id, file!, txn, note),
     onSuccess: (o) => {
       update(o)
-      toast.success('已提交，请等待核对')
+      toast.success(tr('已提交，请等待核对'))
     },
-    onError: (e) => toast.error(errorMessage(e, '提交失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('提交失败'))),
   })
   const cancel = useMutation({
     mutationFn: () => billingApi.cancel(order.id),
     onSuccess: (o) => {
       update(o)
       setConfirmCancel(false)
-      toast.success('付款单已取消')
+      toast.success(tr('付款单已取消'))
     },
-    onError: (e) => toast.error(errorMessage(e, '取消失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('取消失败'))),
   })
 
   function pick(f: File | undefined) {
     setFileError(null)
     if (!f) return
     if (!ACCEPT.includes(f.type)) {
-      setFileError('请上传 JPG、PNG 或 WebP 格式的截图')
+      setFileError(tr('请上传 JPG、PNG 或 WebP 格式的截图'))
       return
     }
     if (f.size > MAX_BYTES) {
-      setFileError('截图不能超过 5MB')
+      setFileError(tr('截图不能超过 5MB'))
       return
     }
     setFile(f)
@@ -259,46 +260,46 @@ function AwaitingPayment({ order }: { order: PaymentOrder }) {
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('已复制')
+      toast.success(tr('已复制'))
     } catch {
-      toast.error('复制失败，请手动输入')
+      toast.error(tr('复制失败，请手动输入'))
     }
   }
 
   return (
     <>
       <Card>
-        <CardHeader title={`第 1 步：用${method?.displayName ?? '收款码'}扫码付款`} description={`请在 ${remaining} 内完成付款`} />
+        <CardHeader title={tr('第 1 步：用{{v0}}扫码付款', { v0: method?.displayName ?? tr('收款码') })} description={tr('请在 {{remaining}} 内完成付款', { remaining: remaining })} />
         <CardBody className="grid gap-6 sm:grid-cols-2 [&>*]:min-w-0">
           <div className="flex justify-center">
             {method?.qrImageUrl ? (
               <img
                 src={method.qrImageUrl}
-                alt={`${method.displayName}收款码`}
+                alt={tr('{{displayName}}收款码', { displayName: method.displayName })}
                 className="w-full max-w-64 rounded-xl border border-slate-200 bg-white"
               />
             ) : (
-              <p className="text-sm text-slate-500">收款码暂不可用，请联系客服</p>
+              <p className="text-sm text-slate-500">{tr('收款码暂不可用，请联系客服')}</p>
             )}
           </div>
           <div className="space-y-4 text-sm">
             <div>
-              <p className="text-slate-500">付款金额（请输入准确金额）</p>
+              <p className="text-slate-500">{tr('付款金额（请输入准确金额）')}</p>
               <p className="text-2xl font-semibold tabular-nums text-slate-900">{formatMoney(order.amount, order.currency)}</p>
             </div>
             {method?.payeeName && (
               <div>
-                <p className="text-slate-500">收款人</p>
+                <p className="text-slate-500">{tr('收款人')}</p>
                 <p className="font-medium text-slate-800">{method.payeeName}</p>
               </div>
             )}
             <div>
-              <p className="text-slate-500">付款备注（必填，用于核对）</p>
+              <p className="text-slate-500">{tr('付款备注（必填，用于核对）')}</p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="rounded-lg bg-amber-50 px-3 py-1.5 font-mono text-lg font-semibold tracking-wider text-amber-800">
                   {order.referenceCode}
                 </span>
-                <Button size="sm" variant="ghost" onClick={() => void copy(order.referenceCode)} aria-label="复制付款备注">
+                <Button size="sm" variant="ghost" onClick={() => void copy(order.referenceCode)} aria-label={tr('复制付款备注')}>
                   <Copy aria-hidden />
                 </Button>
               </div>
@@ -309,7 +310,7 @@ function AwaitingPayment({ order }: { order: PaymentOrder }) {
       </Card>
 
       <Card>
-        <CardHeader title="第 2 步：上传付款截图" description="截图需能看到金额、时间和付款备注" />
+        <CardHeader title={tr('第 2 步：上传付款截图')} description={tr('截图需能看到金额、时间和付款备注')} />
         <CardBody>
           <form
             className="space-y-4"
@@ -317,13 +318,13 @@ function AwaitingPayment({ order }: { order: PaymentOrder }) {
             onSubmit={(e) => {
               e.preventDefault()
               if (!file) {
-                setFileError('请上传付款截图')
+                setFileError(tr('请上传付款截图'))
                 return
               }
               submit.mutate()
             }}
           >
-            <Field label="付款截图" htmlFor="proof-file" error={fileError ?? undefined} required>
+            <Field label={tr('付款截图')} htmlFor="proof-file" error={fileError ?? undefined} required>
               <label
                 htmlFor="proof-file"
                 className={cn(
@@ -332,11 +333,11 @@ function AwaitingPayment({ order }: { order: PaymentOrder }) {
                 )}
               >
                 {preview ? (
-                  <img src={preview} alt="已选择的截图" className="max-h-56 rounded-lg" />
+                  <img src={preview} alt={tr('已选择的截图')} className="max-h-56 rounded-lg" />
                 ) : (
                   <>
                     <ImageUp className="size-8 text-slate-400" aria-hidden />
-                    点击选择截图（JPG / PNG / WebP，不超过 5MB）
+                    {tr('点击选择截图（JPG / PNG / WebP，不超过 5MB）')}
                   </>
                 )}
               </label>
@@ -348,18 +349,18 @@ function AwaitingPayment({ order }: { order: PaymentOrder }) {
                 onChange={(e) => pick(e.target.files?.[0])}
               />
             </Field>
-            <Field label="交易单号" htmlFor="proof-txn" hint="在付款详情里可以找到，填写后核对更快（选填）">
+            <Field label={tr('交易单号')} htmlFor="proof-txn" hint={tr('在付款详情里可以找到，填写后核对更快（选填）')}>
               <Input id="proof-txn" value={txn} maxLength={100} onChange={(e) => setTxn(e.target.value)} autoComplete="off" />
             </Field>
-            <Field label="留言" htmlFor="proof-note" hint="选填">
+            <Field label={tr('留言')} htmlFor="proof-note" hint={tr('选填')}>
               <Input id="proof-note" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
             </Field>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
               <Button variant="ghost" onClick={() => setConfirmCancel(true)} disabled={submit.isPending}>
-                取消付款单
+                {tr('取消付款单')}
               </Button>
               <Button type="submit" loading={submit.isPending}>
-                我已付款，提交核对
+                {tr('我已付款，提交核对')}
               </Button>
             </div>
           </form>
@@ -369,9 +370,9 @@ function AwaitingPayment({ order }: { order: PaymentOrder }) {
       <ConfirmDialog
         open={confirmCancel}
         onOpenChange={setConfirmCancel}
-        title="取消这张付款单？"
-        description="如果你已经付款，请不要取消，直接上传截图即可。"
-        confirmText="取消付款单"
+        title={tr('取消这张付款单？')}
+        description={tr('如果你已经付款，请不要取消，直接上传截图即可。')}
+        confirmText={tr('取消付款单')}
         danger
         loading={cancel.isPending}
         onConfirm={() => cancel.mutate()}

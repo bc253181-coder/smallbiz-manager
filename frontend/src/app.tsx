@@ -9,6 +9,7 @@ import { AuthProvider } from '@/features/auth/AuthProvider'
 import { errorCode } from '@/lib/api'
 import { router } from '@/router'
 
+import { tr } from '@/lib/i18n'
 const queryClient = new QueryClient({
   // 任何操作因套餐限制被拒绝时，额外提示升级入口（各页面自己的错误提示照常显示）
   mutationCache: new MutationCache({
@@ -16,9 +17,9 @@ const queryClient = new QueryClient({
       const code = errorCode(error)
       if (code === 'PLAN_FEATURE_REQUIRED' || code === 'PLAN_LIMIT_REACHED') {
         const pro = (error as { response?: { data?: { details?: { requiredPlan?: string } } } }).response?.data?.details?.requiredPlan === 'PRO'
-        toast.info(pro ? '升级专业版即可使用' : '升级标准版即可使用，首月体验 ¥1.99', {
+        toast.info(pro ? tr('升级专业版即可使用') : tr('升级标准版即可使用，首月体验 ¥1.99'), {
           id: 'plan-upgrade',
-          action: { label: '查看套餐', onClick: () => void router.navigate('/settings/billing') },
+          action: { label: tr('查看套餐'), onClick: () => void router.navigate('/settings/billing') },
         })
       }
     },

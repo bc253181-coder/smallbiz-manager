@@ -14,6 +14,8 @@ export const authApi = {
     api.put<UserView>('/auth/me', body).then((r) => r.data),
 
   changePassword: (body: { oldPassword: string; newPassword: string }) => api.put('/auth/me/password', body),
+
+  updateLocale: (locale: string) => api.put<UserView>('/auth/me/locale', { locale }).then((r) => r.data),
 }
 
 export const tenantApi = {

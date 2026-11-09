@@ -13,17 +13,18 @@ import { BUSINESS_TYPE_LABELS, type BusinessType } from '@/features/auth/types'
 import { errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
+import { tr } from '@/lib/i18n'
 const TYPES: { value: BusinessType; hint: string }[] = [
-  { value: 'RETAIL', hint: '门店零售、服装饰品、美妆日用' },
-  { value: 'WHOLESALE', hint: '批发、分销，按批发价出货' },
-  { value: 'ECOMMERCE', hint: '淘宝、小红书、抖音等网店' },
-  { value: 'TRADING', hint: '进出口、贸易公司' },
-  { value: 'OTHER', hint: '其他类型的经营' },
+  { value: 'RETAIL', hint: tr('门店零售、服装饰品、美妆日用') },
+  { value: 'WHOLESALE', hint: tr('批发、分销，按批发价出货') },
+  { value: 'ECOMMERCE', hint: tr('淘宝、小红书、抖音等网店') },
+  { value: 'TRADING', hint: tr('进出口、贸易公司') },
+  { value: 'OTHER', hint: tr('其他类型的经营') },
 ]
 
 const schema = z.object({
-  name: z.string().trim().min(1, '请填写店铺名称').max(100, '店铺名称最多 100 字'),
-  businessType: z.enum(['RETAIL', 'WHOLESALE', 'ECOMMERCE', 'TRADING', 'OTHER'], { message: '请选择经营类型' }),
+  name: z.string().trim().min(1, tr('请填写店铺名称')).max(100, tr('店铺名称最多 100 字')),
+  businessType: z.enum(['RETAIL', 'WHOLESALE', 'ECOMMERCE', 'TRADING', 'OTHER'], { message: tr('请选择经营类型') }),
   currency: z.string().min(3),
 })
 type FormValues = z.infer<typeof schema>
@@ -46,10 +47,10 @@ export function CreateStorePage({ firstStore }: { firstStore: boolean }) {
     setFormError(null)
     try {
       const s = await createTenant(values.name, values.businessType, values.currency)
-      toast.success(`店铺「${s.currentTenant?.name}」创建成功`)
+      toast.success(tr('店铺「{{name}}」创建成功', { name: s.currentTenant?.name }))
       navigate('/', { replace: true })
     } catch (e) {
-      setFormError(errorMessage(e, '创建失败，请稍后重试'))
+      setFormError(errorMessage(e, tr('创建失败，请稍后重试')))
     }
   })
 
@@ -58,16 +59,16 @@ export function CreateStorePage({ firstStore }: { firstStore: boolean }) {
   return (
     <AuthLayout
       wide
-      title={firstStore ? `欢迎，${session?.user.displayName ?? ''}！先创建你的店铺` : '新建店铺'}
-      subtitle="每个店铺的商品、库存、订单数据完全独立。以后可以随时修改店铺信息。"
+      title={firstStore ? tr('欢迎，{{v0}}！先创建你的店铺', { v0: session?.user.displayName ?? '' }) : tr('新建店铺')}
+      subtitle={tr('每个店铺的商品、库存、订单数据完全独立。以后可以随时修改店铺信息。')}
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <FormError message={formError} />
-        <Field label="店铺名称" htmlFor="name" error={errors.name?.message} required>
-          <Input id="name" placeholder="例如：小美饰品店" invalid={!!errors.name} {...register('name')} />
+        <Field label={tr('店铺名称')} htmlFor="name" error={errors.name?.message} required>
+          <Input id="name" placeholder={tr('例如：小美饰品店')} invalid={!!errors.name} {...register('name')} />
         </Field>
 
-        <Field label="币种" htmlFor="currency" hint="店铺的所有金额都用这个币种显示。有了销售或采购记录后不能再修改。">
+        <Field label={tr('币种')} htmlFor="currency" hint={tr('店铺的所有金额都用这个币种显示。有了销售或采购记录后不能再修改。')}>
           <Select id="currency" {...register('currency')}>
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>
@@ -78,7 +79,7 @@ export function CreateStorePage({ firstStore }: { firstStore: boolean }) {
         </Field>
 
         <fieldset>
-          <legend className="mb-1.5 text-sm font-medium text-slate-700">经营类型</legend>
+          <legend className="mb-1.5 text-sm font-medium text-slate-700">{tr('经营类型')}</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {TYPES.map((t) => (
               <label
@@ -102,19 +103,19 @@ export function CreateStorePage({ firstStore }: { firstStore: boolean }) {
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           {!firstStore && (
             <Button variant="secondary" onClick={() => navigate(-1)}>
-              取消
+              {tr('取消')}
             </Button>
           )}
           <Button type="submit" size="lg" loading={isSubmitting}>
-            创建店铺
+            {tr('创建店铺')}
           </Button>
         </div>
       </form>
       {firstStore && hasStores && (
         <p className="mt-6 text-center text-sm text-slate-500">
-          已经有店铺了？
+          {tr('已经有店铺了？')}
           <Link to="/select-tenant" className="font-medium text-blue-600 hover:underline">
-            选择店铺
+            {tr('选择店铺')}
           </Link>
         </p>
       )}

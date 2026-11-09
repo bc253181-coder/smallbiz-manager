@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { receivableApi } from './api'
 import { ReceivePaymentDialog } from './ReceivePaymentDialog'
 
+import { tr } from '@/lib/i18n'
 /** 客户详情页的欠款卡片（专业版）。 */
 export function CustomerReceivableCard({ customerId, customerName }: { customerId: number; customerName: string }) {
   const allowed = useFeature('RECEIVABLES')
@@ -28,22 +29,22 @@ export function CustomerReceivableCard({ customerId, customerName }: { customerI
   return (
     <Card>
       <CardHeader
-        title="欠款"
+        title={tr('欠款')}
         description={
-          isLoading ? '加载中…' : owes ? `${data.orders.length} 张销售单未结清` : '没有欠款'
+          isLoading ? tr('加载中…') : owes ? tr('{{length}} 张销售单未结清', { length: data.orders.length }) : tr('没有欠款')
         }
         action={
           <div className="flex flex-wrap gap-2">
             {canManage && (
               <Link to={`/customers/${customerId}/statement`} className={buttonVariants({ size: 'sm', variant: 'secondary' })}>
                 <FileText aria-hidden />
-                对账单
+                {tr('对账单')}
               </Link>
             )}
             {owes && (
               <Button size="sm" onClick={() => setPaying(true)}>
                 <HandCoins aria-hidden />
-                收款
+                {tr('收款')}
               </Button>
             )}
           </div>
@@ -52,7 +53,7 @@ export function CustomerReceivableCard({ customerId, customerName }: { customerI
       {owes && (
         <>
           <div className="flex items-baseline justify-between px-5 pt-4">
-            <span className="text-sm text-slate-500">当前欠款</span>
+            <span className="text-sm text-slate-500">{tr('当前欠款')}</span>
             <span className="text-2xl font-semibold tabular-nums text-red-600">{money(data.outstanding)}</span>
           </div>
           <ul className="mt-2 divide-y divide-slate-100">
@@ -62,12 +63,12 @@ export function CustomerReceivableCard({ customerId, customerName }: { customerI
                   <span className="min-w-0">
                     <span className="block font-medium text-slate-800">{o.orderNo}</span>
                     <span className="block text-xs text-slate-500">
-                      {formatDateTime(o.orderDate)} · <span className={cn(o.ageDays > 30 && 'text-red-600')}>{o.ageDays} 天</span>
+                      {formatDateTime(o.orderDate)} · <span className={cn(o.ageDays > 30 && 'text-red-600')}>{o.ageDays} {tr('天')}</span>
                     </span>
                   </span>
                   <span className="shrink-0 text-right tabular-nums">
                     {money(o.outstanding)}
-                    <span className="block text-xs text-slate-400">共 {money(o.totalAmount)}</span>
+                    <span className="block text-xs text-slate-400">{tr('共')} {money(o.totalAmount)}</span>
                   </span>
                 </Link>
               </li>
@@ -75,7 +76,7 @@ export function CustomerReceivableCard({ customerId, customerName }: { customerI
           </ul>
           {canManage && (
             <Link to={`/receivables/payments?customerId=${customerId}`} className="block border-t border-slate-100 px-5 py-2.5 text-center text-sm font-medium text-blue-600 hover:bg-slate-50">
-              查看收款记录
+              {tr('查看收款记录')}
             </Link>
           )}
         </>

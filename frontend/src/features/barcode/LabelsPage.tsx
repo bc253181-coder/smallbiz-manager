@@ -13,13 +13,14 @@ import type { Product } from '@/features/catalog/types'
 import { useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
+import { tr } from '@/lib/i18n'
 type Size = '40x30' | '50x30' | 'a4'
 
 /** 标签纸：单张标签机（每页一张）或 A4 不干胶（3 列 × 8 行，每张 70 × 37 mm）。 */
 const SIZES: Record<Size, { label: string; page: string; w: number; h: number; perPage: number }> = {
-  '40x30': { label: '标签机 40 × 30 mm', page: '40mm 30mm', w: 40, h: 30, perPage: 1 },
-  '50x30': { label: '标签机 50 × 30 mm', page: '50mm 30mm', w: 50, h: 30, perPage: 1 },
-  a4: { label: 'A4 不干胶 3 × 8（70 × 37 mm）', page: 'A4', w: 70, h: 37, perPage: 24 },
+  '40x30': { label: tr('标签机 40 × 30 mm'), page: '40mm 30mm', w: 40, h: 30, perPage: 1 },
+  '50x30': { label: tr('标签机 50 × 30 mm'), page: '50mm 30mm', w: 50, h: 30, perPage: 1 },
+  a4: { label: tr('A4 不干胶 3 × 8（70 × 37 mm）'), page: 'A4', w: 70, h: 37, perPage: 24 },
 }
 
 interface Line {
@@ -68,25 +69,25 @@ export function LabelsPage() {
   return (
     <div>
       <PageHeader
-        title="打印条码标签"
-        description="选择商品和张数，用浏览器打印到标签纸上。没有条码的商品会用 SKU 生成条码，扫码同样能找到。"
-        back={{ to: '/products', label: '商品' }}
+        title={tr('打印条码标签')}
+        description={tr('选择商品和张数，用浏览器打印到标签纸上。没有条码的商品会用 SKU 生成条码，扫码同样能找到。')}
+        back={{ to: '/products', label: tr('商品') }}
         actions={
           <Button onClick={() => window.print()} disabled={total === 0}>
             <Printer aria-hidden />
-            打印 {total > 0 ? `${total} 张` : ''}
+            {tr('打印')} {total > 0 ? tr('{{total}} 张', { total: total }) : ''}
           </Button>
         }
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] [&>*]:min-w-0">
         <Card>
-          <CardHeader title="商品" description={lines.length ? `${lines.length} 个商品 · 共 ${total} 张` : undefined} />
+          <CardHeader title={tr('商品')} description={lines.length ? tr('{{length}} 个商品 · 共 {{total}} 张', { length: lines.length, total: total }) : undefined} />
           <CardBody className="space-y-3">
-            <ProductPicker onPick={add} placeholder="搜索或扫码添加商品" />
+            <ProductPicker onPick={add} placeholder={tr('搜索或扫码添加商品')} />
             {lines.length === 0 ? (
               <p className="rounded-lg border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">
-                {loadedInitial ? '添加要打印标签的商品' : '加载中…'}
+                {loadedInitial ? tr('添加要打印标签的商品') : tr('加载中…')}
               </p>
             ) : (
               <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
@@ -98,11 +99,11 @@ export function LabelsPage() {
                         <p className="truncate text-sm font-medium text-slate-900">{l.product.name}</p>
                         <p className="truncate text-xs text-slate-500">
                           {b.value}
-                          {b.fromSku && <span className="text-amber-700"> · 没有条码，使用 SKU</span>}
+                          {b.fromSku && <span className="text-amber-700"> {tr('· 没有条码，使用 SKU')}</span>}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="size-8" aria-label="减少一张" onClick={() => setCopies(l.product.id, l.copies - 1)}>
+                        <Button variant="ghost" size="icon" className="size-8" aria-label={tr('减少一张')} onClick={() => setCopies(l.product.id, l.copies - 1)}>
                           <Minus aria-hidden />
                         </Button>
                         <input
@@ -112,16 +113,16 @@ export function LabelsPage() {
                           value={l.copies}
                           onChange={(e) => setCopies(l.product.id, Number(e.target.value) || 1)}
                           className="h-8 w-14 rounded-md border border-slate-200 text-center text-sm tabular-nums"
-                          aria-label={`${l.product.name} 张数`}
+                          aria-label={tr('{{name}} 张数', { name: l.product.name })}
                         />
-                        <Button variant="ghost" size="icon" className="size-8" aria-label="增加一张" onClick={() => setCopies(l.product.id, l.copies + 1)}>
+                        <Button variant="ghost" size="icon" className="size-8" aria-label={tr('增加一张')} onClick={() => setCopies(l.product.id, l.copies + 1)}>
                           <Plus aria-hidden />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="size-8 text-slate-400 hover:text-red-600"
-                          aria-label={`移除 ${l.product.name}`}
+                          aria-label={tr('移除 {{name}}', { name: l.product.name })}
                           onClick={() => setLines((ls) => ls.filter((x) => x.product.id !== l.product.id))}
                         >
                           <Trash2 aria-hidden />
@@ -136,9 +137,9 @@ export function LabelsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="标签设置" />
+          <CardHeader title={tr('标签设置')} />
           <CardBody className="space-y-4">
-            <Field label="标签纸" htmlFor="label-size">
+            <Field label={tr('标签纸')} htmlFor="label-size">
               <Select id="label-size" value={size} onChange={(e) => setSize(e.target.value as Size)}>
                 {(Object.keys(SIZES) as Size[]).map((s) => (
                   <option key={s} value={s}>
@@ -149,12 +150,12 @@ export function LabelsPage() {
             </Field>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" className="size-4 accent-blue-600" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />
-              显示零售价
+              {tr('显示零售价')}
             </label>
-            <p className="text-xs text-slate-500">打印时在浏览器的打印设置里选择对应纸张，边距设为「无」，缩放选「100%」。</p>
+            <p className="text-xs text-slate-500">{tr('打印时在浏览器的打印设置里选择对应纸张，边距设为「无」，缩放选「100%」。')}</p>
             {lines[0] && (
               <div>
-                <p className="mb-2 text-xs font-medium text-slate-500">预览</p>
+                <p className="mb-2 text-xs font-medium text-slate-500">{tr('预览')}</p>
                 <div className="flex justify-center rounded-lg bg-slate-100 p-4">
                   <Label product={lines[0].product} w={spec.w} h={spec.h} showPrice={showPrice} money={money} className="bg-white shadow-sm" />
                 </div>
@@ -224,7 +225,7 @@ function Label({
       data-testid="barcode-label"
     >
       <p className="w-full truncate text-center text-[9pt] font-medium leading-tight">{product.name}</p>
-      <svg ref={svg} className="max-h-[60%] w-full" aria-label={`条码 ${b.value}`} role="img" />
+      <svg ref={svg} className="max-h-[60%] w-full" aria-label={tr('条码 {{value}}', { value: b.value })} role="img" />
       {showPrice && <p className="text-[10pt] font-semibold leading-tight">{money(product.retailPrice)}</p>}
     </div>
   )

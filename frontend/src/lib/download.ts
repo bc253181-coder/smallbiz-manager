@@ -1,12 +1,16 @@
 import { AxiosError } from 'axios'
 import { api } from './api'
+import { getLang } from './i18n'
 
 /**
  * 下载接口返回的文件（CSV / Excel），文件名取服务器的 Content-Disposition。
  * 出错时服务器返回的是 JSON，但以 Blob 形式收到：这里转回对象，errorMessage() 才能显示具体原因。
  */
 export async function downloadFile(path: string, params: Record<string, string | number | boolean | undefined>, fallbackName: string) {
-  const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))
+  // lang：英文界面下载的表格表头、文件名也是英文
+  const clean = Object.fromEntries(
+    Object.entries({ ...params, lang: getLang() === 'en' ? 'en' : undefined }).filter(([, v]) => v !== undefined && v !== ''),
+  )
   try {
     const res = await api.get<Blob>(path, { params: clean, responseType: 'blob' })
     const disposition = String(res.headers['content-disposition'] ?? '')
