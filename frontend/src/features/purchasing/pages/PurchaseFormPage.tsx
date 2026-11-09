@@ -74,7 +74,8 @@ function PurchaseForm({ order }: { order?: PurchaseDetail }) {
   function addProduct(p: Product, quantity = 1) {
     setLines((ls) =>
       ls.some((l) => l.productId === p.id)
-        ? ls
+        ? // 再次扫到同一商品：数量 +1
+          ls.map((l) => (l.productId === p.id ? { ...l, quantity: String((Number(l.quantity) || 0) + quantity) } : l))
         : [...ls, { productId: p.id, name: p.name, sku: p.sku, unit: p.unit, stockQty: p.stockQty, quantity: String(quantity), unitCost: p.costPrice ?? '0' }],
     )
   }

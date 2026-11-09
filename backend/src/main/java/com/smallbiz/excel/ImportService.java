@@ -254,6 +254,13 @@ public class ImportService {
                     errs.add(new RowError(r.rowNumber(), sku != null ? "SKU" : "条码", key + "与第 " + first + " 行重复"));
                 }
             }
+            // 条码在店铺内唯一：有 SKU 的行也要检查条码是否与文件中其他行重复
+            if (sku != null && barcode != null) {
+                Integer first = seen.putIfAbsent("条码「" + barcode + "」", r.rowNumber());
+                if (first != null) {
+                    errs.add(new RowError(r.rowNumber(), "条码", "条码「" + barcode + "」与第 " + first + " 行重复"));
+                }
+            }
             if (!errs.isEmpty()) {
                 plan.errors.addAll(errs);
                 continue;
@@ -261,6 +268,14 @@ public class ImportService {
 
             Optional<Product> existing = sku != null ? products.findBySku(sku)
                     : barcode != null ? products.findFirstByBarcodeOrderByIdAsc(barcode) : Optional.empty();
+            if (barcode != null) {
+                Optional<Product> owner = products.findFirstByBarcodeOrderByIdAsc(barcode);
+                if (owner.isPresent() && (existing.isEmpty() || !owner.get().getId().equals(existing.get().getId()))) {
+                    plan.errors.add(new RowError(r.rowNumber(), "条码",
+                            "条码「" + barcode + "」已被商品「" + owner.get().getName() + "」使用"));
+                    continue;
+                }
+            }
             if (existing.isPresent()) {
                 if (mode == Mode.CREATE_ONLY) {
                     plan.skipped++;

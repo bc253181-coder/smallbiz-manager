@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
+import { CameraScanButton } from '@/features/barcode/CameraScanButton'
 import { productApi } from '@/features/catalog/api'
 import { ProductThumb } from '@/features/catalog/components/ProductThumb'
 import type { Product } from '@/features/catalog/types'
@@ -90,8 +91,19 @@ export function InventoryPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="搜索商品名称、SKU 或条码"
-              className="pl-9"
+              className="pl-9 pr-11"
               aria-label="搜索商品"
+              onKeyDown={(e) => {
+                // 扫码枪扫完按回车：立即搜索，不等输入停顿
+                if (e.key === 'Enter') update({ q: search.trim() || null })
+              }}
+            />
+            <CameraScanButton
+              title="扫码查库存"
+              onCode={(code) => {
+                setSearch(code)
+                update({ q: code })
+              }}
             />
           </div>
           <button
