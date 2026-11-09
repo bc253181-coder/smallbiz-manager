@@ -45,6 +45,15 @@ public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long>, J
     java.util.List<SalesOrder> findByCustomerIdAndStatusAndOrderDateLessThanOrderByOrderDateAscIdAsc(Long customerId,
             SalesOrder.Status status, java.time.Instant before);
 
+    /** 每个客户的 [客户 id, 订单数, 累计消费, 当前欠款]（只统计未取消的订单；导出客户用）。 */
+    @Query("""
+            select o.customerId, count(o), sum(o.totalAmount), sum(o.totalAmount - o.paidAmount)
+            from SalesOrder o
+            where o.customerId is not null and o.status = com.smallbiz.sales.SalesOrder.Status.COMPLETED
+            group by o.customerId
+            """)
+    List<Object[]> customerTotals();
+
     /** 开过单的人（开单人筛选用；含已离开店铺的员工）。 */
     @Query("select distinct o.createdBy from SalesOrder o where o.createdBy is not null")
     List<Long> findCreatorIds();

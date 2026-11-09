@@ -12,6 +12,7 @@ export type Feature =
   | 'EXPORT'
   | 'RECEIVABLES'
   | 'STAFF_ACCOUNTS'
+  | 'EXCEL_EXPORT'
 export type Period = 'TRIAL_MONTH' | 'MONTH' | 'YEAR'
 export type PaymentStatus = 'AWAITING_PAYMENT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED'
 export type PlanSource = 'ACTIVATION_CODE' | 'MANUAL_PAYMENT' | 'ADMIN_MANUAL'
@@ -91,6 +92,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   EXPORT: '导出 Excel / CSV',
   RECEIVABLES: '应收账款（赊账、收款、对账单）',
   STAFF_ACCOUNTS: '员工账号',
+  EXCEL_EXPORT: '导出 Excel 表格',
 }
 
 /** 开通各功能所需的最低套餐（与后端 PlanPolicy 一致）。 */
@@ -103,6 +105,7 @@ export const FEATURE_PLAN: Record<Feature, Plan> = {
   EXPORT: 'STANDARD',
   RECEIVABLES: 'PRO',
   STAFF_ACCOUNTS: 'PRO',
+  EXCEL_EXPORT: 'PRO',
 }
 
 export const PERIOD_LABELS: Record<Period, string> = {

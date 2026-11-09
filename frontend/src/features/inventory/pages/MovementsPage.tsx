@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
 import { productApi } from '@/features/catalog/api'
 import { MOVEMENT_LABELS, type MovementType } from '@/features/catalog/types'
+import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
 import { formatDateTime, useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { inventoryApi } from '../api'
@@ -48,7 +49,14 @@ export function MovementsPage() {
 
   return (
     <div>
-      <PageHeader title="库存流水" description="每一次库存变动的记录，不可修改或删除" back={{ to: '/inventory', label: '返回库存' }} />
+      <PageHeader
+        title="库存流水"
+        description="每一次库存变动的记录，不可修改或删除"
+        back={{ to: '/inventory', label: '返回库存' }}
+        actions={
+          <ExcelExportButton path="/exports/movements" params={{ productId, type, from, to }} fallbackName="库存流水.xlsx" />
+        }
+      />
 
       <Card>
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-end">

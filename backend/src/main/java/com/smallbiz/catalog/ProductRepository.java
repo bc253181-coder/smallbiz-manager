@@ -17,6 +17,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Optional<Product> findBySku(String sku);
 
+    /** 导入判重：没有 SKU 时按条码。 */
+    Optional<Product> findFirstByBarcodeOrderByIdAsc(String barcode);
+
     boolean existsByCategoryId(Long categoryId);
 
     /** [categoryId, count] */

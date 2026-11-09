@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { downloadFile } from '@/lib/download'
 
 export type GroupBy = 'DAY' | 'MONTH'
 
@@ -88,16 +89,5 @@ export const reportApi = {
 
 /** 下载 CSV（需要带登录令牌，因此用 axios 取回再触发浏览器下载）。 */
 export async function downloadCsv(path: string, params: Record<string, string>, fallbackName: string) {
-  const res = await api.get<Blob>(path, { params, responseType: 'blob' })
-  const disposition = String(res.headers['content-disposition'] ?? '')
-  const match = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
-  const name = match ? decodeURIComponent(match[1]) : fallbackName
-  const url = URL.createObjectURL(res.data)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  await downloadFile(path, params, fallbackName)
 }

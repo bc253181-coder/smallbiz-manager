@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
+import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
+import { ImportButton } from '@/features/excel/ImportDialog'
 import { useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { supplierApi } from '../api'
@@ -47,10 +49,14 @@ export function SupplierListPage() {
         title="供应商"
         description="管理进货渠道和联系方式"
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus aria-hidden />
-            新增供应商
-          </Button>
+          <>
+            <ImportButton type="suppliers" />
+            <ExcelExportButton path="/exports/suppliers" params={{ q }} fallbackName="供应商.xlsx" />
+            <Button onClick={() => setCreating(true)}>
+              <Plus aria-hidden />
+              新增供应商
+            </Button>
+          </>
         }
       />
       <Card>

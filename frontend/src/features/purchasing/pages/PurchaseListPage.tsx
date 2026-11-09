@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
 import { formatDate } from '@/lib/utils'
+import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
 import { useMoney } from '@/lib/format'
 import { useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
@@ -52,10 +53,13 @@ export function PurchaseListPage() {
         title="采购"
         description="向供应商下单进货，确认收货后自动入库并更新成本"
         actions={
-          <Link to="/purchases/new" className={buttonVariants()}>
-            <Plus aria-hidden />
-            新建采购单
-          </Link>
+          <>
+            <ExcelExportButton path="/exports/purchases" params={{ q, status }} fallbackName="采购.xlsx" />
+            <Link to="/purchases/new" className={buttonVariants()}>
+              <Plus aria-hidden />
+              新建采购单
+            </Link>
+          </>
         }
       />
       <Card>

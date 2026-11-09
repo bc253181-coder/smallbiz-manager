@@ -11,7 +11,9 @@ public enum Feature {
     /** 专业版：赊账、收款记录、客户欠款与对账单。 */
     RECEIVABLES("应收账款"),
     /** 专业版：邀请员工（店主以外最多 5 人）。 */
-    STAFF_ACCOUNTS("员工账号");
+    STAFF_ACCOUNTS("员工账号"),
+    /** 专业版：导出 Excel（.xlsx）。CSV 导出仍属于标准版的 EXPORT。 */
+    EXCEL_EXPORT("Excel 导出");
 
     private final String label;
 

@@ -11,6 +11,7 @@ import { errorMessage } from '@/lib/api'
 import { useFeature, usePlan } from '@/features/billing/api'
 import { useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
 import { downloadCsv, reportApi, type GroupBy } from '../api'
 import { TrendChart } from '../TrendChart'
 
@@ -155,24 +156,27 @@ function ExportButton({ path, params, name }: { path: string; params: Record<str
     )
   }
   return (
-    <Button
-      size="sm"
-      variant="secondary"
-      loading={busy}
-      onClick={async () => {
-        setBusy(true)
-        try {
-          await downloadCsv(path, params, name)
-        } catch (e) {
-          toast.error(errorMessage(e, '导出失败'))
-        } finally {
-          setBusy(false)
-        }
-      }}
-    >
-      <Download aria-hidden />
-      导出 CSV
-    </Button>
+    <div className="flex gap-2">
+      <Button
+        size="sm"
+        variant="secondary"
+        loading={busy}
+        onClick={async () => {
+          setBusy(true)
+          try {
+            await downloadCsv(path, params, name)
+          } catch (e) {
+            toast.error(errorMessage(e, '导出失败'))
+          } finally {
+            setBusy(false)
+          }
+        }}
+      >
+        <Download aria-hidden />
+        CSV
+      </Button>
+      <ExcelExportButton size="sm" label="Excel" path={path} params={{ ...params, format: 'xlsx' }} fallbackName={name.replace(/\.csv$/, '.xlsx')} />
+    </div>
   )
 }
 
