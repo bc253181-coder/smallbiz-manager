@@ -63,6 +63,8 @@ public class PaymentService {
         }
         Tenant tenant = tenants.findByIdForUpdate(tenantId)
                 .orElseThrow(() -> ApiException.notFound("TENANT_NOT_FOUND", "店铺不存在"));
+        // 专业版有效期内不能下单标准版（否则审核通过时会覆盖专业版剩余时间）
+        PlanService.checkNotDowngrade(tenant.effectivePlan(Instant.now()), price.getPlan());
         if (price.isTrial() && tenant.isTrialUsed()) {
             throw PlanService.trialUsed();
         }

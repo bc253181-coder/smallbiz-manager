@@ -83,6 +83,14 @@ public abstract class IntegrationTest {
         return s;
     }
 
+    /** 注册并创建专业版店铺（一年）。 */
+    protected Session registerWithProTenant(String prefix, String tenantName) throws Exception {
+        Session s = createTenant(register(prefix), tenantName);
+        jdbcTemplate.update("update tenants set plan = 'PRO', plan_expires_at = date_add(utc_timestamp(6), interval 365 day) "
+                + "where id = ?", currentTenantId(s, mvc));
+        return s;
+    }
+
     /** 注册并创建免费版店铺。 */
     protected Session registerWithFreeTenant(String prefix, String tenantName) throws Exception {
         return createTenant(register(prefix), tenantName);

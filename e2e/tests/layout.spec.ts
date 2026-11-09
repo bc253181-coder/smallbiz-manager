@@ -20,6 +20,7 @@ const PAGES = [
   '/purchases',
   '/reports',
   '/reports?tab=inventory',
+  '/receivables',
   '/settings',
   '/settings/billing',
   '/terms',

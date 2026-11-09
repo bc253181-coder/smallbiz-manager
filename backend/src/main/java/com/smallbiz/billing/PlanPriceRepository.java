@@ -13,4 +13,7 @@ public interface PlanPriceRepository extends JpaRepository<PlanPrice, Long> {
     List<PlanPrice> findAllByOrderByCurrencyAscSortOrderAsc();
 
     List<PlanPrice> findByCurrencyAndEnabledTrueOrderBySortOrderAsc(String currency);
+
+    java.util.Optional<PlanPrice> findFirstByPlanAndPeriodAndCurrency(com.smallbiz.tenant.Plan plan, PlanPrice.Period period,
+            String currency);
 }

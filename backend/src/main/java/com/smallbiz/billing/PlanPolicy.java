@@ -1,15 +1,12 @@
 package com.smallbiz.billing;
 
-import java.util.EnumSet;
-import java.util.Set;
-
 import com.smallbiz.tenant.Plan;
 
 /**
  * 套餐权益：所有限制集中在这里，调整套餐内容只改这个类。
  *
- * <p>说明：设计稿中"导出"和"批发价"属于专业版，但专业版在应收账款、员工账号完成前不开售，
- * 因此暂时放入标准版，避免出现"买不到的功能"。
+ * <p>套餐等级 FREE &lt; STANDARD &lt; PRO，高等级包含低等级的全部功能。
+ * 应收账款为专业版功能；其余付费功能标准版即可使用。
  */
 public final class PlanPolicy {
 
@@ -19,10 +16,8 @@ public final class PlanPolicy {
     public static final int FREE_MAX_PRODUCTS = 100;
     public static final int FREE_REPORT_DAYS = 30;
 
-    private static final Set<Feature> PAID = EnumSet.allOf(Feature.class);
-
     public static boolean allows(Plan plan, Feature feature) {
-        return plan != Plan.FREE || !PAID.contains(feature);
+        return rank(plan) >= rank(requiredPlan(feature));
     }
 
     /** 商品数量上限；null 表示不限。 */
@@ -32,6 +27,22 @@ public final class PlanPolicy {
 
     /** 开通某功能所需的最低套餐。 */
     public static Plan requiredPlan(Feature feature) {
-        return Plan.STANDARD;
+        return feature == Feature.RECEIVABLES ? Plan.PRO : Plan.STANDARD;
+    }
+
+    public static int rank(Plan plan) {
+        return switch (plan) {
+            case FREE -> 0;
+            case STANDARD -> 1;
+            case PRO -> 2;
+        };
+    }
+
+    public static String label(Plan plan) {
+        return switch (plan) {
+            case FREE -> "免费版";
+            case STANDARD -> "标准版";
+            case PRO -> "专业版";
+        };
     }
 }

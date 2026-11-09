@@ -34,6 +34,10 @@ import com.smallbiz.customer.Customer;
 import com.smallbiz.customer.CustomerService;
 import com.smallbiz.inventory.InventoryService;
 import com.smallbiz.inventory.MovementType;
+import com.smallbiz.receivable.CustomerPayment;
+import com.smallbiz.receivable.CustomerPaymentRepository;
+import com.smallbiz.receivable.PaymentAllocation;
+import com.smallbiz.receivable.PaymentAllocationRepository;
 import com.smallbiz.sales.SalesDtos.CustomerStats;
 import com.smallbiz.sales.SalesDtos.ItemRequest;
 import com.smallbiz.sales.SalesDtos.ItemView;
@@ -60,10 +64,14 @@ public class SalesService {
     private final UserRepository users;
     private final TenantRepository tenants;
     private final PlanGuard planGuard;
+    private final PaymentAllocationRepository allocations;
+    private final CustomerPaymentRepository payments;
 
     public SalesService(SalesOrderRepository orders, ProductRepository products, CustomerService customers,
             InventoryService inventory, SequenceService sequences, UserRepository users, TenantRepository tenants,
-            PlanGuard planGuard) {
+            PlanGuard planGuard, PaymentAllocationRepository allocations, CustomerPaymentRepository payments) {
+        this.allocations = allocations;
+        this.payments = payments;
         this.orders = orders;
         this.products = products;
         this.customers = customers;
@@ -148,6 +156,7 @@ public class SalesService {
         }
         order.setNotes(Strings.blankToNull(req.notes()));
         order.setItems(items, discount);
+        applyPaidAtSale(order, req.paidAmount(), customer, tenantId);
         order = orders.saveAndFlush(order);
 
         for (SalesOrderItem item : sortedByProduct(order)) {
@@ -164,6 +173,10 @@ public class SalesService {
                 .orElseThrow(() -> ApiException.notFound("SALE_NOT_FOUND", "销售单不存在"));
         if (order.getStatus() != SalesOrder.Status.COMPLETED) {
             throw new ApiException(HttpStatus.CONFLICT, "INVALID_STATUS", "该销售单已取消");
+        }
+        // 已收过款的单不能直接取消，否则钱和单对不上（先作废相关收款）
+        if (allocations.existsValidForOrder(order.getId())) {
+            throw ApiException.conflict("ORDER_HAS_PAYMENTS", "这张销售单已有收款记录，请先作废相关收款再取消");
         }
         for (SalesOrderItem item : sortedByProduct(order)) {
             try {
@@ -182,6 +195,24 @@ public class SalesService {
     }
 
     // ---------------- 内部 ----------------
+
+    /** 本次实收：为空 = 全额；少于应收即赊账，必须选择客户且为专业版。 */
+    private void applyPaidAtSale(SalesOrder order, BigDecimal paidAmount, Customer customer, Long tenantId) {
+        if (paidAmount == null) {
+            return;
+        }
+        BigDecimal paid = paidAmount.setScale(2, java.math.RoundingMode.HALF_UP);
+        if (paid.compareTo(order.getTotalAmount()) > 0) {
+            throw ApiException.badRequest("PAID_EXCEEDS_TOTAL", "实收金额不能超过应收金额");
+        }
+        if (paid.compareTo(order.getTotalAmount()) < 0) {
+            if (customer == null) {
+                throw ApiException.badRequest("CREDIT_REQUIRES_CUSTOMER", "赊账需要先选择客户；散客请全额收款");
+            }
+            planGuard.require(tenantId, Feature.RECEIVABLES);
+        }
+        order.setPaidAtSale(paid);
+    }
 
     private List<SalesOrderItem> buildItems(List<ItemRequest> reqs, Customer.PriceTier tier) {
         Set<Long> seen = new HashSet<>();
@@ -232,9 +263,19 @@ public class SalesService {
                 .map(i -> new ItemView(i.getProductId(), i.getProductName(), i.getSku(), i.getUnit(), i.getQuantity(),
                         i.getUnitPrice(), hideCost ? null : i.getUnitCost(), i.getLineTotal()))
                 .toList();
+        List<PaymentAllocation> allocs = o.getId() == null ? List.of() : allocations.findBySalesOrderIdOrderByIdAsc(o.getId());
+        Map<Long, CustomerPayment> paymentById = payments.findAllById(allocs.stream().map(PaymentAllocation::getPaymentId).toList())
+                .stream().collect(Collectors.toMap(CustomerPayment::getId, p -> p));
+        List<SalesDtos.PaymentLine> paymentLines = allocs.stream().map(a -> {
+            CustomerPayment p = paymentById.get(a.getPaymentId());
+            return new SalesDtos.PaymentLine(p.getId(), p.getPaymentNo(), p.getReceivedAt(), p.getMethod().name(),
+                    p.getStatus().name(), a.getAmount());
+        }).toList();
         return new SaleView(o.getId(), o.getOrderNo(), o.getCustomerId(), o.getCustomerName(), o.getPriceTier(),
                 o.getStatus(), o.getOrderDate(), o.getItemCount(), o.getTotalQuantity(), o.getSubtotal(),
-                o.getDiscountAmount(), o.getTotalAmount(), o.getPaidAmount(), o.getPaymentStatus(),
+                o.getDiscountAmount(), o.getTotalAmount(), o.getPaidAmount(), o.getPaymentStatus(), o.getPaidAtSale(),
+                o.getStatus() == SalesOrder.Status.COMPLETED ? o.outstanding() : BigDecimal.ZERO, o.getLastPaymentAt(),
+                paymentLines,
                 hideCost ? null : o.getTotalCost(), hideCost ? null : o.grossProfit(), o.getNotes(), items,
                 names.get(o.getCreatedBy()), o.getCancelledAt(), names.get(o.getCancelledBy()), o.getCancelReason());
     }

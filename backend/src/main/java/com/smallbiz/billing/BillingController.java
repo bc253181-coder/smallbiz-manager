@@ -51,10 +51,12 @@ public class BillingController {
     private final PlanChangeLogRepository logs;
     private final ActivationService activation;
     private final PaymentService payments;
+    private final PlanService planService;
 
     public BillingController(TenantRepository tenants, ProductRepository products, PlanPriceRepository prices,
             PaymentMethodRepository methods, PlanChangeLogRepository logs, ActivationService activation,
-            PaymentService payments) {
+            PaymentService payments, PlanService planService) {
+        this.planService = planService;
         this.tenants = tenants;
         this.products = products;
         this.prices = prices;
@@ -69,13 +71,14 @@ public class BillingController {
     public CurrentPlan current() {
         Long tenantId = CurrentUser.requireTenantId();
         Tenant t = tenants.findById(tenantId).orElseThrow();
-        Plan plan = t.effectivePlan(Instant.now());
+        Instant now = Instant.now();
+        Plan plan = t.effectivePlan(now);
         Map<Feature, Boolean> features = new EnumMap<>(Feature.class);
         for (Feature f : Feature.values()) {
             features.put(f, PlanPolicy.allows(plan, f));
         }
         return new CurrentPlan(plan, plan == Plan.FREE ? null : t.getPlanExpiresAt(), t.isTrialUsed(),
-                products.count(), PlanPolicy.maxProducts(plan), features);
+                products.count(), PlanPolicy.maxProducts(plan), features, planService.upgradeBonusDays(t, Plan.PRO, now));
     }
 
     @GetMapping("/prices")

@@ -3,6 +3,7 @@ import type { Page } from '@/features/catalog/types'
 import type { PriceTier } from '@/features/partners/api'
 
 export type SaleStatus = 'COMPLETED' | 'CANCELLED'
+export type PaymentStatus = 'PAID' | 'PARTIAL' | 'UNPAID'
 
 export interface SaleSummary {
   id: number
@@ -14,6 +15,8 @@ export interface SaleSummary {
   itemCount: number
   totalQuantity: number
   totalAmount: string
+  paidAmount: string
+  paymentStatus: PaymentStatus
 }
 
 export interface SaleItem {
@@ -32,8 +35,10 @@ export interface SaleDetail extends SaleSummary {
   priceTier: PriceTier
   subtotal: string
   discountAmount: string
-  paidAmount: string
-  paymentStatus: 'PAID' | 'PARTIAL' | 'UNPAID'
+  paidAtSale: string
+  outstanding: string
+  lastPaymentAt: string | null
+  payments: SalePaymentLine[]
   totalCost: string | null
   grossProfit: string | null
   notes: string | null
@@ -44,11 +49,28 @@ export interface SaleDetail extends SaleSummary {
   cancelReason: string | null
 }
 
+export interface SalePaymentLine {
+  paymentId: number
+  paymentNo: string
+  receivedAt: string
+  method: string
+  status: 'VALID' | 'VOIDED'
+  amount: string
+}
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  PAID: '已付清',
+  PARTIAL: '部分付款',
+  UNPAID: '未付款',
+}
+
 export interface SaleInput {
   customerId: number | null
   priceTier: PriceTier
   discountAmount: string | null
   notes: string
+  /** 本次实收；null = 全额收款 */
+  paidAmount: string | null
   items: { productId: number; quantity: number; unitPrice: string }[]
 }
 

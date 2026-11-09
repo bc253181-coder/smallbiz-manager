@@ -52,6 +52,9 @@ public class ActivationService {
         if (req.plan() == Plan.FREE) {
             throw ApiException.badRequest("INVALID_PLAN", "激活码只能用于付费套餐");
         }
+        if (req.trial() && req.plan() != Plan.STANDARD) {
+            throw ApiException.badRequest("INVALID_PLAN", "首月体验只适用于标准版");
+        }
         if (req.quantity() < 1 || req.quantity() > 1000) {
             throw ApiException.badRequest("INVALID_QUANTITY", "每批数量为 1–1000");
         }

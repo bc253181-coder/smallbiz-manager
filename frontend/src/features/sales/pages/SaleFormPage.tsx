@@ -17,6 +17,7 @@ import { useMoney } from '@/lib/format'
 import { fromCents, isMoney, toCents } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { AxiosError } from 'axios'
+import { receivableApi } from '@/features/receivables/api'
 import { saleApi } from '../api'
 
 interface Line {
@@ -55,6 +56,8 @@ export function SaleFormPage() {
 
   const canCustomers = useFeature('CUSTOMERS')
   const canWholesale = useFeature('WHOLESALE_PRICE')
+  const canCredit = useFeature('RECEIVABLES')
+  const [paid, setPaid] = useState('')
   const customers = useQuery({
     queryKey: ['customers', 'all'],
     queryFn: () => customerApi.list({ size: 100, sort: 'name,asc' }),
@@ -116,13 +119,23 @@ export function SaleFormPage() {
     discountCents === null ? '金额格式不正确' : discountCents > subtotalCents ? '优惠不能超过商品合计' : null
   const totalCents = subtotalCents - (discountCents ?? 0)
   const totalQty = lines.reduce((s, l) => s + qtyOf(l), 0)
+  // 赊账（专业版）：只有选了客户才显示「本次实收」；留空 = 全额
+  const creditEnabled = canCustomers && canCredit && !!customerId
+  const paidCents = creditEnabled && paid.trim() ? toCents(paid) : null
+  const paidError = !creditEnabled || !paid.trim() ? null : paidCents === null ? '金额格式不正确' : paidCents > Math.max(totalCents, 0) ? '实收不能超过应收' : null
+  const owedCents = paidCents === null ? 0 : Math.max(totalCents, 0) - paidCents
+  const customerDebt = useQuery({
+    queryKey: ['customer-receivable', Number(customerId)],
+    queryFn: () => receivableApi.customer(Number(customerId)),
+    enabled: creditEnabled,
+  })
 
   async function submit() {
     if (saving) return
     setShowErrors(true)
     setFormError(null)
     if (lines.length === 0) return setFormError('请至少添加一个商品')
-    if (lineErrors.some((x) => x.quantity || x.unitPrice) || discountError) return setFormError('请修正标红的内容')
+    if (lineErrors.some((x) => x.quantity || x.unitPrice) || discountError || paidError) return setFormError('请修正标红的内容')
     if (notes.length > 500) return setFormError('备注最多 500 字')
 
     setSaving(true)
@@ -132,15 +145,20 @@ export function SaleFormPage() {
         priceTier: canWholesale ? tier : 'RETAIL',
         discountAmount: discount.trim() || null,
         notes,
+        paidAmount: paidCents === null ? null : fromCents(paidCents),
         items: lines.map((l) => ({ productId: l.productId, quantity: Number(l.quantity), unitPrice: l.unitPrice.trim() })),
       })
       queryClient.setQueryData(['sale', sale.id], sale)
       await Promise.all(
-        [['sales'], ['products'], ['product'], ['product-movements'], ['inventory'], ['customer-stats']].map((k) =>
+        [['sales'], ['products'], ['product'], ['product-movements'], ['inventory'], ['customer-stats'], ['receivables'], ['customer-receivable']].map((k) =>
           queryClient.invalidateQueries({ queryKey: k }),
         ),
       )
-      toast.success(`开单成功：${sale.orderNo}，实收 ${money(sale.totalAmount)}`)
+      toast.success(
+        Number(sale.outstanding) > 0
+          ? `开单成功：${sale.orderNo}，实收 ${money(sale.paidAmount)}，欠款 ${money(sale.outstanding)}`
+          : `开单成功：${sale.orderNo}，实收 ${money(sale.totalAmount)}`,
+      )
       navigate(`/sales/${sale.id}`, { replace: true })
     } catch (err) {
       const code = errorCode(err)
@@ -311,6 +329,21 @@ export function SaleFormPage() {
                 <span className="text-sm text-slate-500">应收</span>
                 <span className="text-2xl font-semibold tabular-nums text-slate-900">{money(fromCents(Math.max(totalCents, 0)))}</span>
               </div>
+              {creditEnabled && (
+                <div className="space-y-1">
+                  <Field label="本次实收" htmlFor="so-paid" hint="留空 = 全额收款；少收的部分记为客户欠款" error={showErrors || paid ? (paidError ?? undefined) : undefined}>
+                    <Input id="so-paid" inputMode="decimal" placeholder={fromCents(Math.max(totalCents, 0))} value={paid} onChange={(e) => setPaid(e.target.value)} invalid={!!paidError} />
+                  </Field>
+                  {owedCents > 0 && !paidError && (
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                      本单欠款 <span className="font-semibold tabular-nums">{money(fromCents(owedCents))}</span>
+                      {customerDebt.data && Number(customerDebt.data.outstanding) > 0 && (
+                        <>，该客户原有欠款 {money(customerDebt.data.outstanding)}</>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
               <Field label="备注" htmlFor="so-notes" error={notes.length > 500 ? '最多 500 字' : undefined}>
                 <Textarea id="so-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
               </Field>

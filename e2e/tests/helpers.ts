@@ -22,7 +22,7 @@ function adminCredentials(): { email: string; password: string } {
 }
 
 /** 以平台管理员身份通过 API 生成一个标准版激活码（模拟在小红书售出）。 */
-export async function createActivationCode(baseURL: string, days = 30): Promise<string> {
+export async function createActivationCode(baseURL: string, days = 30, plan: 'STANDARD' | 'PRO' = 'STANDARD'): Promise<string> {
   const api = await request.newContext({ baseURL })
   try {
     const login = await api.post('/api/v1/auth/login', { data: adminCredentials() })
@@ -30,7 +30,7 @@ export async function createActivationCode(baseURL: string, days = 30): Promise<
     const { accessToken } = await login.json()
     const res = await api.post('/api/v1/admin/code-batches', {
       headers: { Authorization: `Bearer ${accessToken}` },
-      data: { name: 'E2E 自动测试', plan: 'STANDARD', durationDays: days, trial: false, quantity: 1 },
+      data: { name: 'E2E 自动测试', plan, durationDays: days, trial: false, quantity: 1 },
     })
     expect(res.status(), await res.text()).toBe(201)
     return (await res.json()).codes[0]
