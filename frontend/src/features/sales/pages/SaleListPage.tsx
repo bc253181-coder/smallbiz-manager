@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
+import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
 import { formatDateTime, useMoney } from '@/lib/format'
 import { useCanManage, useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
@@ -65,10 +66,17 @@ export function SaleListPage() {
         title="销售"
         description="开单记录。已取消的订单不计入任何统计。"
         actions={
-          <Link to="/sales/new" className={buttonVariants()}>
-            <Plus aria-hidden />
-            开单
-          </Link>
+          <>
+            <ExcelExportButton
+              path="/exports/sales"
+              params={{ q, status, from, to, createdBy }}
+              fallbackName="销售.xlsx"
+            />
+            <Link to="/sales/new" className={buttonVariants()}>
+              <Plus aria-hidden />
+              开单
+            </Link>
+          </>
         }
       />
       <Card>

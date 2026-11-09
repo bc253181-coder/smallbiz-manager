@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
+import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
+import { ImportButton } from '@/features/excel/ImportDialog'
 import { useMoney, formatQty } from '@/lib/format'
 import { useCanManage, useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
@@ -77,6 +79,12 @@ export function ProductListPage() {
               <FolderTree aria-hidden />
               商品分类
             </Link>
+            <ImportButton type="products" />
+            <ExcelExportButton
+              path="/exports/products"
+              params={{ q, categoryId, status, lowStock: lowStock || undefined }}
+              fallbackName="商品.xlsx"
+            />
             {canManage && (
               <Link to="/products/new" className={buttonVariants()}>
                 <Plus aria-hidden />

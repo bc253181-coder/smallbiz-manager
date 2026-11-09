@@ -8,6 +8,8 @@ import { Card } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
+import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
+import { ImportButton } from '@/features/excel/ImportDialog'
 import { useDebouncedValue } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
 import { CUSTOMER_TYPE_LABELS, PRICE_TIER_LABELS, customerApi, type CustomerType, type PriceTier } from '../api'
@@ -51,10 +53,14 @@ export function CustomerListPage() {
         title="客户"
         description="管理客户资料和默认价格（零售 / 批发）"
         actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus aria-hidden />
-            新增客户
-          </Button>
+          <>
+            <ImportButton type="customers" />
+            <ExcelExportButton path="/exports/customers" params={{ q, type, priceTier }} fallbackName="客户.xlsx" />
+            <Button onClick={() => setCreating(true)}>
+              <Plus aria-hidden />
+              新增客户
+            </Button>
+          </>
         }
       />
       <Card>
