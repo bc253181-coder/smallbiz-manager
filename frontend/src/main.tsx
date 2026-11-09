@@ -15,7 +15,8 @@ const queryClient = new QueryClient({
     onError: (error) => {
       const code = errorCode(error)
       if (code === 'PLAN_FEATURE_REQUIRED' || code === 'PLAN_LIMIT_REACHED') {
-        toast.info('升级标准版即可使用，首月体验 ¥1.99', {
+        const pro = (error as { response?: { data?: { details?: { requiredPlan?: string } } } }).response?.data?.details?.requiredPlan === 'PRO'
+        toast.info(pro ? '升级专业版即可使用' : '升级标准版即可使用，首月体验 ¥1.99', {
           id: 'plan-upgrade',
           action: { label: '查看套餐', onClick: () => void router.navigate('/settings/billing') },
         })

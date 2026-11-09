@@ -31,7 +31,10 @@ import {
   PurchaseDetailPage,
   PurchaseFormPage,
   PurchaseListPage,
+  ReceivablesPage,
+  ReceivablePaymentsPage,
   ReportsPage,
+  StatementPage,
   SaleDetailPage,
   SaleFormPage,
   SaleListPage,
@@ -162,6 +165,14 @@ export const router = createBrowserRouter([
                     ],
                   },
                   { path: '/reports', element: <ReportsPage /> },
+                  {
+                    element: <RequireFeature feature="RECEIVABLES" />,
+                    children: [
+                      { path: '/receivables', element: <ReceivablesPage /> },
+                      { path: '/receivables/payments', element: <ReceivablePaymentsPage /> },
+                      { path: '/customers/:id/statement', element: <StatementPage /> },
+                    ],
+                  },
                   {
                     element: <RequireFeature feature="PURCHASING" />,
                     children: [

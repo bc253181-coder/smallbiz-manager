@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, CheckCircle2, Circle, PackageCheck, Plus } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ChevronRight, Circle, HandCoins, PackageCheck, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button'
@@ -12,6 +12,8 @@ import { reportApi } from '@/features/reports/api'
 import { TrendChart } from '@/features/reports/TrendChart'
 import { saleApi } from '@/features/sales/api'
 import { SaleStatusBadge } from '@/features/sales/SaleStatusBadge'
+import { useFeature } from '@/features/billing/api'
+import { receivableApi } from '@/features/receivables/api'
 import { formatDateTime, useMoney } from '@/lib/format'
 import { useCanManage } from '@/lib/hooks'
 import { cn } from '@/lib/utils'
@@ -37,6 +39,8 @@ export function DashboardPage() {
   const lowStock = useQuery({ queryKey: ['inventory', 'low-stock', 5], queryFn: () => inventoryApi.lowStock(5) })
   const recent = useQuery({ queryKey: ['sales', { recent: true }], queryFn: () => saleApi.list({ size: 5 }) })
   const detail = useQuery({ queryKey: ['tenant'], queryFn: tenantApi.current })
+  const canCredit = useFeature('RECEIVABLES')
+  const receivables = useQuery({ queryKey: ['receivables', 'summary'], queryFn: receivableApi.summary, enabled: canManage && canCredit })
   if (!session || !tenant) return null
 
   const s = summary.data
@@ -82,6 +86,22 @@ export function DashboardPage() {
         />
       </div>
 
+      {receivables.data && Number(receivables.data.totalOutstanding) > 0 && (
+        <Link
+          to="/receivables"
+          className="flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900 hover:bg-amber-100"
+        >
+          <span className="flex items-center gap-2 font-medium">
+            <HandCoins className="size-4" aria-hidden />
+            应收账款 <span className="tabular-nums">{money(receivables.data.totalOutstanding)}</span>
+          </span>
+          <span className="text-amber-800">{receivables.data.customerCount} 位客户欠款</span>
+          {Number(receivables.data.overdue30) > 0 && (
+            <span className="text-red-700">逾期 30 天以上 {money(receivables.data.overdue30)}</span>
+          )}
+          <ChevronRight className="ml-auto size-4" aria-hidden />
+        </Link>
+      )}
       {showGuide && (
         <Card>
           <CardHeader title="开始使用" description="完成以下步骤，开始用 SmallBiz Manager 管理生意" />
@@ -177,7 +197,7 @@ export function DashboardPage() {
                     <span className={cn('text-sm font-semibold tabular-nums', o.status === 'CANCELLED' && 'text-slate-400 line-through')}>
                       {money(o.totalAmount)}
                     </span>
-                    <SaleStatusBadge status={o.status} />
+                    <SaleStatusBadge status={o.status} paymentStatus={o.paymentStatus} />
                   </div>
                 </Link>
               </li>

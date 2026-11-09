@@ -9,6 +9,7 @@ import { formatDateTime } from '@/lib/format'
 import { useCanManage } from '@/lib/hooks'
 import { CUSTOMER_TYPE_LABELS, PRICE_TIER_LABELS, customerApi } from '../api'
 import { CustomerFormDialog } from '../CustomerFormDialog'
+import { CustomerReceivableCard } from '@/features/receivables/CustomerReceivableCard'
 import { CustomerSalesHistory } from '@/features/sales/CustomerSalesHistory'
 import { NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
 
@@ -67,7 +68,12 @@ export function CustomerDetailPage() {
           { label: '备注', value: c.notes },
           { label: '添加时间', value: formatDateTime(c.createdAt) },
         ]}
-        history={<CustomerSalesHistory customerId={c.id} />}
+        history={
+          <div className="space-y-6">
+            <CustomerReceivableCard customerId={c.id} customerName={c.name} />
+            <CustomerSalesHistory customerId={c.id} />
+          </div>
+        }
       />
       <CustomerFormDialog open={editing} customer={c} onClose={() => setEditing(false)} />
       <ConfirmDialog

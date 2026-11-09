@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Printer, XCircle } from 'lucide-react'
+import { HandCoins, Plus, Printer, XCircle } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -14,7 +14,12 @@ import { PRICE_TIER_LABELS } from '@/features/partners/api'
 import { errorCode, errorMessage } from '@/lib/api'
 import { formatDateTime, useMoney } from '@/lib/format'
 import { useCanManage } from '@/lib/hooks'
-import { saleApi } from '../api'
+import { useFeature } from '@/features/billing/api'
+import { METHOD_LABELS, type PaymentMethod } from '@/features/receivables/api'
+import { ReceivePaymentDialog } from '@/features/receivables/ReceivePaymentDialog'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import { PAYMENT_STATUS_LABELS, saleApi } from '../api'
 import { SaleStatusBadge } from '../SaleStatusBadge'
 
 const BACK = { to: '/sales', label: '返回销售列表' }
@@ -27,6 +32,8 @@ export function SaleDetailPage() {
   const { session } = useAuth()
   const [cancelling, setCancelling] = useState(false)
   const [reason, setReason] = useState('')
+  const [receiving, setReceiving] = useState(false)
+  const canCredit = useFeature('RECEIVABLES')
 
   const { data: o, isLoading, isError, error, refetch } = useQuery({ queryKey: ['sale', id], queryFn: () => saleApi.get(id) })
   const { data: shop } = useQuery({ queryKey: ['tenant'], queryFn: tenantApi.current })
@@ -36,7 +43,7 @@ export function SaleDetailPage() {
     onSuccess: async (u) => {
       queryClient.setQueryData(['sale', id], u)
       await Promise.all(
-        [['sales'], ['products'], ['product'], ['product-movements'], ['inventory'], ['customer-stats']].map((k) =>
+        [['sales'], ['products'], ['product'], ['product-movements'], ['inventory'], ['customer-stats'], ['receivables'], ['customer-receivable']].map((k) =>
           queryClient.invalidateQueries({ queryKey: k }),
         ),
       )
@@ -73,6 +80,7 @@ export function SaleDetailPage() {
   }
 
   const showCost = o.totalCost !== null
+  const owes = o.status === 'COMPLETED' && Number(o.outstanding) > 0
 
   return (
     <div>
@@ -88,6 +96,12 @@ export function SaleDetailPage() {
           description={`${o.customerName ?? '散客'} · ${formatDateTime(o.orderDate)}`}
           actions={
             <>
+              {owes && canCredit && o.customerId && (
+                <Button onClick={() => setReceiving(true)}>
+                  <HandCoins aria-hidden />
+                  收款
+                </Button>
+              )}
               {canManage && o.status === 'COMPLETED' && (
                 <Button variant="secondary" onClick={() => setCancelling(true)}>
                   <XCircle aria-hidden />
@@ -158,6 +172,12 @@ export function SaleDetailPage() {
                 <AmountRow label="商品合计" value={money(o.subtotal)} />
                 {Number(o.discountAmount) > 0 && <AmountRow label="优惠" value={`−${money(o.discountAmount)}`} />}
                 <AmountRow label="应收" value={money(o.totalAmount)} strong />
+                {o.paymentStatus !== 'PAID' && o.status === 'COMPLETED' && (
+                  <>
+                    <AmountRow label="已收" value={money(o.paidAmount)} />
+                    <AmountRow label="未收" value={money(o.outstanding)} />
+                  </>
+                )}
               </tfoot>
             </table>
           </div>
@@ -177,7 +197,22 @@ export function SaleDetailPage() {
                 )}
               </Row>
               <Row label="开单人">{o.createdByName ?? '—'}</Row>
-              <Row label="收款">{o.paymentStatus === 'PAID' ? '已付清' : o.paymentStatus === 'PARTIAL' ? '部分付款' : '未付款'}</Row>
+              <Row label="收款">
+                <Badge tone={o.paymentStatus === 'PAID' ? 'green' : o.paymentStatus === 'PARTIAL' ? 'amber' : 'red'}>
+                  {PAYMENT_STATUS_LABELS[o.paymentStatus]}
+                </Badge>
+              </Row>
+              {o.paymentStatus !== 'PAID' || o.payments.length > 0 ? (
+                <>
+                  <Row label="开单时实收">{money(o.paidAtSale)}</Row>
+                  <Row label="已收合计">{money(o.paidAmount)}</Row>
+                  {o.status === 'COMPLETED' && (
+                    <Row label="未收">
+                      <span className={owes ? 'text-red-600' : undefined}>{money(o.outstanding)}</span>
+                    </Row>
+                  )}
+                </>
+              ) : null}
               {showCost && (
                 <>
                   <Row label="成本">{money(o.totalCost)}</Row>
@@ -191,6 +226,38 @@ export function SaleDetailPage() {
           </CardBody>
         </Card>
       </div>
+
+      {o.payments.length > 0 && (
+        <Card className="mt-6 print:hidden">
+          <CardHeader title="收款记录" description="收款按开单时间先欠先还，冲抵到这张单的金额" />
+          <ul className="divide-y divide-slate-100">
+            {o.payments.map((p) => (
+              <li key={p.paymentId} className={cn('flex items-center justify-between gap-3 px-5 py-3 text-sm', p.status === 'VOIDED' && 'text-slate-400')}>
+                <span className="min-w-0">
+                  <span className="block font-mono text-xs">{p.paymentNo}</span>
+                  <span className="block text-xs text-slate-500">
+                    {formatDateTime(p.receivedAt)} · {METHOD_LABELS[p.method as PaymentMethod] ?? p.method}
+                    {p.status === 'VOIDED' && ' · 已作废'}
+                  </span>
+                </span>
+                <span className={cn('tabular-nums', p.status === 'VOIDED' ? 'line-through' : 'font-medium text-emerald-700')}>{money(p.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {receiving && o.customerId && (
+        <ReceivePaymentDialog
+          customerId={o.customerId}
+          customerName={o.customerName ?? ''}
+          salesOrderId={o.id}
+          onClose={() => {
+            setReceiving(false)
+            void refetch()
+          }}
+        />
+      )}
 
       <FormDialog
         open={cancelling}

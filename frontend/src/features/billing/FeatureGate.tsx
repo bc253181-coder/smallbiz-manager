@@ -5,12 +5,19 @@ import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
-import { FEATURE_LABELS, usePlan, type Feature } from './api'
+import { PLAN_LABELS } from '@/features/auth/types'
+import { FEATURE_LABELS, FEATURE_PLAN, usePlan, type Feature } from './api'
 
 const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
   CUSTOMERS: '记录客户资料和默认价格，开单时自动带出，查看每位客户的消费记录和欠款。',
   SUPPLIERS: '管理进货渠道，记录每个供应商的采购历史和进货价格。',
   PURCHASING: '下采购单、到货入库，库存和进货成本自动更新。',
+  RECEIVABLES: '客户可以先拿货后付款：记录赊账和收款，查看谁欠多少、欠了多久，打印对账单给客户核对。',
+}
+
+const PLAN_PRICE_HINT: Record<'STANDARD' | 'PRO', string> = {
+  STANDARD: '标准版 ¥6.99/月 起，首月体验只需 ¥1.99 / RM 1.00。',
+  PRO: '专业版 ¥9.9/月 · RM 6.9/月，包含标准版全部功能。标准版剩余天数会折算后加到专业版上。',
 }
 
 /** 套餐未包含的页面：显示升级说明代替页面内容（数据不会被删除）。 */
@@ -24,9 +31,13 @@ export function UpgradePrompt({ feature, className }: { feature: Feature; classN
           <Lock className="size-6" aria-hidden />
         </span>
         {/* 代替整个页面显示，因此作为页面主标题 */}
-        <h1 className="text-lg font-semibold text-slate-900">「{FEATURE_LABELS[feature]}」是标准版功能</h1>
+        <h1 className="text-lg font-semibold text-slate-900">
+          「{FEATURE_LABELS[feature]}」是{PLAN_LABELS[FEATURE_PLAN[feature]]}功能
+        </h1>
         {FEATURE_DESCRIPTIONS[feature] && <p className="text-sm text-slate-600">{FEATURE_DESCRIPTIONS[feature]}</p>}
-        <p className="text-sm text-slate-500">首月体验只需 ¥1.99 / RM 1.00。套餐到期后已有数据会保留，续费后即可继续使用。</p>
+        <p className="text-sm text-slate-500">
+          {PLAN_PRICE_HINT[FEATURE_PLAN[feature] === 'PRO' ? 'PRO' : 'STANDARD']}套餐到期后已有数据会保留，续费后即可继续使用。
+        </p>
         {isOwner ? (
           <Link to="/settings/billing" className={cn(buttonVariants(), 'mt-2')}>
             <Sparkles aria-hidden />

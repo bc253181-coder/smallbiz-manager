@@ -146,7 +146,7 @@ export function SaleListPage() {
                         {money(o.totalAmount)}
                       </td>
                       <td className="px-4 py-3">
-                        <SaleStatusBadge status={o.status} />
+                        <SaleStatusBadge status={o.status} paymentStatus={o.paymentStatus} />
                       </td>
                     </tr>
                   ))}
@@ -166,7 +166,7 @@ export function SaleListPage() {
                         <span className={cn('font-semibold tabular-nums', o.status === 'CANCELLED' && 'text-slate-400 line-through')}>
                           {money(o.totalAmount)}
                         </span>
-                        <SaleStatusBadge status={o.status} />
+                        <SaleStatusBadge status={o.status} paymentStatus={o.paymentStatus} />
                       </div>
                     </Link>
                   </li>

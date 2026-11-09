@@ -3,7 +3,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import type { Plan } from '@/features/auth/types'
 import { api } from '@/lib/api'
 
-export type Feature = 'CUSTOMERS' | 'SUPPLIERS' | 'PURCHASING' | 'WHOLESALE_PRICE' | 'FULL_REPORTS' | 'EXPORT'
+export type Feature = 'CUSTOMERS' | 'SUPPLIERS' | 'PURCHASING' | 'WHOLESALE_PRICE' | 'FULL_REPORTS' | 'EXPORT' | 'RECEIVABLES'
 export type Period = 'TRIAL_MONTH' | 'MONTH' | 'YEAR'
 export type PaymentStatus = 'AWAITING_PAYMENT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED'
 export type PlanSource = 'ACTIVATION_CODE' | 'MANUAL_PAYMENT' | 'ADMIN_MANUAL'
@@ -15,6 +15,8 @@ export interface CurrentPlan {
   productCount: number
   maxProducts: number | null
   features: Record<Feature, boolean>
+  /** 现在升级专业版时，标准版剩余时间可折算的专业版天数 */
+  proUpgradeBonusDays: number
 }
 
 export interface PriceView {
@@ -79,6 +81,18 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   WHOLESALE_PRICE: '批发价开单',
   FULL_REPORTS: '完整报表（不限时间范围）',
   EXPORT: '导出 Excel / CSV',
+  RECEIVABLES: '应收账款（赊账、收款、对账单）',
+}
+
+/** 开通各功能所需的最低套餐（与后端 PlanPolicy 一致）。 */
+export const FEATURE_PLAN: Record<Feature, Plan> = {
+  CUSTOMERS: 'STANDARD',
+  SUPPLIERS: 'STANDARD',
+  PURCHASING: 'STANDARD',
+  WHOLESALE_PRICE: 'STANDARD',
+  FULL_REPORTS: 'STANDARD',
+  EXPORT: 'STANDARD',
+  RECEIVABLES: 'PRO',
 }
 
 export const PERIOD_LABELS: Record<Period, string> = {

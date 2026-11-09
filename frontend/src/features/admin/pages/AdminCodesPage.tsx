@@ -203,14 +203,22 @@ function CreateBatchDialog({
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="套餐" htmlFor="cb-plan">
-          <Select id="cb-plan" value={plan} onChange={(e) => setPlan(e.target.value as Plan)}>
+          <Select
+            id="cb-plan"
+            value={plan}
+            onChange={(e) => {
+              const next = e.target.value as Plan
+              setPlan(next)
+              if (next !== 'STANDARD' && preset === 'trial') setPreset('month')
+            }}
+          >
             <option value="STANDARD">标准版</option>
             <option value="PRO">专业版</option>
           </Select>
         </Field>
         <Field label="类型" htmlFor="cb-preset">
           <Select id="cb-preset" value={preset} onChange={(e) => setPreset(e.target.value as typeof preset)}>
-            <option value="trial">首月体验（30 天，每店限一次）</option>
+            {plan === 'STANDARD' && <option value="trial">首月体验（30 天，每店限一次）</option>}
             <option value="month">月卡（30 天）</option>
             <option value="year">年卡（365 天）</option>
             <option value="custom">自定义天数</option>

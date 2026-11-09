@@ -59,7 +59,7 @@ export function CustomerSalesHistory({ customerId }: { customerId: number }) {
                     <span className={cn('text-sm font-medium tabular-nums', o.status === 'CANCELLED' && 'text-slate-400 line-through')}>
                       {money(o.totalAmount)}
                     </span>
-                    <SaleStatusBadge status={o.status} />
+                    <SaleStatusBadge status={o.status} paymentStatus={o.paymentStatus} />
                   </div>
                 </Link>
               </li>

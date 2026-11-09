@@ -137,14 +137,20 @@ function BuyCard() {
   const [currency, setCurrency] = useState(session?.currentTenant?.currency === 'MYR' ? 'MYR' : 'CNY')
   const [priceId, setPriceId] = useState<number | null>(null)
   const [methodId, setMethodId] = useState<number | null>(null)
+  const isPro = plan.data?.plan === 'PRO'
+  const [planTab, setPlanTab] = useState<'STANDARD' | 'PRO'>(isPro ? 'PRO' : 'STANDARD')
+  // 专业版有效期内只能续费专业版
+  const tab = isPro ? 'PRO' : planTab
 
   const prices = useQuery({ queryKey: ['billing', 'prices', currency], queryFn: () => billingApi.prices(currency) })
   const methods = useQuery({ queryKey: ['billing', 'methods'], queryFn: billingApi.methods })
   const payments = useQuery({ queryKey: ['billing', 'payments'], queryFn: billingApi.payments })
   const open = payments.data?.find((p) => p.status === 'AWAITING_PAYMENT' || p.status === 'PENDING_REVIEW')
 
-  const options = (prices.data ?? []).filter((p) => p.period !== 'TRIAL_MONTH' || !plan.data?.trialUsed)
-  const monthly = prices.data?.find((p) => p.plan === 'STANDARD' && p.period === 'MONTH')
+  const options = (prices.data ?? []).filter((p) => p.plan === tab && (p.period !== 'TRIAL_MONTH' || !plan.data?.trialUsed))
+  const monthly = prices.data?.find((p) => p.plan === tab && p.period === 'MONTH')
+  const hasPro = (prices.data ?? []).some((p) => p.plan === 'PRO')
+  const bonusDays = plan.data?.proUpgradeBonusDays ?? 0
   const currencyMethods = (methods.data ?? []).filter((m) => m.currency === currency)
   const selected = options.find((p) => p.id === priceId) ?? options[0]
   const method = currencyMethods.find((m) => m.id === methodId) ?? currencyMethods[0]
@@ -164,7 +170,7 @@ function BuyCard() {
   return (
     <Card>
       <CardHeader
-        title="升级 / 续费标准版"
+        title="升级 / 续费"
         description="扫码付款后上传截图，人工核对后开通（通常几小时内）"
         action={
           <div className="inline-flex shrink-0 self-start rounded-lg border border-slate-200 p-0.5" role="radiogroup" aria-label="币种">
@@ -204,6 +210,44 @@ function BuyCard() {
           </Link>
         )}
 
+        {hasPro && (
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-slate-700">选择套餐</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(['STANDARD', 'PRO'] as const).map((p) => {
+                const disabled = p === 'STANDARD' && isPro
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={tab === p}
+                    disabled={disabled}
+                    onClick={() => {
+                      setPlanTab(p)
+                      setPriceId(null)
+                    }}
+                    className={cn(
+                      'rounded-xl border p-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50',
+                      tab === p ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:bg-slate-50',
+                    )}
+                  >
+                    <span className="block font-semibold text-slate-900">{PLAN_LABELS[p]}</span>
+                    <span className="block text-xs text-slate-500">
+                      {p === 'STANDARD' ? '客户、供应商、采购、完整报表、导出' : '标准版全部 + 应收账款（赊账、收款、对账单）'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            {isPro && <p className="mt-2 text-xs text-slate-500">你当前是专业版，有效期内只能续费专业版。</p>}
+            {tab === 'PRO' && bonusDays > 0 && (
+              <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                你的标准版还有剩余时间，升级后会折算为 <span className="font-semibold">{bonusDays} 天</span>专业版，加在购买的天数后面。
+              </p>
+            )}
+          </fieldset>
+        )}
+
         {prices.isLoading ? (
           <div className="h-32 animate-pulse rounded-lg bg-slate-100" />
         ) : prices.isError ? (
@@ -239,7 +283,7 @@ function BuyCard() {
                 )
               })}
             </div>
-            {plan.data?.plan === 'STANDARD' && (
+            {plan.data?.plan === tab && (
               <p className="mt-2 text-xs text-slate-500">续费会从当前到期日顺延，不会浪费剩余天数。</p>
             )}
           </fieldset>
@@ -281,10 +325,11 @@ function BuyCard() {
         </Button>
 
         <div className="rounded-lg bg-slate-50 p-4 text-sm">
-          <p className="font-medium text-slate-700">免费版与标准版</p>
+          <p className="font-medium text-slate-700">套餐对比</p>
           <ul className="mt-2 space-y-1 text-slate-600">
             <li>免费版：最多 100 个商品；开单（散客零售价）、库存管理；近 30 天 / 本月报表</li>
             <li>标准版：商品不限；客户、供应商、采购入库、批发价开单、完整报表、导出 CSV</li>
+            <li>专业版：标准版全部功能 + 应收账款（赊账开单、收款记录、欠款账龄、客户对账单）</li>
           </ul>
         </div>
       </CardBody>
