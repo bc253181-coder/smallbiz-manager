@@ -38,7 +38,7 @@ export function UpgradePrompt({ feature, className }: { feature: Feature; classN
             : tr('升级高级永久会员，一次性付款，永久解锁全部功能。')}
           {tr('已有数据会保留。')}
         </p>        {isOwner ? (
-          <Link to="/settings/billing" className={cn(buttonVariants(), 'mt-2')}>
+          <Link to="/settings/billing?redeem=1" className={cn(buttonVariants(), 'mt-2')}>
             <Sparkles aria-hidden />
             {tr('立即升级')}
           </Link>

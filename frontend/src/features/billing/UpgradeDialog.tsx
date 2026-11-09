@@ -50,6 +50,7 @@ export function UpgradeDialog({ onUpgrade }: { onUpgrade: () => void }) {
             </p>
           )}
           <p className="mt-1 text-xs text-slate-500">{tr('一次性付款，永久享有高级会员权益，无需自动续费。')}</p>
+          <p className="mt-1 text-xs text-slate-500">{tr('在小红书购买激活码，兑换后立即开通。')}</p>
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <AlertDialog.Cancel asChild>
               <Button variant="ghost">{tr('以后再说')}</Button>

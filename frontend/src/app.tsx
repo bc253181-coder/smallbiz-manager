@@ -32,7 +32,7 @@ export function renderApp() {
       <AuthProvider>
         <RouterProvider router={router} />
         <PwaLayer />
-        <UpgradeDialog onUpgrade={() => void router.navigate('/settings/billing')} />
+        <UpgradeDialog onUpgrade={() => void router.navigate('/settings/billing?redeem=1')} />
       </AuthProvider>
       <Toaster position="top-center" richColors closeButton />
     </QueryClientProvider>

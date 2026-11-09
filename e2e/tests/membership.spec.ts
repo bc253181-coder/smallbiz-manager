@@ -1,9 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
+import { createActivationCode } from './helpers'
 
 /**
  * 普通会员 + 高级永久会员（docs/16）：
  * 普通会员建满 3 个商品 → 第 4 个弹出升级窗口（文字、价格）→ 已有商品照常编辑 → 会员页显示已用次数
- * → 模拟支付升级永久会员 → 立即可以继续新建、高级功能解锁
+ * → 会员页只有激活码 → 输错提示 → 兑换永久会员激活码 → 立即可以继续新建、高级功能解锁
  */
 async function newOwner(page: Page) {
   const stamp = Date.now()
@@ -57,17 +58,26 @@ test('普通会员次数用完 → 升级窗口 → 升级永久会员后继续�
   await page.goto('/products')
   await expect(page.getByText(`会员商品1 ${stamp}`).first()).toBeVisible()
 
-  // 会员页：普通会员、已用次数、价格；立即升级（模拟支付）
-  await page.goto('/settings/billing')
+  // 会员页：普通会员、已用次数、价格；只有激活码一种开通方式（不显示任何付款方式）
+  await page.goto('/settings/billing?redeem=1')
   await expect(page.getByTestId('membership-level')).toHaveText('普通会员')
   await expect(page.getByRole('progressbar', { name: '已新建商品' })).toHaveAttribute('aria-valuenow', '3')
   await expect(page.getByTestId('lifetime-price')).toHaveText('¥29.90')
-  await page.getByRole('button', { name: /在线支付 · 模拟支付（测试）/ }).click()
-  await page.getByRole('button', { name: /^立即升级/ }).click()
-  await expect(page).toHaveURL(/\/pay\/mock\/PAY-/)
-  await page.getByRole('button', { name: '模拟付款成功', exact: true }).click()
-  await expect(page.getByRole('heading', { name: '付款已确认，套餐已开通' })).toBeVisible()
+  await expect(page.getByText('付款方式')).toHaveCount(0)
+  await expect(page.getByText(/扫码付款|在线支付/)).toHaveCount(0)
+  await expect(page.getByLabel('激活码')).toBeFocused()
 
+  // 输错：提示不正确，不开通
+  await page.getByLabel('激活码').fill('SBZ-AAAA-BBBB-CCCC')
+  await page.getByRole('button', { name: '兑换并开通' }).click()
+  await expect(page.getByText('激活码不正确，请检查后重新输入')).toBeVisible()
+  await expect(page.getByTestId('membership-level')).toHaveText('普通会员')
+
+  // 正确的永久会员激活码（在小红书售出）：立即开通
+  const code = await createActivationCode(testInfo.project.use.baseURL ?? 'http://localhost:5173', 0, 'LIFETIME')
+  await page.getByLabel('激活码').fill(code.toLowerCase())
+  await page.getByRole('button', { name: '兑换并开通' }).click()
+  await expect(page.getByText('已开通高级永久会员')).toBeVisible()
   // 升级后立即生效：会员页显示永久会员，不再计数；可以继续新建；高级功能解锁
   await page.goto('/settings/billing')
   await expect(page.getByTestId('membership-level')).toHaveText('高级永久会员')

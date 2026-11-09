@@ -25,13 +25,13 @@ export function TermsContentEn() {
       </section>
 
       <section>
-        <h2>2. Plans and payment</h2>
+        <h2>2. Membership and payment</h2>
         <ul>
-          <li>The Free plan can be used indefinitely, with feature and quantity limits (for example up to 100 products). Prices and features of paid plans such as Standard are as shown on the “Plan &amp; billing” page.</li>
-          <li>You can pay by QR code on this website and upload a payment screenshot, which we check manually before activating; or activate with an activation code. Plans apply per store and take effect immediately.</li>
-          <li>The first-month trial can be used once per store. Plans do not renew automatically — please renew before they expire.</li>
-          <li>When a plan expires, the store returns to the Free plan: all existing data is kept, paid features are paused, and you can continue after renewing.</li>
-          <li>If the Service is unavailable for a long time because of us, contact support and we will compensate you, for example by extending your plan. For other refund requests, please contact support.</li>
+          <li>The Free membership costs nothing and has feature and usage limits (for example how many stores and products you can create), as shown under “Settings → Membership”. Usage is counted per account; deleting products or stores doesn’t give it back.</li>
+          <li>Lifetime Premium is a one-time purchase; its price and features are as shown on the Membership page. Once activated, all stores you own get Premium forever, with no automatic renewal or charges.</li>
+          <li>To activate, buy an activation code through channels such as Xiaohongshu and redeem it on this website; it takes effect immediately. This website does not take payments directly.</li>
+          <li>Earlier Standard and Pro subscriptions keep working until they expire, after which you become a Free member. Your existing data is always kept and is never deleted or locked because of your membership.</li>
+          <li>If the Service is unavailable for a long time because of us, contact support and we will agree on compensation. For refunds, please contact the shop where you bought the code, or our support.</li>
           <li>Activation codes can be used only once — do not resell or publish them. We may refuse codes that are voided, stolen or of unknown origin.</li>
         </ul>
       </section>
@@ -95,7 +95,7 @@ export function PrivacyContentEn() {
             <strong>Business data</strong>: products, stock, customers, suppliers, purchase and sales orders you enter. Customer and supplier contact details are entered by you; we store and process them on your behalf.
           </li>
           <li>
-            <strong>Payment information</strong>: the screenshot, transaction ID and message you upload when paying by QR code, used only to match your payment. We never collect card numbers or payment passwords.
+            <strong>Payment information</strong>: this website doesn't take payments directly; we only record the activation codes you redeem. Screenshots, transaction IDs and messages uploaded for earlier QR-code payments are used only to match those payments. We never collect card numbers or payment passwords.
           </li>
           <li>
             <strong>Support chats</strong>: questions you ask the online assistant are processed by our AI provider, Anthropic, to write an answer from our help documents. Only the text of your question and the last few messages of the chat are sent, never your account information or store business data. AI answers and questions the assistant cannot answer are recorded to improve its answers, without your account or store information; AI answer records are deleted automatically after 90 days.

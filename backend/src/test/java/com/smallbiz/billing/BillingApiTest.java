@@ -250,7 +250,29 @@ class BillingApiTest extends IntegrationTest {
     // ---------------- 扫码付款 ----------------
 
     @Test
+    void codeOnlyByDefault_paymentOrdersAreRefused() throws Exception {
+        // V19：网站只用激活码开通，收款方式全部停用
+        Session owner = registerWithFreeTenant("bill-code-only", "只用激活码店");
+        assertThat((List<?>) read(send(get("/api/v1/billing/payment-methods"), owner, null), "$")).isEmpty();
+        List<Integer> lifetime = read(send(get("/api/v1/billing/prices?currency=CNY"), owner, null), "$[?(@.period == 'LIFETIME')].id");
+        Integer anyMethod = jdbcTemplate.queryForObject("select min(id) from payment_methods", Integer.class);
+        assertThat((String) read(send(post("/api/v1/billing/payment-orders"), owner,
+                "{\"priceId\":%d,\"paymentMethodId\":%d}".formatted(lifetime.get(0), anyMethod)), "$.code"))
+                .isEqualTo("METHOD_NOT_FOUND");
+    }
+
+    /** 扫码付款（V19 起默认停用，平台后台可以重新启用）：启用后流程照常。 */
+    @Test
     void manualPaymentFlow() throws Exception {
+        jdbcTemplate.update("update payment_methods set enabled = true");
+        try {
+            manualPaymentFlowWithMethodsEnabled();
+        } finally {
+            jdbcTemplate.update("update payment_methods set enabled = false");
+        }
+    }
+
+    private void manualPaymentFlowWithMethodsEnabled() throws Exception {
         Session owner = registerWithFreeTenant("bill-pay", "付款店");
         Session admin = admin();
 
