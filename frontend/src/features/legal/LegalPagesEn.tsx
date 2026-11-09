@@ -98,7 +98,7 @@ export function PrivacyContentEn() {
             <strong>Payment information</strong>: the screenshot, transaction ID and message you upload when paying by QR code, used only to match your payment. We never collect card numbers or payment passwords.
           </li>
           <li>
-            <strong>Support chats</strong>: questions the help assistant cannot answer are recorded to improve its answers, without your account information.
+            <strong>Support chats</strong>: questions you ask the online assistant are processed by our AI provider, Anthropic, to write an answer from our help documents. Only the text of your question and the last few messages of the chat are sent, never your account information or store business data. AI answers and questions the assistant cannot answer are recorded to improve its answers, without your account or store information; AI answer records are deleted automatically after 90 days.
           </li>
           <li>
             <strong>Technical information</strong>: your IP address, used to prevent password guessing and abuse (for example limiting failed sign-ins).
@@ -116,6 +116,7 @@ export function PrivacyContentEn() {
         <ul>
           <li>Only to provide, maintain and improve the Service, and to handle payments and support requests.</li>
           <li>We do not sell your information or share it with third parties for marketing.</li>
+          <li>The online assistant uses Anthropic's AI service to write answers; only the chat text is sent (see "Support chats" above).</li>
           <li>Data is stored on cloud servers we rent. We do not disclose your information to anyone else unless required by law.</li>
           <li>Platform administrators can see only store names, plan status and the owner's email and name (to handle payments and support), not stores' business data.</li>
         </ul>
