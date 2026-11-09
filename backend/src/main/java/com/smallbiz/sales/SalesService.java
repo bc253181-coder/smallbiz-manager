@@ -70,10 +70,13 @@ public class SalesService {
     private final PlanGuard planGuard;
     private final PaymentAllocationRepository allocations;
     private final CustomerPaymentRepository payments;
+    private final com.smallbiz.pricing.CustomerPriceService customerPrices;
 
     public SalesService(SalesOrderRepository orders, ProductRepository products, CustomerService customers,
             InventoryService inventory, SequenceService sequences, UserRepository users, TenantRepository tenants,
-            PlanGuard planGuard, PaymentAllocationRepository allocations, CustomerPaymentRepository payments) {
+            PlanGuard planGuard, PaymentAllocationRepository allocations, CustomerPaymentRepository payments,
+            com.smallbiz.pricing.CustomerPriceService customerPrices) {
+        this.customerPrices = customerPrices;
         this.allocations = allocations;
         this.payments = payments;
         this.orders = orders;
@@ -163,7 +166,9 @@ public class SalesService {
             planGuard.require(tenantId, Feature.WHOLESALE_PRICE);
         }
         Customer customer = req.customerId() == null ? null : customers.load(req.customerId());
-        List<SalesOrderItem> items = buildItems(req.items(), req.priceTier());
+        Map<Long, BigDecimal> contract = customerPrices.contractPrices(tenantId, req.customerId(),
+                req.items().stream().map(ItemRequest::productId).toList());
+        List<SalesOrderItem> items = buildItems(req.items(), req.priceTier(), contract);
         BigDecimal subtotal = items.stream().map(SalesOrderItem::getLineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal discount = (req.discountAmount() == null ? BigDecimal.ZERO : req.discountAmount())
                 .setScale(2, java.math.RoundingMode.HALF_UP);
@@ -235,7 +240,11 @@ public class SalesService {
         order.setPaidAtSale(paid);
     }
 
-    private List<SalesOrderItem> buildItems(List<ItemRequest> reqs, Customer.PriceTier tier) {
+    /**
+     * 单价：留空时按 协议价 → 客户价格类型（批发 / 零售）取价；传了单价时与应取的价格比较，
+     * 相同则记录对应来源，不同记录为手动改价。
+     */
+    private List<SalesOrderItem> buildItems(List<ItemRequest> reqs, Customer.PriceTier tier, Map<Long, BigDecimal> contract) {
         Set<Long> seen = new HashSet<>();
         List<SalesOrderItem> items = new ArrayList<>();
         for (ItemRequest r : reqs) {
@@ -248,8 +257,20 @@ public class SalesService {
                 throw new ApiException(HttpStatus.CONFLICT, "PRODUCT_INACTIVE", "「" + p.getName() + "」已下架，不能销售",
                         Map.of("productId", p.getId()));
             }
-            BigDecimal price = r.unitPrice() != null ? r.unitPrice() : defaultPrice(p, tier);
-            items.add(new SalesOrderItem(p.getId(), p.getName(), p.getSku(), p.getUnit(), r.quantity(), price,
+            BigDecimal expected;
+            PriceSource expectedSource;
+            if (contract.containsKey(p.getId())) {
+                expected = contract.get(p.getId());
+                expectedSource = PriceSource.CONTRACT;
+            } else {
+                expected = defaultPrice(p, tier);
+                expectedSource = tier == Customer.PriceTier.WHOLESALE && p.getWholesalePrice() != null
+                        ? PriceSource.WHOLESALE : PriceSource.RETAIL;
+            }
+            // 统一为两位小数（与数据库一致，接口返回 "8.00" 而不是 "8"）
+            BigDecimal price = (r.unitPrice() != null ? r.unitPrice() : expected).setScale(2, java.math.RoundingMode.HALF_UP);
+            PriceSource source = price.compareTo(expected) == 0 ? expectedSource : PriceSource.MANUAL;
+            items.add(new SalesOrderItem(p.getId(), p.getName(), p.getSku(), p.getUnit(), r.quantity(), price, source,
                     p.getCostPrice()));
         }
         return items;
@@ -282,7 +303,7 @@ public class SalesService {
                 .collect(Collectors.toMap(User::getId, User::getDisplayName));
         List<ItemView> items = o.getItems().stream()
                 .map(i -> new ItemView(i.getProductId(), i.getProductName(), i.getSku(), i.getUnit(), i.getQuantity(),
-                        i.getUnitPrice(), hideCost ? null : i.getUnitCost(), i.getLineTotal()))
+                        i.getUnitPrice(), hideCost ? null : i.getUnitCost(), i.getLineTotal(), i.getPriceSource()))
                 .toList();
         List<PaymentAllocation> allocs = o.getId() == null ? List.of() : allocations.findBySalesOrderIdOrderByIdAsc(o.getId());
         Map<Long, CustomerPayment> paymentById = payments.findAllById(allocs.stream().map(PaymentAllocation::getPaymentId).toList())

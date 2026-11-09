@@ -14,6 +14,7 @@ export type Feature =
   | 'STAFF_ACCOUNTS'
   | 'EXCEL_EXPORT'
   | 'LABEL_PRINTING'
+  | 'CUSTOMER_PRICES'
 export type Period = 'TRIAL_MONTH' | 'MONTH' | 'YEAR'
 export type PaymentStatus = 'AWAITING_PAYMENT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED'
 export type PlanSource = 'ACTIVATION_CODE' | 'MANUAL_PAYMENT' | 'ADMIN_MANUAL'
@@ -95,6 +96,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   STAFF_ACCOUNTS: '员工账号',
   EXCEL_EXPORT: '导出 Excel 表格',
   LABEL_PRINTING: '打印条码标签',
+  CUSTOMER_PRICES: '客户协议价',
 }
 
 /** 开通各功能所需的最低套餐（与后端 PlanPolicy 一致）。 */
@@ -109,6 +111,7 @@ export const FEATURE_PLAN: Record<Feature, Plan> = {
   STAFF_ACCOUNTS: 'PRO',
   EXCEL_EXPORT: 'PRO',
   LABEL_PRINTING: 'STANDARD',
+  CUSTOMER_PRICES: 'PRO',
 }
 
 export const PERIOD_LABELS: Record<Period, string> = {

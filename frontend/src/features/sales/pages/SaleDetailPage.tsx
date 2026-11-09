@@ -19,7 +19,7 @@ import { METHOD_LABELS, type PaymentMethod } from '@/features/receivables/api'
 import { ReceivePaymentDialog } from '@/features/receivables/ReceivePaymentDialog'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { PAYMENT_STATUS_LABELS, saleApi } from '../api'
+import { PAYMENT_STATUS_LABELS, PRICE_SOURCE_LABELS, saleApi } from '../api'
 import { SaleStatusBadge } from '../SaleStatusBadge'
 
 const BACK = { to: '/sales', label: '返回销售列表' }
@@ -163,7 +163,13 @@ export function SaleDetailPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                       {i.quantity} {i.unit}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{money(i.unitPrice)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {money(i.unitPrice)}
+                      {/* 价格来源只在屏幕上显示，打印给客户的单据上不显示 */}
+                      <p className={cn('text-xs print:hidden', i.priceSource === 'CONTRACT' ? 'text-violet-700' : i.priceSource === 'MANUAL' ? 'text-amber-700' : 'text-slate-400')}>
+                        {PRICE_SOURCE_LABELS[i.priceSource]}
+                      </p>
+                    </td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">{money(i.lineTotal)}</td>
                   </tr>
                 ))}

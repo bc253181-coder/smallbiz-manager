@@ -54,7 +54,8 @@ public final class SalesDtos {
             int quantity,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal unitPrice,
             @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal unitCost,
-            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal lineTotal) {
+            @JsonFormat(shape = JsonFormat.Shape.STRING) BigDecimal lineTotal,
+            PriceSource priceSource) {
     }
 
     public record Creator(Long id, String name) {

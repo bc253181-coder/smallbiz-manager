@@ -40,7 +40,7 @@ public final class PlanPolicy {
     /** 开通某功能所需的最低套餐。 */
     public static Plan requiredPlan(Feature feature) {
         return switch (feature) {
-            case RECEIVABLES, STAFF_ACCOUNTS, EXCEL_EXPORT -> Plan.PRO;
+            case RECEIVABLES, STAFF_ACCOUNTS, EXCEL_EXPORT, CUSTOMER_PRICES -> Plan.PRO;
             default -> Plan.STANDARD;
         };
     }

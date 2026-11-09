@@ -15,7 +15,9 @@ public enum Feature {
     /** 专业版：导出 Excel（.xlsx）。CSV 导出仍属于标准版的 EXPORT。 */
     EXCEL_EXPORT("Excel 导出"),
     /** 标准版：批量打印条码标签（扫码本身所有套餐可用）。 */
-    LABEL_PRINTING("打印条码标签");
+    LABEL_PRINTING("打印条码标签"),
+    /** 专业版：客户协议价（批发价仍为标准版的 WHOLESALE_PRICE）。 */
+    CUSTOMER_PRICES("客户协议价");
 
     private final String label;
 
