@@ -7,6 +7,7 @@ import { RegisterPage } from '@/features/auth/pages/RegisterPage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
 import { RequireFeature } from '@/features/billing/FeatureGate'
 import { PrivacyPage, TermsPage } from '@/features/legal/LegalPages'
+import { InvitePage } from '@/features/staff/InvitePage'
 import { useCanManage } from '@/lib/hooks'
 import { CreateStorePage } from '@/features/tenant/pages/CreateStorePage'
 import { SelectStorePage } from '@/features/tenant/pages/SelectStorePage'
@@ -39,6 +40,7 @@ import {
   SaleFormPage,
   SaleListPage,
   SettingsPage,
+  StaffPage,
   SupplierDetailPage,
   SupplierListPage,
 } from '@/lazyPages'
@@ -62,11 +64,22 @@ function RequireTenant() {
   return <Outlet />
 }
 
-/** 已登录用户访问登录/注册页 → 回首页。 */
+/** 已登录用户访问登录/注册页 → 回到原页面（例如员工邀请页），否则回首页。 */
 function GuestOnly() {
   const { status } = useAuth()
+  const location = useLocation()
   if (status === 'loading') return <FullPageSpinner />
-  if (status === 'authenticated') return <Navigate to="/" replace />
+  if (status === 'authenticated') {
+    const from = (location.state as { from?: string } | null)?.from
+    return <Navigate to={from ?? '/'} replace />
+  }
+  return <Outlet />
+}
+
+/** 只有店主能进入的页面。 */
+function RequireOwner() {
+  const { session } = useAuth()
+  if (session?.currentTenant?.role !== 'OWNER') return <Navigate to="/settings" replace />
   return <Outlet />
 }
 
@@ -100,6 +113,7 @@ export const router = createBrowserRouter([
   // 公开页面：登录与否都能访问
   { path: '/terms', element: <TermsPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/invite/:token', element: <InvitePage /> },
   {
     element: <GuestOnly />,
     children: [
@@ -186,6 +200,7 @@ export const router = createBrowserRouter([
               },
               { path: '/settings', element: <SettingsPage /> },
               { path: '/settings/billing', element: <BillingPage /> },
+              { element: <RequireOwner />, children: [{ path: '/settings/staff', element: <StaffPage /> }] },
               { path: '/settings/billing/pay/:id', element: <PaymentPage /> },
               { path: '*', element: <NotFoundPage /> },
             ],

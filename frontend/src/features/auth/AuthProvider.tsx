@@ -14,6 +14,10 @@ interface AuthContextValue {
   logout: () => Promise<void>
   createTenant: (name: string, businessType: BusinessType) => Promise<SessionResponse>
   switchTenant: (tenantId: number) => Promise<SessionResponse>
+  /** 接受员工邀请：加入店铺并切换过去。 */
+  acceptInvitation: (token: string) => Promise<SessionResponse>
+  /** 员工退出某家店铺。 */
+  leaveTenant: (tenantId: number) => Promise<SessionResponse>
   /** 更新本地会话中的用户/店铺信息（例如修改昵称或店名后）。 */
   patchSession: (updater: (s: SessionResponse) => SessionResponse) => void
 }
@@ -63,6 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       createTenant: async (name, businessType) => accept(await tenantApi.create({ name, businessType })),
       switchTenant: async (tenantId) => accept(await tenantApi.switchTo(tenantId)),
+      acceptInvitation: async (token) => accept(await tenantApi.acceptInvitation(token)),
+      leaveTenant: async (tenantId) => accept(await tenantApi.leave(tenantId)),
       patchSession: (updater) => setSession((s) => (s ? updater(s) : s)),
     }),
     [status, session, accept, queryClient],

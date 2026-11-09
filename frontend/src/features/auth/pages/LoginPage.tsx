@@ -60,7 +60,7 @@ export function LoginPage() {
       </form>
       <p className="mt-6 text-center text-sm text-slate-500">
         还没有账号？
-        <Link to="/register" className="font-medium text-blue-600 hover:underline">
+        <Link to="/register" state={location.state} className="font-medium text-blue-600 hover:underline">
           免费注册
         </Link>
       </p>

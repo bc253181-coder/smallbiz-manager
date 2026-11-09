@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { z } from 'zod'
 import { AuthLayout } from '@/components/layout/AuthLayout'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,9 @@ type FormValues = z.infer<typeof schema>
 export function RegisterPage() {
   const { register: registerAccount } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  // 从员工邀请链接过来：注册后回到邀请页
+  const from = (location.state as { from?: string } | null)?.from
   const [formError, setFormError] = useState<string | null>(null)
 
   const {
@@ -36,7 +39,7 @@ export function RegisterPage() {
     setFormError(null)
     try {
       await registerAccount(values.email, values.password, values.displayName)
-      navigate('/onboarding', { replace: true })
+      navigate(from ?? '/onboarding', { replace: true })
     } catch (e) {
       const fields = fieldErrors(e)
       Object.entries(fields).forEach(([k, msg]) => setError(k as keyof FormValues, { message: msg }))
@@ -94,7 +97,7 @@ export function RegisterPage() {
       </form>
       <p className="mt-6 text-center text-sm text-slate-500">
         已有账号？
-        <Link to="/login" className="font-medium text-blue-600 hover:underline">
+        <Link to="/login" state={location.state} className="font-medium text-blue-600 hover:underline">
           去登录
         </Link>
       </p>

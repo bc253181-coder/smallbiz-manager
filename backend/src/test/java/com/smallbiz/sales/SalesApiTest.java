@@ -258,6 +258,7 @@ class SalesApiTest extends IntegrationTest {
         Long tenantId = currentTenantId(owner, mvc);
         Long p = product(owner, "商品", 10, null);
         Session staff = register("so-staff");
+        allowStaff(tenantId);
         members.save(new TenantMember(tenantId, staff.userId(), MemberRole.STAFF));
         MockHttpServletResponse sw = send(post("/api/v1/tenants/" + tenantId + "/switch"), staff, null);
         Session st = new Session(staff.email(), staff.password(), read(sw, "$.accessToken"), null, staff.userId());

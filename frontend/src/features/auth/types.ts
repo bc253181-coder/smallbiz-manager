@@ -14,6 +14,8 @@ export interface TenantSummary {
   id: number
   name: string
   role: MemberRole
+  /** false：员工所在店铺的专业版已到期，暂时不能进入 */
+  accessible: boolean
 }
 
 export interface CurrentTenant {

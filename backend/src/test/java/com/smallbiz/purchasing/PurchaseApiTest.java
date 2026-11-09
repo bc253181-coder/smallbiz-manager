@@ -294,6 +294,7 @@ class PurchaseApiTest extends IntegrationTest {
         Long a = product(owner, "商品", "1", 0);
         Long id = createOk(owner, order(sup, true, item(a, 1, "1")));
         Session staff = register("po-staff");
+        allowStaff(tenantId);
         members.save(new TenantMember(tenantId, staff.userId(), MemberRole.STAFF));
         MockHttpServletResponse sw = send(post("/api/v1/tenants/" + tenantId + "/switch"), staff, null);
         Session st = new Session(staff.email(), staff.password(), read(sw, "$.accessToken"), null, staff.userId());

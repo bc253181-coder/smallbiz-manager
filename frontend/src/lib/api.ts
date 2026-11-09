@@ -76,6 +76,11 @@ api.interceptors.response.use(undefined, async (error: AxiosError<ApiErrorBody>)
       return api(original)
     }
   }
+  // 员工所在店铺的专业版到期：刷新会话（服务器不再绑定该店铺），页面随之回到选择店铺
+  if (error.response?.status === 403 && error.response.data?.code === 'STORE_PLAN_EXPIRED' && original && !original._retried) {
+    original._retried = true
+    void refreshSession()
+  }
   return Promise.reject(error)
 })
 
