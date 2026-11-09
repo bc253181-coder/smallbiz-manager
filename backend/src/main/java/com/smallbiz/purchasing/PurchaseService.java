@@ -55,9 +55,11 @@ public class PurchaseService {
     private final SequenceService sequences;
     private final UserRepository users;
     private final TenantRepository tenants;
+    private final com.smallbiz.warehouse.WarehouseService warehouses;
 
     public PurchaseService(PurchaseOrderRepository orders, ProductRepository products, SupplierService suppliers,
-            InventoryService inventory, SequenceService sequences, UserRepository users, TenantRepository tenants) {
+            InventoryService inventory, SequenceService sequences, UserRepository users, TenantRepository tenants, com.smallbiz.warehouse.WarehouseService warehouses) {
+        this.warehouses = warehouses;
         this.orders = orders;
         this.products = products;
         this.suppliers = suppliers;
@@ -168,7 +170,7 @@ public class PurchaseService {
      * 采购单行锁保证同一张单只能收货一次。
      */
     @Transactional
-    public PurchaseView receive(Long id, Long userId) {
+    public PurchaseView receive(Long id, Long warehouseIdOrNull, Long userId) {
         PurchaseOrder order = lock(id);
         if (order.getStatus() == PurchaseStatus.RECEIVED) {
             throw notAllowed("该采购单已经收过货了");
@@ -176,13 +178,16 @@ public class PurchaseService {
         if (order.getStatus() != PurchaseStatus.ORDERED) {
             throw notAllowed("只有已下单的采购单可以确认收货");
         }
+        // 收货仓库：为空用默认仓库；非默认仓库需要专业版
+        Long warehouseId = warehouses.resolve(order.getTenantId(), warehouseIdOrNull,
+                com.smallbiz.warehouse.WarehouseService.Use.OPERATE).getId();
         List<PurchaseOrderItem> sorted = order.getItems().stream()
                 .sorted(Comparator.comparing(PurchaseOrderItem::getProductId)).toList();
         for (PurchaseOrderItem item : sorted) {
             try {
                 inventory.apply(item.getProductId(), new InventoryService.Change(MovementType.PURCHASE_RECEIVE,
                         item.getQuantity(), item.getUnitCost(), REF_TYPE, order.getId(),
-                        "采购收货 " + order.getOrderNo(), userId));
+                        "采购收货 " + order.getOrderNo(), userId, warehouseId));
             } catch (ApiException e) {
                 if ("PRODUCT_NOT_FOUND".equals(e.getCode())) {
                     throw ApiException.conflict("PRODUCT_DELETED",
@@ -192,6 +197,7 @@ public class PurchaseService {
             }
         }
         order.markReceived(Instant.now(), userId);
+        order.setWarehouseId(warehouseId);
         return toView(orders.saveAndFlush(order));
     }
 
@@ -264,6 +270,6 @@ public class PurchaseService {
                 o.getOrderDate(), o.getExpectedDate(), o.getItemCount(), o.getTotalQuantity(), o.getTotalAmount(),
                 o.getNotes(), items, names.get(o.getCreatedBy()), o.getSubmittedAt(), o.getReceivedAt(),
                 names.get(o.getReceivedBy()), o.getCancelledAt(), names.get(o.getCancelledBy()), o.getCancelReason(),
-                o.getVersion());
+                o.getVersion(), o.getWarehouseId(), o.getWarehouseId() == null ? null : warehouses.names().get(o.getWarehouseId()));
     }
 }

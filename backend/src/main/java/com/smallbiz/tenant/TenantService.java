@@ -26,9 +26,11 @@ public class TenantService {
     private final TenantMemberRepository members;
     private final UserRepository users;
     private final AuthService authService;
+    private final jakarta.persistence.EntityManager em;
 
     public TenantService(TenantRepository tenants, TenantMemberRepository members, UserRepository users,
-            AuthService authService) {
+            AuthService authService, jakarta.persistence.EntityManager em) {
+        this.em = em;
         this.tenants = tenants;
         this.members = members;
         this.users = users;
@@ -47,6 +49,13 @@ public class TenantService {
         }
         Tenant tenant = tenants.save(new Tenant(req.name().trim(), req.businessType(), userId));
         members.save(new TenantMember(tenant.getId(), userId, MemberRole.OWNER));
+        // 每家店一个默认仓库。当前会话的店铺 id 在请求开始时就确定了（那时还没有这家店），
+        // 所以用原生 SQL 在同一事务里显式写入 tenant_id
+        em.createNativeQuery("""
+                INSERT INTO warehouses (tenant_id, name, is_default, active, sort_order, version, created_at, updated_at)
+                VALUES (:t, :n, TRUE, TRUE, 0, 0, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
+                """).setParameter("t", tenant.getId()).setParameter("n", com.smallbiz.warehouse.DefaultWarehouse.DEFAULT_NAME)
+                .executeUpdate();
         authService.logout(currentRefreshToken);
         return authService.issue(user, tenant.getId());
     }

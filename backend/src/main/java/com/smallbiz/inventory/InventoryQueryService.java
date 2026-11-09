@@ -37,16 +37,21 @@ import com.smallbiz.tenant.TenantRepository;
 @Service
 public class InventoryQueryService {
 
-    public record MovementFilter(Long productId, MovementType type, LocalDate from, LocalDate to) {
+    public record MovementFilter(Long productId, MovementType type, LocalDate from, LocalDate to, Long warehouseId) {
+        public MovementFilter(Long productId, MovementType type, LocalDate from, LocalDate to) {
+            this(productId, type, from, to, null);
+        }
     }
 
     private final StockMovementRepository movements;
     private final ProductRepository products;
     private final UserRepository users;
     private final TenantRepository tenants;
+    private final com.smallbiz.warehouse.WarehouseRepository warehouses;
 
     public InventoryQueryService(StockMovementRepository movements, ProductRepository products, UserRepository users,
-            TenantRepository tenants) {
+            TenantRepository tenants, com.smallbiz.warehouse.WarehouseRepository warehouses) {
+        this.warehouses = warehouses;
         this.movements = movements;
         this.products = products;
         this.users = users;
@@ -65,6 +70,9 @@ public class InventoryQueryService {
         }
         if (f.type() != null) {
             spec = spec.and((root, q, cb) -> cb.equal(root.get("type"), f.type()));
+        }
+        if (f.warehouseId() != null) {
+            spec = spec.and((root, q, cb) -> cb.equal(root.get("warehouseId"), f.warehouseId()));
         }
         if (f.from() != null) {
             var start = f.from().atStartOfDay(zone).toInstant();
@@ -89,11 +97,14 @@ public class InventoryQueryService {
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
         Map<Long, String> userNames = users.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getId, User::getDisplayName));
+        Map<Long, String> warehouseNames = warehouses.findAll().stream()
+                .collect(Collectors.toMap(com.smallbiz.warehouse.Warehouse::getId, com.smallbiz.warehouse.Warehouse::getName));
 
         return PageResponse.of(page, m -> {
             Product p = productMap.get(m.getProductId());
             return new MovementRow(m.getId(), m.getProductId(), p == null ? "（已删除商品）" : p.getName(),
-                    p == null ? null : p.getSku(), p == null ? null : p.getUnit(), m.getType(), m.getQtyChange(),
+                    p == null ? null : p.getSku(), p == null ? null : p.getUnit(), m.getWarehouseId(),
+                    warehouseNames.get(m.getWarehouseId()), m.getType(), m.getQtyChange(),
                     m.getQtyBefore(), m.getQtyAfter(), hideCost ? null : m.getUnitCost(), m.getRefType(),
                     m.getRefId(), m.getReason(), userNames.get(m.getCreatedBy()), m.getCreatedAt());
         });

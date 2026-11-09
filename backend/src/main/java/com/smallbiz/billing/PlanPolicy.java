@@ -32,6 +32,13 @@ public final class PlanPolicy {
 
     public static final int PRO_MAX_STAFF = 5;
 
+    public static final int PRO_MAX_WAREHOUSES = 5;
+
+    /** 启用的仓库数量上限（含默认仓库）：专业版 5 个，其他套餐只有默认仓库。 */
+    public static int maxWarehouses(Plan plan) {
+        return plan == Plan.PRO ? PRO_MAX_WAREHOUSES : 1;
+    }
+
     /** 店主总能进入自己的店；员工只在店铺套餐包含员工账号时能进入（到期后成员关系保留，续费即恢复）。 */
     public static boolean memberCanEnter(Plan plan, com.smallbiz.tenant.MemberRole role) {
         return role == com.smallbiz.tenant.MemberRole.OWNER || allows(plan, Feature.STAFF_ACCOUNTS);
@@ -40,7 +47,7 @@ public final class PlanPolicy {
     /** 开通某功能所需的最低套餐。 */
     public static Plan requiredPlan(Feature feature) {
         return switch (feature) {
-            case RECEIVABLES, STAFF_ACCOUNTS, EXCEL_EXPORT, CUSTOMER_PRICES -> Plan.PRO;
+            case RECEIVABLES, STAFF_ACCOUNTS, EXCEL_EXPORT, CUSTOMER_PRICES, WAREHOUSES -> Plan.PRO;
             default -> Plan.STANDARD;
         };
     }

@@ -8,6 +8,9 @@ export interface StockResult {
   qtyChange: number
   stockQty: number
   costPrice: string | null
+  warehouseId: number
+  /** 本次操作仓库的库存 */
+  warehouseQty: number
 }
 
 export interface MovementRow {
@@ -16,6 +19,8 @@ export interface MovementRow {
   productName: string
   productSku: string | null
   productUnit: string | null
+  warehouseId: number
+  warehouseName: string | null
   type: MovementType
   qtyChange: number
   qtyBefore: number
@@ -49,6 +54,7 @@ export interface LowStockItem {
 
 export interface MovementQuery {
   productId?: number
+  warehouseId?: number
   type?: MovementType
   from?: string
   to?: string
@@ -57,13 +63,13 @@ export interface MovementQuery {
 }
 
 export const inventoryApi = {
-  stockIn: (body: { productId: number; quantity: number; unitCost: string | null; reason: string }) =>
+  stockIn: (body: { productId: number; quantity: number; unitCost: string | null; reason: string; warehouseId?: number }) =>
     api.post<StockResult>('/inventory/stock-in', body).then((r) => r.data),
 
-  stockOut: (body: { productId: number; quantity: number; reason: string }) =>
+  stockOut: (body: { productId: number; quantity: number; reason: string; warehouseId?: number }) =>
     api.post<StockResult>('/inventory/stock-out', body).then((r) => r.data),
 
-  adjust: (body: { productId: number; actualQty: number; reason: string }) =>
+  adjust: (body: { productId: number; actualQty: number; reason: string; warehouseId?: number }) =>
     api.post<StockResult>('/inventory/adjust', body).then((r) => r.data),
 
   movements: (q: MovementQuery) =>
@@ -86,5 +92,8 @@ export async function invalidateStock(queryClient: QueryClient, productId: numbe
     queryClient.invalidateQueries({ queryKey: ['product', productId] }),
     queryClient.invalidateQueries({ queryKey: ['product-movements', productId] }),
     queryClient.invalidateQueries({ queryKey: ['inventory'] }),
+    queryClient.invalidateQueries({ queryKey: ['warehouses'] }),
+    queryClient.invalidateQueries({ queryKey: ['warehouse-stocks'] }),
+    queryClient.invalidateQueries({ queryKey: ['product-stocks'] }),
   ])
 }

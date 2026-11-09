@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { ChevronRight, CreditCard, Lock, Users } from 'lucide-react'
+import { ChevronRight, CreditCard, Lock, Users, Warehouse as WarehouseIcon } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -14,6 +14,8 @@ import { authApi, tenantApi } from '@/features/auth/api'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { BUSINESS_TYPE_LABELS, PLAN_LABELS, ROLE_LABELS, type BusinessType } from '@/features/auth/types'
 import { useFeature, usePlan } from '@/features/billing/api'
+import { useWarehouses } from '@/features/warehouse/api'
+import { useCanManage } from '@/lib/hooks'
 import { applySession, errorMessage, fieldErrors } from '@/lib/api'
 
 const TIMEZONES = [
@@ -37,6 +39,7 @@ export function SettingsPage() {
       </div>
       <PlanLink />
       <MembershipLink />
+      <WarehouseLink />
       <StoreSettings />
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileSettings />
@@ -124,6 +127,32 @@ function MembershipLink() {
         }}
       />
     </div>
+  )
+}
+
+// ---------------- 仓库（店主/管理员） ----------------
+
+function WarehouseLink() {
+  const canManage = useCanManage()
+  const allowed = useFeature('WAREHOUSES')
+  const wh = useWarehouses()
+  if (!canManage) return null
+  return (
+    <Link to="/settings/warehouses" className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm hover:bg-slate-50">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+        <WarehouseIcon className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 font-medium text-slate-900">
+          仓库
+          {!allowed && <Lock className="size-3.5 text-slate-400" aria-label="需要专业版" />}
+        </span>
+        <span className="block text-sm text-slate-500">
+          {wh.multi ? `已启用 ${wh.active.length} 个仓库，可分开记录库存、互相调拨` : '有门店和仓库等多个放货地点时，分开记录库存'}
+        </span>
+      </span>
+      <ChevronRight className="size-5 text-slate-400" aria-hidden />
+    </Link>
   )
 }
 

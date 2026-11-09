@@ -28,6 +28,7 @@ import com.smallbiz.inventory.InventoryDtos.StockResult;
 import com.smallbiz.inventory.InventoryDtos.Summary;
 import com.smallbiz.security.CurrentUser;
 import com.smallbiz.tenant.MemberRole;
+import com.smallbiz.warehouse.WarehouseService;
 
 import jakarta.validation.Valid;
 
@@ -38,8 +39,11 @@ public class InventoryController {
     private final InventoryService inventory;
     private final InventoryQueryService queries;
     private final ProductRepository products;
+    private final WarehouseService warehouses;
 
-    public InventoryController(InventoryService inventory, InventoryQueryService queries, ProductRepository products) {
+    public InventoryController(InventoryService inventory, InventoryQueryService queries, ProductRepository products,
+            WarehouseService warehouses) {
+        this.warehouses = warehouses;
         this.inventory = inventory;
         this.queries = queries;
         this.products = products;
@@ -55,9 +59,9 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     @Transactional
     public ResponseEntity<StockResult> stockIn(@Valid @RequestBody StockInRequest req) {
-        CurrentUser.requireTenantId();
+        Long w = warehouses.resolve(CurrentUser.requireTenantId(), req.warehouseId(), WarehouseService.Use.OPERATE).getId();
         StockMovement m = inventory.apply(req.productId(), new InventoryService.Change(MovementType.STOCK_IN,
-                req.quantity(), req.unitCost(), null, null, req.reason(), CurrentUser.userId()));
+                req.quantity(), req.unitCost(), null, null, req.reason(), CurrentUser.userId(), w));
         return ResponseEntity.status(HttpStatus.CREATED).body(result(m));
     }
 
@@ -65,9 +69,9 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     @Transactional
     public ResponseEntity<StockResult> stockOut(@Valid @RequestBody StockOutRequest req) {
-        CurrentUser.requireTenantId();
+        Long w = warehouses.resolve(CurrentUser.requireTenantId(), req.warehouseId(), WarehouseService.Use.OPERATE).getId();
         StockMovement m = inventory.apply(req.productId(), new InventoryService.Change(MovementType.STOCK_OUT,
-                -req.quantity(), null, null, null, req.reason(), CurrentUser.userId()));
+                -req.quantity(), null, null, null, req.reason(), CurrentUser.userId(), w));
         return ResponseEntity.status(HttpStatus.CREATED).body(result(m));
     }
 
@@ -75,15 +79,15 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     @Transactional
     public ResponseEntity<StockResult> adjust(@Valid @RequestBody AdjustRequest req) {
-        CurrentUser.requireTenantId();
-        StockMovement m = inventory.adjustTo(req.productId(), req.actualQty(), req.reason(), CurrentUser.userId());
+        Long w = warehouses.resolve(CurrentUser.requireTenantId(), req.warehouseId(), WarehouseService.Use.OPERATE).getId();
+        StockMovement m = inventory.adjustTo(req.productId(), w, req.actualQty(), req.reason(), CurrentUser.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(result(m));
     }
 
     private StockResult result(StockMovement m) {
         var p = products.findById(m.getProductId()).orElseThrow();
         return new StockResult(m.getId(), p.getId(), m.getQtyChange(), p.getStockQty(),
-                hideCost() ? null : p.getCostPrice());
+                hideCost() ? null : p.getCostPrice(), m.getWarehouseId(), m.getQtyAfter());
     }
 
     // ---------------- 查询 ----------------
@@ -91,13 +95,14 @@ public class InventoryController {
     @GetMapping("/movements")
     public PageResponse<MovementRow> movements(
             @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) Long warehouseId,
             @RequestParam(required = false) MovementType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         Long tenantId = CurrentUser.requireTenantId();
-        return queries.movements(tenantId, new InventoryQueryService.MovementFilter(productId, type, from, to),
+        return queries.movements(tenantId, new InventoryQueryService.MovementFilter(productId, type, from, to, warehouseId),
                 Paging.of(page, size, null, Map.of(), Sort.by(Sort.Direction.DESC, "createdAt", "id")), hideCost());
     }
 

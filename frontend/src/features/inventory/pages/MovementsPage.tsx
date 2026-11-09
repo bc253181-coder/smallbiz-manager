@@ -9,6 +9,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { productApi } from '@/features/catalog/api'
 import { MOVEMENT_LABELS, type MovementType } from '@/features/catalog/types'
 import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
+import { useWarehouses } from '@/features/warehouse/api'
 import { formatDateTime, useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { inventoryApi } from '../api'
@@ -21,6 +22,9 @@ export function MovementsPage() {
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
   const page = Number(params.get('page') ?? 0)
+  const warehouseId = params.get('warehouseId') ? Number(params.get('warehouseId')) : undefined
+  const wh = useWarehouses()
+  const showWarehouse = wh.all.length > 1
 
   function update(changes: Record<string, string | null>, resetPage = true) {
     const next = new URLSearchParams(params)
@@ -39,13 +43,13 @@ export function MovementsPage() {
   })
   const invalidRange = !!(from && to && from > to)
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['inventory', 'movements', { productId, type, from, to, page }],
-    queryFn: () => inventoryApi.movements({ productId, type, from, to, page, size: 20 }),
+    queryKey: ['inventory', 'movements', { productId, warehouseId, type, from, to, page }],
+    queryFn: () => inventoryApi.movements({ productId, warehouseId, type, from, to, page, size: 20 }),
     placeholderData: keepPreviousData,
     enabled: !invalidRange,
   })
   const showCost = data?.items.some((m) => m.unitCost !== null) ?? false
-  const filtered = !!(productId || type || from || to)
+  const filtered = !!(productId || warehouseId || type || from || to)
 
   return (
     <div>
@@ -54,7 +58,7 @@ export function MovementsPage() {
         description="每一次库存变动的记录，不可修改或删除"
         back={{ to: '/inventory', label: '返回库存' }}
         actions={
-          <ExcelExportButton path="/exports/movements" params={{ productId, type, from, to }} fallbackName="库存流水.xlsx" />
+          <ExcelExportButton path="/exports/movements" params={{ productId, warehouseId, type, from, to }} fallbackName="库存流水.xlsx" />
         }
       />
 
@@ -68,7 +72,20 @@ export function MovementsPage() {
               </button>
             </div>
           )}
-          <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className={cn('grid flex-1 grid-cols-1 gap-2', showWarehouse ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-3')}>
+            {showWarehouse && (
+              <label className="text-xs text-slate-500">
+                仓库
+                <Select value={warehouseId ?? ''} onChange={(e) => update({ warehouseId: e.target.value || null })} className="mt-1">
+                  <option value="">全部仓库</option>
+                  {wh.all.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            )}
             <label className="text-xs text-slate-500">
               类型
               <Select value={type ?? ''} onChange={(e) => update({ type: e.target.value || null })} className="mt-1">
@@ -113,6 +130,7 @@ export function MovementsPage() {
                     <tr>
                       <th className="px-4 py-3">时间</th>
                       <th className="px-4 py-3">商品</th>
+                      {showWarehouse && <th className="px-4 py-3">仓库</th>}
                       <th className="px-4 py-3">类型</th>
                       <th className="px-4 py-3 text-right">变动</th>
                       <th className="px-4 py-3 text-right">变动后</th>
@@ -134,6 +152,7 @@ export function MovementsPage() {
                             <span className="text-slate-400">{m.productName}</span>
                           )}
                         </td>
+                        {showWarehouse && <td className="whitespace-nowrap px-4 py-3 text-slate-600">{m.warehouseName}</td>}
                         <td className="whitespace-nowrap px-4 py-3">{MOVEMENT_LABELS[m.type]}</td>
                         <td className={cn('px-4 py-3 text-right font-medium tabular-nums', m.qtyChange > 0 ? 'text-emerald-700' : 'text-red-600')}>
                           {m.qtyChange > 0 ? `+${m.qtyChange}` : m.qtyChange}
@@ -153,7 +172,8 @@ export function MovementsPage() {
                     <div className="min-w-0">
                       <p className="truncate font-medium text-slate-900">{m.productName}</p>
                       <p className="text-xs text-slate-500">
-                        {MOVEMENT_LABELS[m.type]} · {formatDateTime(m.createdAt)}
+                        {MOVEMENT_LABELS[m.type]}
+                        {showWarehouse && `· ${m.warehouseName}`} · {formatDateTime(m.createdAt)}
                       </p>
                       {m.reason && <p className="mt-0.5 truncate text-xs text-slate-500">{m.reason}</p>}
                     </div>

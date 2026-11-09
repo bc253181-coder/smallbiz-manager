@@ -42,6 +42,10 @@ import {
   SaleListPage,
   SettingsPage,
   StaffPage,
+  TransferDetailPage,
+  TransferFormPage,
+  TransfersPage,
+  WarehousesPage,
   SupplierDetailPage,
   SupplierListPage,
 } from '@/lazyPages'
@@ -181,6 +185,10 @@ export const router = createBrowserRouter([
                     ],
                   },
                   { path: '/reports', element: <ReportsPage /> },
+                  { path: '/settings/warehouses', element: <WarehousesPage /> },
+                  { path: '/inventory/transfers', element: <TransfersPage /> },
+                  { path: '/inventory/transfers/new', element: <TransferFormPage /> },
+                  { path: '/inventory/transfers/:id', element: <TransferDetailPage /> },
                   {
                     element: <RequireFeature feature="RECEIVABLES" />,
                     children: [

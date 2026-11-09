@@ -15,5 +15,9 @@ public enum MovementType {
     /** 销售取消，恢复库存。 */
     SALE_CANCEL,
     /** 采购收货。 */
-    PURCHASE_RECEIVE
+    PURCHASE_RECEIVE,
+    /** 调拨调出。 */
+    TRANSFER_OUT,
+    /** 调拨调入。 */
+    TRANSFER_IN
 }

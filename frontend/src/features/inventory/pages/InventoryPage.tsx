@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, History, Search, Warehouse } from 'lucide-react'
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ClipboardCheck, History, Search, Warehouse } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/form'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
 import { CameraScanButton } from '@/features/barcode/CameraScanButton'
+import { useWarehouses, warehouseApi } from '@/features/warehouse/api'
 import { productApi } from '@/features/catalog/api'
 import { ProductThumb } from '@/features/catalog/components/ProductThumb'
 import type { Product } from '@/features/catalog/types'
@@ -47,12 +48,23 @@ export function InventoryPage() {
   const open = (mode: StockMode, p: Product) =>
     setAction({ mode, target: { id: p.id, name: p.name, sku: p.sku, unit: p.unit, stockQty: p.stockQty } })
 
+  // 多仓库：按仓库查看数量（只有一个仓库时不显示）
+  const wh = useWarehouses()
+  const warehouseId = params.get('w') ? Number(params.get('w')) : undefined
   const summary = useQuery({ queryKey: ['inventory', 'summary'], queryFn: inventoryApi.summary })
   const list = useQuery({
     queryKey: ['products', 'inventory', { q, lowStock, page }],
     queryFn: () => productApi.list({ q, lowStock, page, size: 20, sort: 'stockQty,asc' }),
     placeholderData: keepPreviousData,
   })
+
+  const pageIds = list.data?.items.map((p) => p.id) ?? []
+  const whStocks = useQuery({
+    queryKey: ['warehouse-stocks', warehouseId, pageIds],
+    queryFn: () => warehouseApi.stocks(warehouseId!, pageIds),
+    enabled: wh.multi && !!warehouseId && pageIds.length > 0,
+  })
+  const shownQty = (p: Product) => (wh.multi && warehouseId ? (whStocks.data?.get(p.id) ?? null) : p.stockQty)
 
   const s = summary.data
   const showValue = s?.inventoryValue !== null && s?.inventoryValue !== undefined
@@ -63,10 +75,18 @@ export function InventoryPage() {
         title="库存"
         description="查看库存、入库、出库和盘点。所有变动都会自动记录。"
         actions={
-          <Link to="/inventory/movements" className={buttonVariants({ variant: 'secondary' })}>
-            <History aria-hidden />
-            库存流水
-          </Link>
+          <>
+            {canManage && wh.all.length > 1 && (
+              <Link to="/inventory/transfers" className={buttonVariants({ variant: 'secondary' })}>
+                <ArrowLeftRight aria-hidden />
+                调拨
+              </Link>
+            )}
+            <Link to="/inventory/movements" className={buttonVariants({ variant: 'secondary' })}>
+              <History aria-hidden />
+              库存流水
+            </Link>
+          </>
         }
       />
 
@@ -84,6 +104,25 @@ export function InventoryPage() {
       </div>
 
       <Card>
+        {wh.multi && (
+          <div className="-mb-px flex gap-1 overflow-x-auto border-b border-slate-100 px-4 pt-3" role="tablist" aria-label="按仓库查看">
+            {[{ id: undefined as number | undefined, name: '全部仓库' }, ...wh.active].map((w) => (
+              <button
+                key={w.id ?? 'all'}
+                type="button"
+                role="tab"
+                aria-selected={warehouseId === w.id}
+                onClick={() => update({ w: w.id ? String(w.id) : null }, false)}
+                className={cn(
+                  'whitespace-nowrap border-b-2 px-3 pb-2 text-sm font-medium',
+                  warehouseId === w.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800',
+                )}
+              >
+                {w.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden />
@@ -157,13 +196,16 @@ export function InventoryPage() {
                         <span
                           className={cn(
                             'text-lg font-semibold tabular-nums',
-                            p.stockQty <= 0 ? 'text-red-600' : p.lowStock ? 'text-amber-700' : 'text-slate-900',
+                            (shownQty(p) ?? 0) <= 0 ? 'text-red-600' : p.lowStock ? 'text-amber-700' : 'text-slate-900',
                           )}
                         >
-                          {formatQty(p.stockQty)}
+                          {shownQty(p) === null ? '…' : formatQty(shownQty(p)!)}
                         </span>
-                        <span className="text-xs text-slate-500">{p.unit}</span>
-                        {p.stockQty <= 0 ? <Badge tone="red">缺货</Badge> : p.lowStock && <Badge tone="amber">低库存</Badge>}
+                        <span className="text-xs text-slate-500">
+                          {p.unit}
+                          {wh.multi && warehouseId && `（共 ${formatQty(p.stockQty)}）`}
+                        </span>
+                        {(shownQty(p) ?? 0) <= 0 ? <Badge tone="red">缺货</Badge> : p.lowStock && <Badge tone="amber">低库存</Badge>}
                       </span>
                       {canManage && (
                         <div className="flex gap-1.5">
@@ -199,7 +241,13 @@ export function InventoryPage() {
         )}
       </Card>
 
-      <StockActionDialog target={action?.target ?? null} mode={action?.mode ?? 'in'} onClose={() => setAction(null)} />
+      <StockActionDialog
+        target={action?.target ?? null}
+        mode={action?.mode ?? 'in'}
+        onClose={() => setAction(null)}
+        warehouses={wh.multi ? wh.usable : []}
+        initialWarehouseId={wh.usable.some((x) => x.id === warehouseId) ? warehouseId : wh.defaultWarehouse?.id}
+      />
     </div>
   )
 }

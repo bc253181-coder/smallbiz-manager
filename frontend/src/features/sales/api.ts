@@ -46,6 +46,8 @@ export const PRICE_SOURCE_LABELS: Record<PriceSource, string> = {
 
 export interface SaleDetail extends SaleSummary {
   priceTier: PriceTier
+  warehouseId: number
+  warehouseName: string | null
   subtotal: string
   discountAmount: string
   paidAtSale: string
@@ -85,6 +87,8 @@ export interface SaleInput {
   /** 本次实收；null = 全额收款 */
   paidAmount: string | null
   items: { productId: number; quantity: number; unitPrice: string }[]
+  /** 出货仓库；不传 = 默认仓库 */
+  warehouseId?: number
 }
 
 export interface CustomerStats {

@@ -38,6 +38,8 @@ export interface PurchaseDetail extends PurchaseSummary {
   cancelledAt: string | null
   cancelledByName: string | null
   cancelReason: string | null
+  warehouseId: number | null
+  warehouseName: string | null
   version: number
 }
 
@@ -95,7 +97,8 @@ export const purchaseApi = {
   update: (id: number, body: PurchaseInput & { version: number }) =>
     api.put<PurchaseDetail>(`/purchase-orders/${id}`, body).then((r) => r.data),
   submit: (id: number) => api.post<PurchaseDetail>(`/purchase-orders/${id}/submit`).then((r) => r.data),
-  receive: (id: number) => api.post<PurchaseDetail>(`/purchase-orders/${id}/receive`).then((r) => r.data),
+  receive: (id: number, warehouseId?: number) =>
+    api.post<PurchaseDetail>(`/purchase-orders/${id}/receive`, warehouseId ? { warehouseId } : {}).then((r) => r.data),
   cancel: (id: number, reason: string) =>
     api.post<PurchaseDetail>(`/purchase-orders/${id}/cancel`, { reason }).then((r) => r.data),
   remove: (id: number) => api.delete(`/purchase-orders/${id}`),

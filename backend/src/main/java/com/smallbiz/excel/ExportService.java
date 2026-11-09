@@ -212,10 +212,10 @@ public class ExportService {
     @Transactional(readOnly = true)
     public byte[] movements(Long tenantId, InventoryQueryService.MovementFilter f) {
         List<MovementRow> list = items(inventoryQuery.movements(tenantId, f, all(Sort.by("createdAt", "id")), false));
-        List<List<Object>> rows = list.stream().map(m -> Arrays.<Object>asList(m.createdAt(), m.productName(), m.productSku(),
-                movementType(m.type()), m.qtyChange(), m.qtyBefore(), m.qtyAfter(), m.productUnit(), m.unitCost(), m.reason(),
+        List<List<Object>> rows = list.stream().map(m -> Arrays.<Object>asList(m.createdAt(), m.warehouseName(),
+                m.productName(), m.productSku(), movementType(m.type()), m.qtyChange(), m.qtyBefore(), m.qtyAfter(), m.productUnit(), m.unitCost(), m.reason(),
                 m.operatorName())).toList();
-        return new XlsxWriter(zone(tenantId)).sheet("库存流水", List.of(dateTime("时间"), text("商品"), text("SKU"),
+        return new XlsxWriter(zone(tenantId)).sheet("库存流水", List.of(dateTime("时间"), text("仓库"), text("商品"), text("SKU"),
                 text("类型"), integer("变动数量"), integer("变动前"), integer("变动后"), text("单位"), money("单位成本"),
                 text("原因"), text("操作人")), rows).toBytes();
     }
@@ -229,6 +229,8 @@ public class ExportService {
             case SALE -> "销售";
             case SALE_CANCEL -> "销售取消";
             case PURCHASE_RECEIVE -> "采购收货";
+            case TRANSFER_OUT -> "调拨调出";
+            case TRANSFER_IN -> "调拨调入";
         };
     }
 }

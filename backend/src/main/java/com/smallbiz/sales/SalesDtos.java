@@ -39,7 +39,9 @@ public final class SalesDtos {
             @DecimalMin(value = "0", message = "实收不能为负数")
             @Digits(integer = 12, fraction = 2, message = "实收最多两位小数") BigDecimal paidAmount,
             @NotEmpty(message = "请至少添加一个商品") @Size(max = 200, message = "一张销售单最多 200 个商品")
-            List<@Valid ItemRequest> items) {
+            List<@Valid ItemRequest> items,
+            /** 出货仓库；为空表示默认仓库。 */
+            Long warehouseId) {
     }
 
     public record CancelRequest(@Size(max = 200, message = "原因最多 200 字") String reason) {
@@ -110,7 +112,9 @@ public final class SalesDtos {
             String createdByName,
             Instant cancelledAt,
             String cancelledByName,
-            String cancelReason) {
+            String cancelReason,
+            Long warehouseId,
+            String warehouseName) {
     }
 
     /** 冲抵到这张销售单的收款（含已作废的，便于追溯）。 */
