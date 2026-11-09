@@ -9,6 +9,7 @@ import { formatDateTime } from '@/lib/format'
 import { useCanManage } from '@/lib/hooks'
 import { CUSTOMER_TYPE_LABELS, PRICE_TIER_LABELS, customerApi } from '../api'
 import { CustomerFormDialog } from '../CustomerFormDialog'
+import { CustomerPricesCard } from '../CustomerPricesCard'
 import { CustomerReceivableCard } from '@/features/receivables/CustomerReceivableCard'
 import { CustomerSalesHistory } from '@/features/sales/CustomerSalesHistory'
 import { NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
@@ -71,6 +72,7 @@ export function CustomerDetailPage() {
         history={
           <div className="space-y-6">
             <CustomerReceivableCard customerId={c.id} customerName={c.name} />
+            <CustomerPricesCard customerId={c.id} customerName={c.name} />
             <CustomerSalesHistory customerId={c.id} />
           </div>
         }

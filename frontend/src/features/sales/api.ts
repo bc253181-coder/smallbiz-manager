@@ -31,6 +31,17 @@ export interface SaleItem {
   /** 店员为 null */
   unitCost: string | null
   lineTotal: string
+  /** 单价来源 */
+  priceSource: PriceSource
+}
+
+export type PriceSource = 'RETAIL' | 'WHOLESALE' | 'CONTRACT' | 'MANUAL'
+
+export const PRICE_SOURCE_LABELS: Record<PriceSource, string> = {
+  RETAIL: '零售价',
+  WHOLESALE: '批发价',
+  CONTRACT: '协议价',
+  MANUAL: '手动改价',
 }
 
 export interface SaleDetail extends SaleSummary {

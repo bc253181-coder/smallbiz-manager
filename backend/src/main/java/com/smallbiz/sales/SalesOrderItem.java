@@ -38,6 +38,10 @@ public class SalesOrderItem extends TenantScopedEntity {
     @Column(name = "unit_price", nullable = false, precision = 14, scale = 2)
     private BigDecimal unitPrice;
 
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(name = "price_source", nullable = false, length = 20)
+    private PriceSource priceSource;
+
     /** 销售时的成本快照。 */
     @Column(name = "unit_cost", nullable = false, precision = 14, scale = 2)
     private BigDecimal unitCost;
@@ -52,7 +56,8 @@ public class SalesOrderItem extends TenantScopedEntity {
     }
 
     public SalesOrderItem(Long productId, String productName, String sku, String unit, int quantity,
-            BigDecimal unitPrice, BigDecimal unitCost) {
+            BigDecimal unitPrice, PriceSource priceSource, BigDecimal unitCost) {
+        this.priceSource = priceSource;
         this.productId = productId;
         this.productName = productName;
         this.sku = sku;
@@ -90,6 +95,10 @@ public class SalesOrderItem extends TenantScopedEntity {
 
     public BigDecimal getUnitPrice() {
         return unitPrice;
+    }
+
+    public PriceSource getPriceSource() {
+        return priceSource;
     }
 
     public BigDecimal getUnitCost() {

@@ -57,6 +57,8 @@ public class ImportController {
             planGuard.require(tenantId, Feature.CUSTOMERS);
         } else if (t == Type.SUPPLIERS) {
             planGuard.require(tenantId, Feature.SUPPLIERS);
+        } else if (t == Type.CUSTOMER_PRICES) {
+            planGuard.require(tenantId, Feature.CUSTOMER_PRICES);
         }
     }
 
@@ -65,6 +67,7 @@ public class ImportController {
             case "products" -> Type.PRODUCTS;
             case "customers" -> Type.CUSTOMERS;
             case "suppliers" -> Type.SUPPLIERS;
+            case "customer-prices" -> Type.CUSTOMER_PRICES;
             default -> throw ApiException.notFound("IMPORT_TYPE_NOT_FOUND", "不支持导入这种数据");
         };
     }

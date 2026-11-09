@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { downloadFile } from '@/lib/download'
 
-export type ImportType = 'products' | 'customers' | 'suppliers'
+export type ImportType = 'products' | 'customers' | 'suppliers' | 'customer-prices'
 export type ImportMode = 'CREATE_ONLY' | 'UPSERT'
 
 export interface RowError {
@@ -27,6 +27,7 @@ export const IMPORT_LABELS: Record<ImportType, string> = {
   products: '商品',
   customers: '客户',
   suppliers: '供应商',
+  'customer-prices': '协议价',
 }
 
 /** 判断重复的依据（显示在导入弹窗中）。 */
@@ -34,6 +35,7 @@ export const DUPLICATE_RULES: Record<ImportType, string> = {
   products: '按 SKU 判断（没有 SKU 时按条码）',
   customers: '按电话判断（没有电话时按客户名称）',
   suppliers: '按供应商名称判断',
+  'customer-prices': '同一客户 + 商品已有协议价',
 }
 
 /** 导入后需要刷新的数据。 */
@@ -41,6 +43,7 @@ export const IMPORT_QUERY_KEYS: Record<ImportType, string[][]> = {
   products: [['products'], ['categories'], ['inventory'], ['billing']],
   customers: [['customers']],
   suppliers: [['suppliers']],
+  'customer-prices': [['customer-prices'], ['product-customer-prices']],
 }
 
 export const importApi = {

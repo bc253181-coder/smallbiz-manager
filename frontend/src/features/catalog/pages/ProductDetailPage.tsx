@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
+import { ProductCustomerPricesCard } from '@/features/partners/ProductCustomerPricesCard'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EmptyState, ErrorState, PageHeader } from '@/components/ui/page'
 import { Pagination } from '@/components/ui/pagination'
@@ -168,6 +169,10 @@ export function ProductDetailPage() {
             )}
           </CardBody>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <ProductCustomerPricesCard productId={p.id} />
       </div>
 
       <Card className="mt-6">

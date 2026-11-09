@@ -100,11 +100,20 @@ public class ImportService {
             new Col("供应商品", false, "最多 500 字", "数据线、充电头", "suppliedProductsNote"),
             new Col("备注", false, "最多 2000 字", "", "notes"));
 
+    static final List<Col> CUSTOMER_PRICE_COLS = List.of(
+            new Col("客户电话", false, "按电话找客户；没有电话时按客户名称", "13800138000", "customer"),
+            new Col("客户名称", false, "客户电话和客户名称至少填一个", "张三五金店", "customer"),
+            new Col("商品SKU", false, "按 SKU 找商品；没有 SKU 时按条码", "CABLE-001", "product"),
+            new Col("商品条码", false, "商品 SKU 和条码至少填一个", "6901234567890", "product"),
+            new Col("协议价", true, "数字，最多两位小数", "7.50", "price"),
+            new Col("备注", false, "最多 200 字", "2026 年框架协议", "notes"));
+
     static List<Col> columns(Type type) {
         return switch (type) {
             case PRODUCTS -> PRODUCT_COLS;
             case CUSTOMERS -> CUSTOMER_COLS;
             case SUPPLIERS -> SUPPLIER_COLS;
+            case CUSTOMER_PRICES -> CUSTOMER_PRICE_COLS;
         };
     }
 
@@ -113,6 +122,7 @@ public class ImportService {
             case PRODUCTS -> "商品";
             case CUSTOMERS -> "客户";
             case SUPPLIERS -> "供应商";
+            case CUSTOMER_PRICES -> "协议价";
         };
     }
 
@@ -141,11 +151,17 @@ public class ImportService {
     private final SupplierService supplierService;
     private final PlanGuard planGuard;
     private final Validator validator;
+    private final com.smallbiz.pricing.CustomerPriceRepository customerPrices;
+    private final com.smallbiz.pricing.CustomerPriceService customerPriceService;
     private final Map<Long, Deque<Instant>> rate = new ConcurrentHashMap<>();
 
     public ImportService(ProductRepository products, ProductService productService, CategoryRepository categories,
             CategoryService categoryService, CustomerRepository customers, CustomerService customerService,
-            SupplierRepository suppliers, SupplierService supplierService, PlanGuard planGuard, Validator validator) {
+            SupplierRepository suppliers, SupplierService supplierService, PlanGuard planGuard, Validator validator,
+            com.smallbiz.pricing.CustomerPriceRepository customerPrices,
+            com.smallbiz.pricing.CustomerPriceService customerPriceService) {
+        this.customerPrices = customerPrices;
+        this.customerPriceService = customerPriceService;
         this.products = products;
         this.productService = productService;
         this.categories = categories;
@@ -192,6 +208,7 @@ public class ImportService {
             case PRODUCTS -> planProducts(parsed.rows(), mode, tenantId, userId);
             case CUSTOMERS -> planCustomers(parsed.rows(), mode, userId);
             case SUPPLIERS -> planSuppliers(parsed.rows(), mode, userId);
+            case CUSTOMER_PRICES -> planCustomerPrices(parsed.rows(), mode, tenantId, userId);
         };
 
         boolean ok = plan.errors.isEmpty();
@@ -490,6 +507,71 @@ public class ImportService {
                     plan.actions.add(new Action(r.rowNumber(), () -> supplierService.create(req, userId)));
                 }
             }
+        }
+        return plan;
+    }
+
+    // ---------------- 客户协议价 ----------------
+
+    private Plan planCustomerPrices(List<RowData> rows, Mode mode, Long tenantId, Long userId) {
+        Plan plan = new Plan();
+        Map<String, Integer> seen = new HashMap<>();
+        for (RowData r : rows) {
+            List<RowError> errs = new ArrayList<>();
+            String phone = r.get("客户电话");
+            String customerName = r.get("客户名称");
+            String sku = r.get("商品SKU");
+            String barcode = r.get("商品条码");
+            BigDecimal price = money(r, "协议价", errs);
+            Optional<Customer> customer = phone != null ? customers.findFirstByPhoneOrderByIdAsc(phone)
+                    : customerName != null ? customers.findFirstByNameOrderByIdAsc(customerName) : Optional.empty();
+            if (phone == null && customerName == null) {
+                errs.add(new RowError(r.rowNumber(), "客户电话", "客户电话和客户名称至少填一个"));
+            } else if (customer.isEmpty()) {
+                errs.add(new RowError(r.rowNumber(), phone != null ? "客户电话" : "客户名称",
+                        "找不到客户「" + (phone != null ? phone : customerName) + "」，请先在客户页面添加"));
+            }
+            Optional<Product> product = sku != null ? products.findBySku(sku)
+                    : barcode != null ? products.findFirstByBarcodeOrderByIdAsc(barcode) : Optional.empty();
+            if (sku == null && barcode == null) {
+                errs.add(new RowError(r.rowNumber(), "商品SKU", "商品 SKU 和条码至少填一个"));
+            } else if (product.isEmpty()) {
+                errs.add(new RowError(r.rowNumber(), sku != null ? "商品SKU" : "商品条码",
+                        "找不到商品「" + (sku != null ? sku : barcode) + "」"));
+            }
+            if (price == null && errs.stream().noneMatch(e -> "协议价".equals(e.column()))) {
+                errs.add(new RowError(r.rowNumber(), "协议价", "请填写协议价"));
+            }
+            if (customer.isPresent() && product.isPresent()) {
+                String key = customer.get().getId() + ":" + product.get().getId();
+                Integer first = seen.putIfAbsent(key, r.rowNumber());
+                if (first != null) {
+                    errs.add(new RowError(r.rowNumber(), null, "同一客户和商品与第 " + first + " 行重复"));
+                }
+            }
+            if (!errs.isEmpty()) {
+                plan.errors.addAll(errs);
+                continue;
+            }
+            com.smallbiz.pricing.CustomerPriceDtos.PriceRequest req =
+                    new com.smallbiz.pricing.CustomerPriceDtos.PriceRequest(price, r.get("备注"));
+            if (!validate(req, r.rowNumber(), CUSTOMER_PRICE_COLS, plan)) {
+                continue;
+            }
+            Long customerId = customer.get().getId();
+            Long productId = product.get().getId();
+            boolean exists = customerPrices.findByCustomerIdAndProductId(customerId, productId).isPresent();
+            if (exists && mode == Mode.CREATE_ONLY) {
+                plan.skipped++;
+                continue;
+            }
+            if (exists) {
+                plan.updated++;
+            } else {
+                plan.created++;
+            }
+            plan.actions.add(new Action(r.rowNumber(),
+                    () -> customerPriceService.set(tenantId, customerId, productId, req.price(), req.notes(), userId)));
         }
         return plan;
     }

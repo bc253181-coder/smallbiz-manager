@@ -7,7 +7,7 @@ public final class ImportDtos {
     private ImportDtos() {
     }
 
-    public enum Type { PRODUCTS, CUSTOMERS, SUPPLIERS }
+    public enum Type { PRODUCTS, CUSTOMERS, SUPPLIERS, CUSTOMER_PRICES }
 
     /** CREATE_ONLY：重复的跳过；UPSERT：重复的更新资料（商品不改库存）。 */
     public enum Mode { CREATE_ONLY, UPSERT }

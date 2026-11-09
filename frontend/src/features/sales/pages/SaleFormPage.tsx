@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { fromCents, isMoney, toCents } from '@/lib/money'
 import { cn } from '@/lib/utils'
 import { AxiosError } from 'axios'
 import { receivableApi } from '@/features/receivables/api'
+import { customerPriceApi } from '@/features/partners/customerPrices'
 import { saleApi } from '../api'
 
 interface Line {
@@ -32,6 +33,8 @@ interface Line {
   unitPrice: string
   /** 手动改过单价：切换价格类型时不再自动覆盖 */
   priceEdited: boolean
+  /** 当前单价来自客户协议价 */
+  contract: boolean
 }
 
 function tierPrice(l: Pick<Line, 'retailPrice' | 'wholesalePrice'>, tier: PriceTier): string {
@@ -73,16 +76,39 @@ export function SaleFormPage() {
 
   function changeTier(next: PriceTier) {
     setTier(next)
-    setLines((ls) => ls.map((l) => (l.priceEdited ? l : { ...l, unitPrice: tierPrice(l, next) })))
+    setLines((ls) => ls.map((l) => (l.priceEdited || l.contract ? l : { ...l, unitPrice: tierPrice(l, next) })))
+  }
+
+  // 客户协议价（专业版）：选客户、加商品时取价；手动改过的行不覆盖
+  const canContract = useFeature('CUSTOMER_PRICES')
+  const customerRef = useRef(customerId)
+  async function applyContractPrices(forCustomer: string, productIds: number[]) {
+    if (!canContract || !forCustomer || productIds.length === 0) return
+    try {
+      const quotes = await customerPriceApi.quote(Number(forCustomer), productIds)
+      if (customerRef.current !== forCustomer) return // 期间又换了客户
+      const byId = new Map(quotes.map((q) => [q.productId, q.price]))
+      setLines((ls) =>
+        ls.map((l) => (l.priceEdited || !byId.has(l.productId) ? l : { ...l, unitPrice: byId.get(l.productId)!, contract: true })),
+      )
+    } catch {
+      // 取不到协议价时按零售 / 批发价，开单时后端会再按规则核对价格来源
+    }
   }
 
   function changeCustomer(id: string) {
     setCustomerId(id)
+    customerRef.current = id
     const c = customers.data?.items.find((x) => String(x.id) === id)
-    changeTier(c ? c.priceTier : 'RETAIL')
+    const next = c ? c.priceTier : 'RETAIL'
+    setTier(next)
+    // 换客户：未手改的行先回到该客户的零售 / 批发价，再套用新客户的协议价
+    setLines((ls) => ls.map((l) => (l.priceEdited ? l : { ...l, unitPrice: tierPrice(l, next), contract: false })))
+    void applyContractPrices(id, lines.map((l) => l.productId))
   }
 
   function addProduct(p: Product) {
+    if (!lines.some((l) => l.productId === p.id)) void applyContractPrices(customerId, [p.id])
     setLines((ls) =>
       ls.some((l) => l.productId === p.id)
         ? ls.map((l) => (l.productId === p.id ? { ...l, quantity: String((Number(l.quantity) || 0) + 1) } : l))
@@ -99,6 +125,7 @@ export function SaleFormPage() {
               quantity: '1',
               unitPrice: tierPrice(p, tier),
               priceEdited: false,
+              contract: false,
             },
           ],
     )
@@ -223,7 +250,12 @@ export function SaleFormPage() {
                           {err.quantity && <span className="mt-1 block text-red-600">{err.quantity}</span>}
                         </label>
                         <label className="text-xs text-slate-500">
-                          单价{l.priceEdited ? '（已改价）' : ''}
+                          单价
+                          {l.priceEdited ? (
+                            '（已改价）'
+                          ) : l.contract ? (
+                            <span className="ml-1 rounded bg-violet-50 px-1 py-px text-[11px] font-medium text-violet-700">协议价</span>
+                          ) : null}
                           <Input
                             inputMode="decimal"
                             value={l.unitPrice}
