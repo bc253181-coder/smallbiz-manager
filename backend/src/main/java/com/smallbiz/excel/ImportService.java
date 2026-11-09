@@ -179,10 +179,12 @@ public class ImportService {
     public byte[] template(Type type) {
         List<Col> cols = columns(type);
         List<List<Object>> help = cols.stream()
-                .map(c -> List.<Object>of(c.header(), c.required() ? "必填" : "选填", c.help(), c.example()))
+                .map(c -> List.<Object>of(ExcelI18n.t(c.header()), ExcelI18n.t(c.required() ? "必填" : "选填"),
+                        ExcelI18n.t(c.help()), ExcelI18n.t(c.example())))
                 .toList();
         return new XlsxWriter(ZoneId.of("UTC"))
-                .textSheet(label(type), cols.stream().map(c -> c.required() ? c.header() + "*" : c.header()).toList())
+                .textSheet(label(type), cols.stream()
+                        .map(c -> c.required() ? ExcelI18n.t(c.header()) + "*" : ExcelI18n.t(c.header())).toList())
                 .sheet("填写说明", List.of(XlsxWriter.Column.text("列名"), XlsxWriter.Column.text("是否必填"),
                         XlsxWriter.Column.text("说明"), XlsxWriter.Column.text("示例")), help)
                 .toBytes();
@@ -253,7 +255,7 @@ public class ImportService {
             ProductStatus status = null;
             String s = r.get("状态");
             if (s != null) {
-                status = switch (s) {
+                status = switch (s.toUpperCase(java.util.Locale.ROOT)) {
                     case "在售", "上架", "ACTIVE" -> ProductStatus.ACTIVE;
                     case "停售", "下架", "INACTIVE" -> ProductStatus.INACTIVE;
                     default -> {
@@ -408,7 +410,7 @@ public class ImportService {
             Customer.Type type = null;
             String t = r.get("类型");
             if (t != null) {
-                type = switch (t) {
+                type = switch (t.toUpperCase(java.util.Locale.ROOT)) {
                     case "个人", "INDIVIDUAL" -> Customer.Type.INDIVIDUAL;
                     case "企业", "公司", "BUSINESS" -> Customer.Type.BUSINESS;
                     default -> {
@@ -420,7 +422,7 @@ public class ImportService {
             Customer.PriceTier tier = null;
             String p = r.get("默认价格");
             if (p != null) {
-                tier = switch (p) {
+                tier = switch (p.toUpperCase(java.util.Locale.ROOT)) {
                     case "零售", "零售价", "RETAIL" -> Customer.PriceTier.RETAIL;
                     case "批发", "批发价", "WHOLESALE" -> Customer.PriceTier.WHOLESALE;
                     default -> {

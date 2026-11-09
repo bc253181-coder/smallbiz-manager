@@ -14,10 +14,12 @@ export const authApi = {
     api.put<UserView>('/auth/me', body).then((r) => r.data),
 
   changePassword: (body: { oldPassword: string; newPassword: string }) => api.put('/auth/me/password', body),
+
+  updateLocale: (locale: string) => api.put<UserView>('/auth/me/locale', { locale }).then((r) => r.data),
 }
 
 export const tenantApi = {
-  create: (body: { name: string; businessType: BusinessType }) =>
+  create: (body: { name: string; businessType: BusinessType; currency?: string }) =>
     api.post<SessionResponse>('/tenants', body).then((r) => r.data),
 
   switchTo: (tenantId: number) => api.post<SessionResponse>(`/tenants/${tenantId}/switch`).then((r) => r.data),
@@ -28,6 +30,6 @@ export const tenantApi = {
 
   current: () => api.get<TenantView>('/tenant').then((r) => r.data),
 
-  update: (body: Omit<TenantView, 'id' | 'currency' | 'plan' | 'planExpiresAt'>) =>
+  update: (body: Omit<TenantView, 'id' | 'currency' | 'plan' | 'planExpiresAt' | 'currencyLocked' | 'currencyConfirmed'> & { currency?: string }) =>
     api.put<TenantView>('/tenant', body).then((r) => r.data),
 }

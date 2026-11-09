@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils'
 import { inventoryApi } from '../api'
 import { StockActionDialog, type StockMode, type StockTarget } from '../StockActionDialog'
 
+import { tr } from '@/lib/i18n'
+import { warehouseName } from '@/lib/systemText'
 export function InventoryPage() {
   const [params, setParams] = useSearchParams()
   const money = useMoney()
@@ -72,41 +74,41 @@ export function InventoryPage() {
   return (
     <div>
       <PageHeader
-        title="库存"
-        description="查看库存、入库、出库和盘点。所有变动都会自动记录。"
+        title={tr('库存')}
+        description={tr('查看库存、入库、出库和盘点。所有变动都会自动记录。')}
         actions={
           <>
             {canManage && wh.all.length > 1 && (
               <Link to="/inventory/transfers" className={buttonVariants({ variant: 'secondary' })}>
                 <ArrowLeftRight aria-hidden />
-                调拨
+                {tr('调拨')}
               </Link>
             )}
             <Link to="/inventory/movements" className={buttonVariants({ variant: 'secondary' })}>
               <History aria-hidden />
-              库存流水
+              {tr('库存流水')}
             </Link>
           </>
         }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-        <Stat label="商品数" value={s?.productCount} />
-        <Stat label="库存总量" value={s?.totalQty} />
-        {showValue && <Stat label="库存价值（按成本）" text={s ? money(s.inventoryValue) : undefined} />}
+        <Stat label={tr('商品数')} value={s?.productCount} />
+        <Stat label={tr('库存总量')} value={s?.totalQty} />
+        {showValue && <Stat label={tr('库存价值（按成本）')} text={s ? money(s.inventoryValue) : undefined} />}
         <Stat
-          label="低库存"
+          label={tr('低库存')}
           value={s?.lowStockCount}
           tone={s?.lowStockCount ? 'amber' : undefined}
           onClick={() => update({ lowStock: 'true' })}
         />
-        <Stat label="缺货" value={s?.outOfStockCount} tone={s?.outOfStockCount ? 'red' : undefined} />
+        <Stat label={tr('缺货')} value={s?.outOfStockCount} tone={s?.outOfStockCount ? 'red' : undefined} />
       </div>
 
       <Card>
         {wh.multi && (
-          <div className="-mb-px flex gap-1 overflow-x-auto border-b border-slate-100 px-4 pt-3" role="tablist" aria-label="按仓库查看">
-            {[{ id: undefined as number | undefined, name: '全部仓库' }, ...wh.active].map((w) => (
+          <div className="-mb-px flex gap-1 overflow-x-auto border-b border-slate-100 px-4 pt-3" role="tablist" aria-label={tr('按仓库查看')}>
+            {[{ id: undefined as number | undefined, name: tr('全部仓库') }, ...wh.active].map((w) => (
               <button
                 key={w.id ?? 'all'}
                 type="button"
@@ -118,7 +120,7 @@ export function InventoryPage() {
                   warehouseId === w.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800',
                 )}
               >
-                {w.name}
+                {warehouseName(w.name)}
               </button>
             ))}
           </div>
@@ -129,16 +131,16 @@ export function InventoryPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索商品名称、SKU 或条码"
+              placeholder={tr('搜索商品名称、SKU 或条码')}
               className="pl-9 pr-11"
-              aria-label="搜索商品"
+              aria-label={tr('搜索商品')}
               onKeyDown={(e) => {
                 // 扫码枪扫完按回车：立即搜索，不等输入停顿
                 if (e.key === 'Enter') update({ q: search.trim() || null })
               }}
             />
             <CameraScanButton
-              title="扫码查库存"
+              title={tr('扫码查库存')}
               onCode={(code) => {
                 setSearch(code)
                 update({ q: code })
@@ -154,7 +156,7 @@ export function InventoryPage() {
               lowStock ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
             )}
           >
-            只看低库存
+            {tr('只看低库存')}
           </button>
         </div>
 
@@ -165,12 +167,12 @@ export function InventoryPage() {
         ) : list.data && list.data.items.length === 0 ? (
           <EmptyState
             icon={Warehouse}
-            title={q || lowStock ? '没有符合条件的商品' : '还没有商品'}
-            description={q || lowStock ? '换个条件试试' : '先在「商品」中添加商品，再来管理库存'}
+            title={q || lowStock ? tr('没有符合条件的商品') : tr('还没有商品')}
+            description={q || lowStock ? tr('换个条件试试') : tr('先在「商品」中添加商品，再来管理库存')}
             action={
               !(q || lowStock) && (
                 <Link to="/products/new" className={buttonVariants()}>
-                  新增商品
+                  {tr('新增商品')}
                 </Link>
               )
             }
@@ -186,8 +188,8 @@ export function InventoryPage() {
                       <div className="min-w-0">
                         <p className="truncate font-medium text-slate-900 hover:text-blue-600">{p.name}</p>
                         <p className="truncate text-xs text-slate-500">
-                          {p.sku} · 预警值 {p.lowStockThreshold}
-                          {p.costPrice !== null && ` · 价值 ${money((Number(p.costPrice) * Math.max(p.stockQty, 0)).toFixed(2))}`}
+                          {p.sku} {tr('· 预警值')} {p.lowStockThreshold}
+                          {p.costPrice !== null && tr(' · 价值 {{v0}}', { v0: money((Number(p.costPrice) * Math.max(p.stockQty, 0)).toFixed(2)) })}
                         </p>
                       </div>
                     </Link>
@@ -203,23 +205,23 @@ export function InventoryPage() {
                         </span>
                         <span className="text-xs text-slate-500">
                           {p.unit}
-                          {wh.multi && warehouseId && `（共 ${formatQty(p.stockQty)}）`}
+                          {wh.multi && warehouseId && tr('（共 {{stockQty}}）', { stockQty: formatQty(p.stockQty) })}
                         </span>
-                        {(shownQty(p) ?? 0) <= 0 ? <Badge tone="red">缺货</Badge> : p.lowStock && <Badge tone="amber">低库存</Badge>}
+                        {(shownQty(p) ?? 0) <= 0 ? <Badge tone="red">{tr('缺货')}</Badge> : p.lowStock && <Badge tone="amber">{tr('低库存')}</Badge>}
                       </span>
                       {canManage && (
-                        <div className="flex gap-1.5">
+                        <div className="flex flex-wrap justify-end gap-1.5">
                           <Button size="sm" variant="secondary" onClick={() => open('in', p)}>
                             <ArrowDownToLine aria-hidden />
-                            入库
+                            {tr('入库')}
                           </Button>
                           <Button size="sm" variant="secondary" onClick={() => open('out', p)}>
                             <ArrowUpFromLine aria-hidden />
-                            出库
+                            {tr('出库')}
                           </Button>
                           <Button size="sm" variant="secondary" onClick={() => open('adjust', p)}>
                             <ClipboardCheck aria-hidden />
-                            盘点
+                            {tr('盘点')}
                           </Button>
                         </div>
                       )}
@@ -232,7 +234,7 @@ export function InventoryPage() {
                   page={list.data.page}
                   totalPages={list.data.totalPages}
                   totalItems={list.data.totalItems}
-                  unit="件商品"
+                  unit={tr('件商品')}
                   onChange={(p) => update({ page: String(p) }, false)}
                 />
               </div>
@@ -265,7 +267,7 @@ function Stat({
   tone?: 'amber' | 'red'
   onClick?: () => void
 }) {
-  const shown = text ?? (value === undefined ? undefined : value.toLocaleString('zh-CN'))
+  const shown = text ?? (value === undefined ? undefined : formatQty(value))
   const Tag = onClick ? 'button' : 'div'
   return (
     <Tag

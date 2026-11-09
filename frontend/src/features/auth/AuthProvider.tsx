@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { applySession, onSessionChange, refreshSession } from '@/lib/api'
+import { getLang, syncLangFromAccount } from '@/lib/i18n'
 import { authApi, tenantApi } from './api'
 import type { BusinessType, SessionResponse } from './types'
 
@@ -12,7 +13,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<SessionResponse>
   register: (email: string, password: string, displayName: string) => Promise<SessionResponse>
   logout: () => Promise<void>
-  createTenant: (name: string, businessType: BusinessType) => Promise<SessionResponse>
+  createTenant: (name: string, businessType: BusinessType, currency?: string) => Promise<SessionResponse>
   switchTenant: (tenantId: number) => Promise<SessionResponse>
   /** 接受员工邀请：加入店铺并切换过去。 */
   acceptInvitation: (token: string) => Promise<SessionResponse>
@@ -31,6 +32,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onSessionChange((s) => {
+      // 界面语言跟着账号：账号上的语言与本机不同时以账号为准（刷新页面）；账号还没设置时记下当前语言
+      if (s?.user) {
+        if (syncLangFromAccount(s.user.locale)) {
+          window.location.reload()
+          return
+        }
+        if (!s.user.locale) void authApi.updateLocale(getLang()).catch(() => undefined)
+      }
       setSession(s)
       setStatus(s ? 'authenticated' : 'anonymous')
     })
@@ -65,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           applySession(null)
         }
       },
-      createTenant: async (name, businessType) => accept(await tenantApi.create({ name, businessType })),
+      createTenant: async (name, businessType, currency) => accept(await tenantApi.create({ name, businessType, currency })),
       switchTenant: async (tenantId) => accept(await tenantApi.switchTo(tenantId)),
       acceptInvitation: async (token) => accept(await tenantApi.acceptInvitation(token)),
       leaveTenant: async (tenantId) => accept(await tenantApi.leave(tenantId)),

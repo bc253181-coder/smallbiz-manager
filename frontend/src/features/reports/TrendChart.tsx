@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useMoney } from '@/lib/format'
 
+import { tr } from '@/lib/i18n'
 export interface TrendDatum {
   period: string
   amount: string
@@ -22,7 +23,7 @@ export function TrendChart({
   data,
   label,
   height = 240,
-  countLabel = '订单',
+  countLabel = tr('订单'),
 }: {
   data: TrendDatum[]
   label: string
@@ -34,7 +35,7 @@ export function TrendChart({
   const total = rows.reduce((s, r) => s + r.value, 0)
 
   return (
-    <div role="img" aria-label={`${label}：共 ${rows.length} 个时间段，合计 ${money(total.toFixed(2))}`} style={{ height }}>
+    <div role="img" aria-label={tr('{{label}}：共 {{length}} 个时间段，合计 {{v2}}', { label: label, length: rows.length, v2: money(total.toFixed(2)) })} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap={2}>
           <CartesianGrid vertical={false} stroke="#e2e8f0" strokeDasharray="0" />
@@ -68,7 +69,7 @@ export function TrendChart({
                   </p>
                   {d.orderCount !== undefined && (
                     <p className="text-slate-500">
-                      {countLabel} {d.orderCount} 笔
+                      {countLabel} {d.orderCount} {tr('笔')}
                     </p>
                   )}
                 </div>

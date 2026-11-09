@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { ROLE_LABELS, type TenantSummary } from '@/features/auth/types'
 import { errorMessage } from '@/lib/api'
 
+import { tr } from '@/lib/i18n'
 export function SelectStorePage() {
   const { session, switchTenant, leaveTenant, logout } = useAuth()
   const navigate = useNavigate()
@@ -32,7 +33,7 @@ export function SelectStorePage() {
     setLeavePending(true)
     try {
       const s = await leaveTenant(t.id)
-      toast.success(`已退出「${t.name}」`)
+      toast.success(tr('已退出「{{name}}」', { name: t.name }))
       setLeaving(null)
       if (s.tenants.length === 0) navigate('/onboarding', { replace: true })
     } catch (e) {
@@ -43,7 +44,7 @@ export function SelectStorePage() {
   }
 
   return (
-    <AuthLayout title="选择店铺" subtitle="请选择要进入的店铺">
+    <AuthLayout title={tr('选择店铺')} subtitle={tr('请选择要进入的店铺')}>
       <ul className="space-y-2">
         {session?.tenants.map((t) => (
           <li key={t.id} className="rounded-lg border border-slate-200">
@@ -74,14 +75,14 @@ export function SelectStorePage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-slate-500">{t.name}</span>
-                  <span className="block text-xs text-amber-700">店铺套餐已到期，暂时不能进入，请联系店主续费</span>
+                  <span className="block text-xs text-amber-700">{tr('店铺套餐已到期，暂时不能进入，请联系店主续费')}</span>
                 </span>
               </div>
             )}
             {t.role !== 'OWNER' && (
               <div className="border-t border-slate-100 px-3 py-1.5 text-right">
                 <button type="button" className="text-xs text-slate-500 hover:text-red-600" onClick={() => setLeaving(t)}>
-                  退出这家店铺
+                  {tr('退出这家店铺')}
                 </button>
               </div>
             )}
@@ -91,7 +92,7 @@ export function SelectStorePage() {
       <div className="mt-6 flex items-center justify-between">
         <Link to="/stores/new" className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline">
           <Plus className="size-4" aria-hidden />
-          新建店铺
+          {tr('新建店铺')}
         </Link>
         <Button
           variant="ghost"
@@ -101,15 +102,15 @@ export function SelectStorePage() {
             navigate('/login', { replace: true })
           }}
         >
-          退出登录
+          {tr('退出登录')}
         </Button>
       </div>
       <ConfirmDialog
         open={!!leaving}
         onOpenChange={(o) => !o && setLeaving(null)}
-        title={`退出「${leaving?.name ?? ''}」？`}
-        description="退出后不能再进入这家店铺，需要店主重新邀请。你开过的单会保留。"
-        confirmText="退出店铺"
+        title={tr('退出「{{v0}}」？', { v0: leaving?.name ?? '' })}
+        description={tr('退出后不能再进入这家店铺，需要店主重新邀请。你开过的单会保留。')}
+        confirmText={tr('退出店铺')}
         danger
         loading={leavePending}
         onConfirm={() => leaving && void leave(leaving)}

@@ -11,6 +11,7 @@ import { cn, formatDate } from '@/lib/utils'
 import { purchaseApi } from './api'
 import { PurchaseStatusBadge } from './PurchaseStatusBadge'
 
+import { tr } from '@/lib/i18n'
 /** 供应商详情页：采购记录 + 供应过的商品。 */
 export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) {
   const money = useMoney()
@@ -29,11 +30,11 @@ export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) 
   return (
     <>
       <CardHeader
-        title="采购记录"
+        title={tr('采购记录')}
         action={
           <Link to={`/purchases/new?supplierId=${supplierId}`} className={buttonVariants({ size: 'sm' })}>
             <Plus aria-hidden />
-            新建采购单
+            {tr('新建采购单')}
           </Link>
         }
       />
@@ -47,7 +48,7 @@ export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) 
             onClick={() => setTab(t)}
             className={cn('rounded-lg px-3 py-1.5 text-sm font-medium', tab === t ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100')}
           >
-            {t === 'orders' ? '采购单' : '供应过的商品'}
+            {t === 'orders' ? tr('采购单') : tr('供应过的商品')}
           </button>
         ))}
       </div>
@@ -58,7 +59,7 @@ export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) 
         ) : orders.isError ? (
           <ErrorState onRetry={() => void orders.refetch()} />
         ) : !orders.data || orders.data.items.length === 0 ? (
-          <EmptyState icon={Truck} title="还没有向该供应商采购过" />
+          <EmptyState icon={Truck} title={tr('还没有向该供应商采购过')} />
         ) : (
           <>
             <ul className="divide-y divide-slate-100">
@@ -68,7 +69,7 @@ export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) 
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-900">{o.orderNo}</p>
                       <p className="text-xs text-slate-500">
-                        {formatDate(o.orderDate)} · {o.itemCount} 种 / {o.totalQuantity} 件
+                        {formatDate(o.orderDate)} · {o.itemCount} {tr('种 /')} {o.totalQuantity} {tr('件')}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -80,7 +81,7 @@ export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) 
               ))}
             </ul>
             <div className="border-t border-slate-100 px-5 py-3">
-              <Pagination page={orders.data.page} totalPages={orders.data.totalPages} totalItems={orders.data.totalItems} unit="张" onChange={setPage} />
+              <Pagination page={orders.data.page} totalPages={orders.data.totalPages} totalItems={orders.data.totalItems} unit={tr('张')} onChange={setPage} />
             </div>
           </>
         )
@@ -89,7 +90,7 @@ export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) 
       ) : products.isError ? (
         <ErrorState onRetry={() => void products.refetch()} />
       ) : !products.data || products.data.length === 0 ? (
-        <EmptyState icon={Truck} title="暂无已收货的商品" description="采购单确认收货后，这里会列出该供应商供应过的商品" />
+        <EmptyState icon={Truck} title={tr('暂无已收货的商品')} description={tr('采购单确认收货后，这里会列出该供应商供应过的商品')} />
       ) : (
         <ul className="divide-y divide-slate-100">
           {products.data.map((p) => (
@@ -98,11 +99,11 @@ export function SupplierPurchaseHistory({ supplierId }: { supplierId: number }) 
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-900">{p.productName}</p>
                   <p className="text-xs text-slate-500">
-                    {p.sku} · 采购 {p.orderCount} 次 · 最近 {formatDate(p.lastReceivedAt)}
+                    {p.sku} {tr('· 采购')} {p.orderCount} {tr('次 · 最近')} {formatDate(p.lastReceivedAt)}
                   </p>
                 </div>
                 <span className="whitespace-nowrap text-sm tabular-nums text-slate-700">
-                  累计 {p.totalQuantity} {p.unit}
+                  {tr('累计')} {p.totalQuantity} {p.unit}
                 </span>
               </Link>
             </li>

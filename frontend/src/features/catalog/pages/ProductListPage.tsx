@@ -21,14 +21,15 @@ import { categoryApi, flattenCategories, productApi } from '../api'
 import { ProductThumb } from '../components/ProductThumb'
 import { STATUS_LABELS, type Product, type ProductStatus } from '../types'
 
+import { tr } from '@/lib/i18n'
 const SORTS = [
-  { value: '', label: '最近更新' },
-  { value: 'name,asc', label: '名称 A→Z' },
-  { value: 'stockQty,asc', label: '库存 少→多' },
-  { value: 'stockQty,desc', label: '库存 多→少' },
-  { value: 'retailPrice,asc', label: '零售价 低→高' },
-  { value: 'retailPrice,desc', label: '零售价 高→低' },
-  { value: 'createdAt,desc', label: '最新添加' },
+  { value: '', label: tr('最近更新') },
+  { value: 'name,asc', label: tr('名称 A→Z') },
+  { value: 'stockQty,asc', label: tr('库存 少→多') },
+  { value: 'stockQty,desc', label: tr('库存 多→少') },
+  { value: 'retailPrice,asc', label: tr('零售价 低→高') },
+  { value: 'retailPrice,desc', label: tr('零售价 高→低') },
+  { value: 'createdAt,desc', label: tr('最新添加') },
 ]
 
 export function ProductListPage() {
@@ -72,10 +73,10 @@ export function ProductListPage() {
         navigate(`/products/${p.id}`)
       } else {
         setSearch(code.trim())
-        if (!quiet) toast.error(`没有条码为「${code.trim()}」的商品`)
+        if (!quiet) toast.error(tr('没有条码为「{{v0}}」的商品', { v0: code.trim() }))
       }
     } catch (e) {
-      toast.error(errorMessage(e, '查找失败'))
+      toast.error(errorMessage(e, tr('查找失败')))
     }
   }
 
@@ -91,30 +92,30 @@ export function ProductListPage() {
   return (
     <div>
       <PageHeader
-        title="商品"
-        description="管理商品资料、价格和库存预警"
+        title={tr('商品')}
+        description={tr('管理商品资料、价格和库存预警')}
         actions={
           <>
             <Link to="/products/categories" className={buttonVariants({ variant: 'secondary' })}>
               <FolderTree aria-hidden />
-              商品分类
+              {tr('商品分类')}
             </Link>
             {canManage && (
               <Link to="/products/labels" className={buttonVariants({ variant: 'secondary' })}>
                 <Tag aria-hidden />
-                打印标签
+                {tr('打印标签')}
               </Link>
             )}
             <ImportButton type="products" />
             <ExcelExportButton
               path="/exports/products"
               params={{ q, categoryId, status, lowStock: lowStock || undefined }}
-              fallbackName="商品.xlsx"
+              fallbackName={tr('商品.xlsx')}
             />
             {canManage && (
               <Link to="/products/new" className={buttonVariants()}>
                 <Plus aria-hidden />
-                新增商品
+                {tr('新增商品')}
               </Link>
             )}
           </>
@@ -129,9 +130,9 @@ export function ProductListPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索商品名称、SKU 或条码"
+              placeholder={tr('搜索商品名称、SKU 或条码')}
               className="pl-9 pr-11"
-              aria-label="搜索商品"
+              aria-label={tr('搜索商品')}
               onKeyDown={(e) => {
                 // 扫码枪扫完按回车：条码对应唯一商品时直接打开详情
                 if (e.key === 'Enter' && looksLikeCode(search)) void openByCode(search, true)
@@ -141,12 +142,12 @@ export function ProductListPage() {
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Select
-              aria-label="按分类筛选"
+              aria-label={tr('按分类筛选')}
               value={categoryId ?? ''}
               onChange={(e) => update({ categoryId: e.target.value || null })}
               className="sm:w-40"
             >
-              <option value="">全部分类</option>
+              <option value="">{tr('全部分类')}</option>
               {flattenCategories(categories ?? []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
@@ -154,16 +155,16 @@ export function ProductListPage() {
               ))}
             </Select>
             <Select
-              aria-label="按状态筛选"
+              aria-label={tr('按状态筛选')}
               value={status ?? ''}
               onChange={(e) => update({ status: e.target.value || null })}
               className="sm:w-32"
             >
-              <option value="">全部状态</option>
-              <option value="ACTIVE">在售</option>
-              <option value="INACTIVE">已下架</option>
+              <option value="">{tr('全部状态')}</option>
+              <option value="ACTIVE">{tr('在售')}</option>
+              <option value="INACTIVE">{tr('已下架')}</option>
             </Select>
-            <Select aria-label="排序" value={sort} onChange={(e) => update({ sort: e.target.value || null })} className="sm:w-36">
+            <Select aria-label={tr('排序')} value={sort} onChange={(e) => update({ sort: e.target.value || null })} className="sm:w-36">
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
@@ -179,7 +180,7 @@ export function ProductListPage() {
                 lowStock ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
               )}
             >
-              只看低库存
+              {tr('只看低库存')}
             </button>
           </div>
         </div>
@@ -192,8 +193,8 @@ export function ProductListPage() {
           filtered ? (
             <EmptyState
               icon={Search}
-              title="没有符合条件的商品"
-              description="换个关键词或清除筛选条件试试"
+              title={tr('没有符合条件的商品')}
+              description={tr('换个关键词或清除筛选条件试试')}
               action={
                 <Button
                   variant="secondary"
@@ -203,20 +204,20 @@ export function ProductListPage() {
                   }}
                 >
                   <X aria-hidden />
-                  清除筛选
+                  {tr('清除筛选')}
                 </Button>
               }
             />
           ) : (
             <EmptyState
               icon={Package}
-              title="还没有商品"
-              description="添加第一个商品，录入名称、价格和库存，开始管理你的生意"
+              title={tr('还没有商品')}
+              description={tr('添加第一个商品，录入名称、价格和库存，开始管理你的生意')}
               action={
                 canManage && (
                   <Link to="/products/new" className={buttonVariants()}>
                     <Plus aria-hidden />
-                    新增商品
+                    {tr('新增商品')}
                   </Link>
                 )
               }
@@ -230,13 +231,13 @@ export function ProductListPage() {
                 <table className="w-full min-w-[600px] text-sm">
                   <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-4 py-3">商品</th>
-                      <th className="px-4 py-3">分类</th>
-                      <th className="px-4 py-3 text-right">零售价</th>
-                      <th className="hidden px-4 py-3 text-right xl:table-cell">批发价</th>
-                      {showCost && <th className="hidden px-4 py-3 text-right xl:table-cell">成本</th>}
-                      <th className="px-4 py-3 text-right">库存</th>
-                      <th className="px-4 py-3">状态</th>
+                      <th className="px-4 py-3">{tr('商品')}</th>
+                      <th className="px-4 py-3">{tr('分类')}</th>
+                      <th className="px-4 py-3 text-right">{tr('零售价')}</th>
+                      <th className="hidden px-4 py-3 text-right xl:table-cell">{tr('批发价')}</th>
+                      {showCost && <th className="hidden px-4 py-3 text-right xl:table-cell">{tr('成本')}</th>}
+                      <th className="px-4 py-3 text-right">{tr('库存')}</th>
+                      <th className="px-4 py-3">{tr('状态')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -293,7 +294,7 @@ export function ProductListPage() {
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <StockCell product={p} />
-                        {p.status === 'INACTIVE' && <Badge>已下架</Badge>}
+                        {p.status === 'INACTIVE' && <Badge>{tr('已下架')}</Badge>}
                       </div>
                     </Link>
                   </li>
@@ -305,7 +306,7 @@ export function ProductListPage() {
                   page={data.page}
                   totalPages={data.totalPages}
                   totalItems={data.totalItems}
-                  unit="件商品"
+                  unit={tr('件商品')}
                   onChange={(p) => update({ page: String(p) }, false)}
                 />
               </div>
@@ -324,14 +325,14 @@ function StockCell({ product }: { product: Product }) {
         {formatQty(product.stockQty)}
       </span>
       <span className="text-xs text-slate-500">{product.unit}</span>
-      {product.lowStock && <Badge tone="amber">低库存</Badge>}
+      {product.lowStock && <Badge tone="amber">{tr('低库存')}</Badge>}
     </span>
   )
 }
 
 function ListSkeleton() {
   return (
-    <div className="space-y-3 p-4" aria-label="加载中">
+    <div className="space-y-3 p-4" aria-label={tr('加载中')}>
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
           <div className="size-10 animate-pulse rounded-lg bg-slate-100" />

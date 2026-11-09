@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { Feature } from '@/features/billing/api'
 
+import { tr } from '@/lib/i18n'
 export interface NavItem {
   label: string
   to: string
@@ -26,14 +27,14 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: '仪表盘', to: '/', icon: LayoutDashboard },
-  { label: '商品', to: '/products', icon: Package },
-  { label: '库存', to: '/inventory', icon: Warehouse },
-  { label: '销售', to: '/sales', icon: ReceiptText },
-  { label: '采购', to: '/purchases', icon: Truck, managerOnly: true, feature: 'PURCHASING' },
-  { label: '客户', to: '/customers', icon: Contact, feature: 'CUSTOMERS' },
-  { label: '应收账款', to: '/receivables', icon: HandCoins, managerOnly: true, feature: 'RECEIVABLES' },
-  { label: '供应商', to: '/suppliers', icon: Factory, managerOnly: true, feature: 'SUPPLIERS' },
-  { label: '报表', to: '/reports', icon: ChartColumn, managerOnly: true },
-  { label: '设置', to: '/settings', icon: Settings },
+  { label: tr('仪表盘'), to: '/', icon: LayoutDashboard },
+  { label: tr('商品'), to: '/products', icon: Package },
+  { label: tr('库存'), to: '/inventory', icon: Warehouse },
+  { label: tr('销售'), to: '/sales', icon: ReceiptText },
+  { label: tr('采购'), to: '/purchases', icon: Truck, managerOnly: true, feature: 'PURCHASING' },
+  { label: tr('客户'), to: '/customers', icon: Contact, feature: 'CUSTOMERS' },
+  { label: tr('应收账款'), to: '/receivables', icon: HandCoins, managerOnly: true, feature: 'RECEIVABLES' },
+  { label: tr('供应商'), to: '/suppliers', icon: Factory, managerOnly: true, feature: 'SUPPLIERS' },
+  { label: tr('报表'), to: '/reports', icon: ChartColumn, managerOnly: true },
+  { label: tr('设置'), to: '/settings', icon: Settings },
 ]

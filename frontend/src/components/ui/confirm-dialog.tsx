@@ -2,13 +2,14 @@ import { AlertDialog } from 'radix-ui'
 import type { ReactNode } from 'react'
 import { Button } from './button'
 
+import { tr } from '@/lib/i18n'
 /** 二次确认对话框（删除等不可撤销操作）。由调用方控制 open。 */
 export function ConfirmDialog({
   open,
   onOpenChange,
   title,
   description,
-  confirmText = '确认',
+  confirmText = tr('确认'),
   danger,
   loading,
   onConfirm,
@@ -34,7 +35,7 @@ export function ConfirmDialog({
           <div className="mt-6 flex justify-end gap-2">
             <AlertDialog.Cancel asChild>
               <Button variant="secondary" disabled={loading}>
-                取消
+                {tr('取消')}
               </Button>
             </AlertDialog.Cancel>
             <Button

@@ -14,7 +14,8 @@ import { CustomerReceivableCard } from '@/features/receivables/CustomerReceivabl
 import { CustomerSalesHistory } from '@/features/sales/CustomerSalesHistory'
 import { NotFoundCard, PartnerDetailLayout } from './PartnerDetail'
 
-const BACK = { to: '/customers', label: '返回客户列表' }
+import { tr } from '@/lib/i18n'
+const BACK = { to: '/customers', label: tr('返回客户列表') }
 
 export function CustomerDetailPage() {
   const id = Number(useParams().id)
@@ -30,21 +31,21 @@ export function CustomerDetailPage() {
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: ['customer', id] })
       await queryClient.invalidateQueries({ queryKey: ['customers'] })
-      toast.success('客户已删除')
+      toast.success(tr('客户已删除'))
       navigate('/customers', { replace: true })
     },
     onError: (e) => {
       setDeleting(false)
-      toast.error(errorMessage(e, '删除失败'))
+      toast.error(errorMessage(e, tr('删除失败')))
     },
   })
 
-  if (isLoading) return <div className="h-80 animate-pulse rounded-xl bg-slate-100" aria-label="加载中" />
+  if (isLoading) return <div className="h-80 animate-pulse rounded-xl bg-slate-100" aria-label={tr('加载中')} />
   if (isError || !c) {
     return (
       <NotFoundCard
         back={BACK}
-        title="客户"
+        title={tr('客户')}
         error={errorMessage(error)}
         onRetry={() => void refetch()}
         notFound={errorCode(error) === 'CUSTOMER_NOT_FOUND'}
@@ -57,17 +58,17 @@ export function CustomerDetailPage() {
       <PartnerDetailLayout
         back={BACK}
         title={c.name}
-        badge={<Badge tone={c.priceTier === 'WHOLESALE' ? 'blue' : 'slate'}>{PRICE_TIER_LABELS[c.priceTier]}客户</Badge>}
+        badge={<Badge tone={c.priceTier === 'WHOLESALE' ? 'blue' : 'slate'}>{PRICE_TIER_LABELS[c.priceTier]}{tr('客户')}</Badge>}
         canManage={canManage}
         onEdit={() => setEditing(true)}
         onDelete={() => setDeleting(true)}
         info={[
-          { label: '客户类型', value: CUSTOMER_TYPE_LABELS[c.customerType] },
-          { label: '联系电话', value: c.phone },
-          { label: '邮箱', value: c.email },
-          { label: '地址', value: c.address },
-          { label: '备注', value: c.notes },
-          { label: '添加时间', value: formatDateTime(c.createdAt) },
+          { label: tr('客户类型'), value: CUSTOMER_TYPE_LABELS[c.customerType] },
+          { label: tr('联系电话'), value: c.phone },
+          { label: tr('邮箱'), value: c.email },
+          { label: tr('地址'), value: c.address },
+          { label: tr('备注'), value: c.notes },
+          { label: tr('添加时间'), value: formatDateTime(c.createdAt) },
         ]}
         history={
           <div className="space-y-6">
@@ -81,9 +82,9 @@ export function CustomerDetailPage() {
       <ConfirmDialog
         open={deleting}
         onOpenChange={setDeleting}
-        title={`删除客户「${c.name}」？`}
-        description="删除后不再出现在客户列表中。已有订单中的客户名称会保留。"
-        confirmText="删除"
+        title={tr('删除客户「{{name}}」？', { name: c.name })}
+        description={tr('删除后不再出现在客户列表中。已有订单中的客户名称会保留。')}
+        confirmText={tr('删除')}
         danger
         loading={remove.isPending}
         onConfirm={() => remove.mutate()}

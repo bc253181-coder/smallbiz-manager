@@ -68,6 +68,11 @@ public class AuthController {
         return authService.updateProfile(CurrentUser.userId(), req);
     }
 
+    @PutMapping("/me/locale")
+    public UserView updateLocale(@Valid @RequestBody com.smallbiz.auth.AuthDtos.LocaleRequest req) {
+        return authService.updateLocale(CurrentUser.userId(), req.locale());
+    }
+
     @PutMapping("/me/password")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest req) {
         authService.changePassword(CurrentUser.userId(), req);

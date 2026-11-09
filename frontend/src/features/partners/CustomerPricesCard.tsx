@@ -18,6 +18,7 @@ import { useCanManage } from '@/lib/hooks'
 import { isMoney, toCents } from '@/lib/money'
 import { customerPriceApi, type CustomerPrice } from './customerPrices'
 
+import { tr } from '@/lib/i18n'
 /** 编辑中的协议价：来自已有行或刚选中的商品。 */
 interface Editing {
   productId: number
@@ -36,7 +37,7 @@ function discountText(price: string, wholesale: string | null, retail: string) {
   const ref = toCents(wholesale ?? retail)
   const p = toCents(price)
   if (!ref || p === null || p >= ref) return null
-  return `比${wholesale ? '批发价' : '零售价'}低 ${(((ref - p) / ref) * 100).toFixed(1)}%`
+  return tr('比{{v0}}低 {{v1}}%', { v0: wholesale ? tr('批发价') : tr('零售价'), v1: (((ref - p) / ref) * 100).toFixed(1) })
 }
 
 /** 客户详情页的「协议价」卡片（店主/管理员）。 */
@@ -60,19 +61,19 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
     onSuccess: async (r) => {
       await refresh()
       await queryClient.invalidateQueries({ queryKey: ['product-customer-prices', r.productId] })
-      toast.success(`已设置「${r.productName}」的协议价 ${money(r.price)}`)
+      toast.success(tr('已设置「{{productName}}」的协议价 {{price}}', { productName: r.productName, price: money(r.price) }))
       setEditing(null)
     },
-    onError: (e) => toast.error(errorMessage(e, '保存失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('保存失败'))),
   })
   const remove = useMutation({
     mutationFn: (productId: number) => customerPriceApi.remove(customerId, productId),
     onSuccess: async () => {
       await refresh()
-      toast.success('协议价已删除')
+      toast.success(tr('协议价已删除'))
       setRemoving(null)
     },
-    onError: (e) => toast.error(errorMessage(e, '删除失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('删除失败'))),
   })
 
   if (!canManage) return null
@@ -102,13 +103,13 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
   return (
     <Card>
       <CardHeader
-        title="协议价"
+        title={tr('协议价')}
         description={
           allowed
-            ? '给这个客户的专门价格，开单时自动带出（优先于批发价 / 零售价）'
+            ? tr('给这个客户的专门价格，开单时自动带出（优先于批发价 / 零售价）')
             : data?.length
-              ? '专业版已到期：协议价暂不生效，开单按批发价 / 零售价，续费后恢复'
-              : '专业版功能：为老客户设置固定价格，开单自动带出'
+              ? tr('专业版已到期：协议价暂不生效，开单按批发价 / 零售价，续费后恢复')
+              : tr('专业版功能：为老客户设置固定价格，开单自动带出')
         }
         action={allowed && <ImportButton type="customer-prices" size="sm" />}
       />
@@ -116,22 +117,22 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
         <div className="px-5 pb-5">
           <Link to="/settings/billing" className={buttonVariants({ size: 'sm', variant: 'secondary' })}>
             <Tags aria-hidden />
-            了解专业版
+            {tr('了解专业版')}
           </Link>
         </div>
       ) : (
         <div className="space-y-3 px-5 pb-5">
-          {allowed && <ProductPicker onPick={startNew} placeholder="搜索或扫码添加商品，设置协议价" />}
+          {allowed && <ProductPicker onPick={startNew} placeholder={tr('搜索或扫码添加商品，设置协议价')} />}
           {isLoading ? (
             <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
           ) : !data?.length ? (
             <p className="rounded-lg border border-dashed border-slate-300 py-6 text-center text-sm text-slate-500">
-              还没有协议价。添加商品后，给「{customerName}」开单会自动使用协议价。
+              {tr('还没有协议价。添加商品后，给「')}{customerName}{tr('」开单会自动使用协议价。')}
             </p>
           ) : (
             <>
               {data.length > 8 && (
-                <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="在协议价中查找商品" aria-label="查找协议价商品" />
+                <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={tr('在协议价中查找商品')} aria-label={tr('查找协议价商品')} />
               )}
               <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
                 {rows.map((r) => {
@@ -143,7 +144,7 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
                           {r.productName}
                         </Link>
                         <p className="truncate text-xs text-slate-500">
-                          {r.wholesalePrice ? `批发 ${money(r.wholesalePrice)} · ` : ''}零售 {money(r.retailPrice)}
+                          {r.wholesalePrice ? tr('批发 {{wholesalePrice}} · ', { wholesalePrice: money(r.wholesalePrice) }) : ''}{tr('零售')} {money(r.retailPrice)}
                           {r.notes && ` · ${r.notes}`}
                         </p>
                       </div>
@@ -152,7 +153,7 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
                         {r.belowCost ? (
                           <p className="flex items-center justify-end gap-1 text-xs text-red-600">
                             <AlertTriangle className="size-3" aria-hidden />
-                            低于成本
+                            {tr('低于成本')}
                           </p>
                         ) : (
                           off && <p className="text-xs text-slate-500">{off}</p>
@@ -164,7 +165,7 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
                             variant="ghost"
                             size="icon"
                             className="size-8"
-                            aria-label={`修改 ${r.productName} 的协议价`}
+                            aria-label={tr('修改 {{productName}} 的协议价', { productName: r.productName })}
                             onClick={() =>
                               setEditing({ ...r, costPrice: r.costPrice, notes: r.notes ?? '', isNew: false })
                             }
@@ -175,7 +176,7 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
                             variant="ghost"
                             size="icon"
                             className="size-8 text-slate-400 hover:text-red-600"
-                            aria-label={`删除 ${r.productName} 的协议价`}
+                            aria-label={tr('删除 {{productName}} 的协议价', { productName: r.productName })}
                             onClick={() => setRemoving(r)}
                           >
                             <Trash2 aria-hidden />
@@ -195,9 +196,9 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
         <FormDialog
           open
           onClose={() => setEditing(null)}
-          title={editing.isNew ? '设置协议价' : '修改协议价'}
+          title={editing.isNew ? tr('设置协议价') : tr('修改协议价')}
           description={`${customerName} · ${editing.productName}`}
-          submitText="保存"
+          submitText={tr('保存')}
           saving={save.isPending}
           onSubmit={(e) => {
             e.preventDefault()
@@ -205,11 +206,11 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
           }}
         >
           <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            零售价 {money(editing.retailPrice)}
-            {editing.wholesalePrice && ` · 批发价 ${money(editing.wholesalePrice)}`}
-            {editing.costPrice && ` · 进货成本 ${money(editing.costPrice)}`}
+            {tr('零售价')} {money(editing.retailPrice)}
+            {editing.wholesalePrice && tr(' · 批发价 {{wholesalePrice}}', { wholesalePrice: money(editing.wholesalePrice) })}
+            {editing.costPrice && tr(' · 进货成本 {{costPrice}}', { costPrice: money(editing.costPrice) })}
           </p>
-          <Field label={`协议价（每${editing.unit}）`} htmlFor="cp-price" error={priceOk ? undefined : '金额格式不正确'} required>
+          <Field label={tr('协议价（每{{unit}}）', { unit: editing.unit })} htmlFor="cp-price" error={priceOk ? undefined : tr('金额格式不正确')} required>
             <Input
               id="cp-price"
               inputMode="decimal"
@@ -222,10 +223,10 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
           {belowCost && (
             <p className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
               <AlertTriangle className="size-4 shrink-0" aria-hidden />
-              协议价低于进货成本，按这个价格卖会亏本。仍可保存。
+              {tr('协议价低于进货成本，按这个价格卖会亏本。仍可保存。')}
             </p>
           )}
-          <Field label="备注" htmlFor="cp-notes" hint="例如：2026 年框架协议">
+          <Field label={tr('备注')} htmlFor="cp-notes" hint={tr('例如：2026 年框架协议')}>
             <Input id="cp-notes" maxLength={200} value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} />
           </Field>
         </FormDialog>
@@ -233,9 +234,9 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
       <ConfirmDialog
         open={!!removing}
         onOpenChange={(o) => !o && setRemoving(null)}
-        title={`删除「${removing?.productName ?? ''}」的协议价？`}
-        description="删除后给这个客户开单会按批发价 / 零售价。已开的单不受影响。"
-        confirmText="删除"
+        title={tr('删除「{{v0}}」的协议价？', { v0: removing?.productName ?? '' })}
+        description={tr('删除后给这个客户开单会按批发价 / 零售价。已开的单不受影响。')}
+        confirmText={tr('删除')}
         danger
         loading={remove.isPending}
         onConfirm={() => removing && remove.mutate(removing.productId)}

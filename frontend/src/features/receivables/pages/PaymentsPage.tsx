@@ -15,10 +15,11 @@ import { formatDateTime, useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { METHOD_LABELS, RECEIVABLE_QUERY_KEYS, receivableApi, type CustomerPayment } from '../api'
 
+import { tr } from '@/lib/i18n'
 const STATUS_TABS = [
-  { value: '', label: '全部' },
-  { value: 'VALID', label: '有效' },
-  { value: 'VOIDED', label: '已作废' },
+  { value: '', label: tr('全部') },
+  { value: 'VALID', label: tr('有效') },
+  { value: 'VOIDED', label: tr('已作废') },
 ]
 
 export function PaymentsPage() {
@@ -45,8 +46,8 @@ export function PaymentsPage() {
 
   return (
     <div>
-      <PageHeader title="收款记录" description="收款只能作废、不能修改；作废后相关销售单恢复为未结清" back={{ to: '/receivables', label: '应收账款' }} />
-      <div className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1" role="tablist" aria-label="按状态筛选">
+      <PageHeader title={tr('收款记录')} description={tr('收款只能作废、不能修改；作废后相关销售单恢复为未结清')} back={{ to: '/receivables', label: tr('应收账款') }} />
+      <div className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1" role="tablist" aria-label={tr('按状态筛选')}>
         {STATUS_TABS.map((t) => (
           <button
             key={t.value}
@@ -64,7 +65,7 @@ export function PaymentsPage() {
         ))}
         {customerId && (
           <button type="button" onClick={() => update({ customerId: null, page: null })} className="ml-auto whitespace-nowrap text-sm text-blue-600 hover:underline">
-            显示所有客户
+            {tr('显示所有客户')}
           </button>
         )}
       </div>
@@ -74,7 +75,7 @@ export function PaymentsPage() {
         ) : isError ? (
           <ErrorState onRetry={() => void refetch()} message={errorMessage(error)} />
         ) : !data?.items.length ? (
-          <EmptyState icon={ReceiptText} title="还没有收款记录" />
+          <EmptyState icon={ReceiptText} title={tr('还没有收款记录')} />
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.items.map((p) => (
@@ -83,14 +84,14 @@ export function PaymentsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-slate-900">{p.customerName ?? '—'}</span>
                     <span className="font-mono text-xs text-slate-500">{p.paymentNo}</span>
-                    {p.status === 'VOIDED' && <Badge tone="red">已作废</Badge>}
+                    {p.status === 'VOIDED' && <Badge tone="red">{tr('已作废')}</Badge>}
                   </div>
                   <p className="text-xs text-slate-500">
-                    {formatDateTime(p.receivedAt)} · {METHOD_LABELS[p.method]} · 经手人 {p.createdByName ?? '—'}
+                    {formatDateTime(p.receivedAt)} · {METHOD_LABELS[p.method]} {tr('· 经手人')} {p.createdByName ?? '—'}
                     {p.notes ? ` · ${p.notes}` : ''}
                   </p>
                   <p className="mt-1 text-xs text-slate-600">
-                    冲抵：
+                    {tr('冲抵：')}
                     {p.allocations.map((a, i) => (
                       <span key={a.salesOrderId}>
                         {i > 0 && '、'}
@@ -103,7 +104,7 @@ export function PaymentsPage() {
                   </p>
                   {p.status === 'VOIDED' && (
                     <p className="mt-1 text-xs text-red-700">
-                      {formatDateTime(p.voidedAt)} 由 {p.voidedByName ?? '—'} 作废：{p.voidReason}
+                      {formatDateTime(p.voidedAt)} {tr('由')} {p.voidedByName ?? '—'} {tr('作废：')}{p.voidReason}
                     </p>
                   )}
                 </div>
@@ -113,7 +114,7 @@ export function PaymentsPage() {
                   </span>
                   {p.status === 'VALID' && (
                     <Button size="sm" variant="ghost" className="text-red-600" onClick={() => setVoiding(p)}>
-                      作废
+                      {tr('作废')}
                     </Button>
                   )}
                 </div>
@@ -141,34 +142,34 @@ function VoidDialog({ payment, onClose }: { payment: CustomerPayment; onClose: (
     mutationFn: () => receivableApi.voidPayment(payment.id, reason.trim()),
     onSuccess: async () => {
       await Promise.all(RECEIVABLE_QUERY_KEYS.map((k) => queryClient.invalidateQueries({ queryKey: k })))
-      toast.success('收款已作废，相关销售单已恢复为未结清')
+      toast.success(tr('收款已作废，相关销售单已恢复为未结清'))
       onClose()
     },
-    onError: (e) => toast.error(errorMessage(e, '作废失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('作废失败'))),
   })
   return (
     <FormDialog
       open
       onClose={onClose}
-      title={`作废收款 ${payment.paymentNo}`}
-      description={`${payment.customerName ?? ''} · ${money(payment.amount)}。作废后不能恢复，如需要请重新登记收款。`}
-      submitText="确认作废"
+      title={tr('作废收款 {{paymentNo}}', { paymentNo: payment.paymentNo })}
+      description={tr('{{v0}} · {{amount}}。作废后不能恢复，如需要请重新登记收款。', { v0: payment.customerName ?? '', amount: money(payment.amount) })}
+      submitText={tr('确认作废')}
       saving={mutation.isPending}
       onSubmit={(e) => {
         e.preventDefault()
         if (!reason.trim()) {
-          setError('请填写作废原因')
+          setError(tr('请填写作废原因'))
           return
         }
         mutation.mutate()
       }}
     >
-      <Field label="作废原因" htmlFor="void-reason" error={error ?? undefined} required>
+      <Field label={tr('作废原因')} htmlFor="void-reason" error={error ?? undefined} required>
         <Input
           id="void-reason"
           value={reason}
           maxLength={200}
-          placeholder="例如：金额登记错误"
+          placeholder={tr('例如：金额登记错误')}
           onChange={(e) => {
             setReason(e.target.value)
             setError(null)

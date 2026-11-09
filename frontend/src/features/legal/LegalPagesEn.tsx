@@ -1,0 +1,151 @@
+import { Link } from 'react-router'
+
+const SUPPORT_WECHAT = 'Pianzibudehaosi_1A'
+
+/** English Terms of Service (same content as the Chinese version; the Chinese version prevails if they differ). */
+export function TermsContentEn() {
+  return (
+    <>
+      <p>
+        Welcome to SmallBiz Manager (“the Service”), an online inventory, sales and business management tool for small
+        merchants. By signing up you confirm that you have read and agree to these Terms and our{' '}
+        <Link to="/privacy" className="text-blue-600 hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
+
+      <section>
+        <h2>1. Your account</h2>
+        <ul>
+          <li>Sign up with a real email address you can access and keep your password safe. Actions taken with your account are treated as yours.</li>
+          <li>One account can create or join several stores. The store owner is responsible for the store's data and members.</li>
+          <li>If your account is misused, change your password immediately and contact us. Changing your password signs you out on all devices.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>2. Plans and payment</h2>
+        <ul>
+          <li>The Free plan can be used indefinitely, with feature and quantity limits (for example up to 100 products). Prices and features of paid plans such as Standard are as shown on the “Plan &amp; billing” page.</li>
+          <li>You can pay by QR code on this website and upload a payment screenshot, which we check manually before activating; or activate with an activation code. Plans apply per store and take effect immediately.</li>
+          <li>The first-month trial can be used once per store. Plans do not renew automatically — please renew before they expire.</li>
+          <li>When a plan expires, the store returns to the Free plan: all existing data is kept, paid features are paused, and you can continue after renewing.</li>
+          <li>If the Service is unavailable for a long time because of us, contact support and we will compensate you, for example by extending your plan. For other refund requests, please contact support.</li>
+          <li>Activation codes can be used only once — do not resell or publish them. We may refuse codes that are voided, stolen or of unknown origin.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>3. Your data</h2>
+        <ul>
+          <li>Business data you enter — products, stock, customers, suppliers, orders — belongs to you (the store). We store and process it only to provide the Service, and never sell it or use it for other purposes.</li>
+          <li>Each store's data is isolated and cannot be seen by other stores.</li>
+          <li>Customer and supplier details you enter may include other people's personal information. Make sure you obtained it lawfully and have the right to use it.</li>
+          <li>You can export reports at any time. To close your account or delete store data, please contact support.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Acceptable use</h2>
+        <p>You must not use the Service for illegal activities or to record illegal transactions, try to access other stores' data, attack or interfere with the Service, or register accounts or call the API in bulk by automated means. We may suspend or terminate accounts that break these rules.</p>
+      </section>
+
+      <section>
+        <h2>5. Changes and interruptions</h2>
+        <ul>
+          <li>We do our best to keep the Service stable and back up data regularly, but cannot guarantee it will never be interrupted or error-free. We try to announce maintenance in advance.</li>
+          <li>Figures such as gross profit and stock value are calculated from the data you enter and are for business reference only, not financial or tax advice.</li>
+          <li>To the extent permitted by law, we are not liable for indirect losses arising from use of the Service.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Updates to these Terms</h2>
+        <p>We may update these Terms. We will notify you of important changes on the website; continuing to use the Service after an update means you accept the updated Terms.</p>
+      </section>
+
+      <section>
+        <h2>7. Contact us</h2>
+        <p>
+          Use the help button in the bottom-right corner of the website, or add our support WeChat{' '}
+          <span className="font-mono">{SUPPORT_WECHAT}</span>.
+        </p>
+      </section>
+    </>
+  )
+}
+
+/** English Privacy Policy. */
+export function PrivacyContentEn() {
+  return (
+    <>
+      <p>This policy explains what information we collect, why, and how we protect it. We collect only what is needed to provide the Service.</p>
+
+      <section>
+        <h2>1. Information we collect</h2>
+        <ul>
+          <li>
+            <strong>Account information</strong>: email, name, password (we store only an irreversible hash — nobody can see your password), and an optional mobile number.
+          </li>
+          <li>
+            <strong>Store details</strong>: store name, business type, time zone, currency, and optional phone and address.
+          </li>
+          <li>
+            <strong>Business data</strong>: products, stock, customers, suppliers, purchase and sales orders you enter. Customer and supplier contact details are entered by you; we store and process them on your behalf.
+          </li>
+          <li>
+            <strong>Payment information</strong>: the screenshot, transaction ID and message you upload when paying by QR code, used only to match your payment. We never collect card numbers or payment passwords.
+          </li>
+          <li>
+            <strong>Support chats</strong>: questions the help assistant cannot answer are recorded to improve its answers, without your account information.
+          </li>
+          <li>
+            <strong>Technical information</strong>: your IP address, used to prevent password guessing and abuse (for example limiting failed sign-ins).
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>2. Cookies</h2>
+        <p>We use a single essential cookie to keep you signed in (for up to 30 days); scripts on the page cannot read it. We use no advertising cookies and no third-party analytics or tracking. Your language choice is remembered in your browser and on your account.</p>
+      </section>
+
+      <section>
+        <h2>3. How we use and share information</h2>
+        <ul>
+          <li>Only to provide, maintain and improve the Service, and to handle payments and support requests.</li>
+          <li>We do not sell your information or share it with third parties for marketing.</li>
+          <li>Data is stored on cloud servers we rent. We do not disclose your information to anyone else unless required by law.</li>
+          <li>Platform administrators can see only store names, plan status and the owner's email and name (to handle payments and support), not stores' business data.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Retention and security</h2>
+        <ul>
+          <li>We keep your data while your account exists; expiry of a plan does not delete data. After you close your account we delete or anonymize your data within a reasonable period, unless the law requires us to keep it.</li>
+          <li>Security measures include HTTPS everywhere, irreversible password hashing, isolation between stores, private payment screenshots and regular backups.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. Your rights</h2>
+        <p>You can view and edit your profile and store details in Settings. To access, export, correct or delete your personal information, or close your account, contact support and we will respond within 15 working days.</p>
+      </section>
+
+      <section>
+        <h2>6. Minors</h2>
+        <p>The Service is intended for business operators and not for anyone under 18.</p>
+      </section>
+
+      <section>
+        <h2>7. Updates and contact</h2>
+        <p>
+          We will notify you on the website when this policy changes. If you have questions, use the help button in the bottom-right corner, or add our support WeChat{' '}
+          <span className="font-mono">{SUPPORT_WECHAT}</span>.
+        </p>
+      </section>
+    </>
+  )
+}

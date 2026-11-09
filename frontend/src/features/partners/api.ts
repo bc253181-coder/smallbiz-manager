@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import type { Page } from '@/features/catalog/types'
 
+import { tr } from '@/lib/i18n'
 export type CustomerType = 'INDIVIDUAL' | 'BUSINESS'
 export type PriceTier = 'RETAIL' | 'WHOLESALE'
 
@@ -52,8 +53,8 @@ export interface SupplierInput {
   notes: string
 }
 
-export const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = { INDIVIDUAL: '个人', BUSINESS: '企业/商户' }
-export const PRICE_TIER_LABELS: Record<PriceTier, string> = { RETAIL: '零售价', WHOLESALE: '批发价' }
+export const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = { INDIVIDUAL: tr('个人'), BUSINESS: tr('企业/商户') }
+export const PRICE_TIER_LABELS: Record<PriceTier, string> = { RETAIL: tr('零售价'), WHOLESALE: tr('批发价') }
 
 function clean(params: object) {
   return Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))

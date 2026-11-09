@@ -1,6 +1,7 @@
 import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 import type { SessionResponse } from '@/features/auth/types'
 
+import { hasTranslation, tr } from '@/lib/i18n'
 /** 后端统一错误格式。 */
 export interface ApiErrorBody {
   code: string
@@ -85,11 +86,11 @@ api.interceptors.response.use(undefined, async (error: AxiosError<ApiErrorBody>)
 })
 
 /** 从错误中取出给用户看的提示文字。 */
-export function errorMessage(error: unknown, fallback = '操作失败，请稍后重试'): string {
+export function errorMessage(error: unknown, fallback = tr('操作失败，请稍后重试')): string {
   if (error instanceof AxiosError) {
     const body = error.response?.data as ApiErrorBody | undefined
-    if (body?.message) return body.message
-    if (!error.response) return '网络连接失败，请检查网络后重试'
+    if (body?.message) return serverText(body.message, body.code)
+    if (!error.response) return tr('网络连接失败，请检查网络后重试')
   }
   return fallback
 }
@@ -98,9 +99,20 @@ export function errorMessage(error: unknown, fallback = '操作失败，请稍�
 export function fieldErrors(error: unknown): Record<string, string> {
   if (error instanceof AxiosError) {
     const body = error.response?.data as ApiErrorBody | undefined
-    return body?.details?.fields ?? {}
+    const fields = body?.details?.fields ?? {}
+    return Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, serverText(v)]))
   }
   return {}
+}
+
+/**
+ * 后端提示是中文：英文界面下先找逐字翻译，找不到再用按错误代码的通用说明（ERR:代码），都没有就显示原文。
+ * 含有商品名等变量的提示通常没有逐字翻译，会显示通用说明。
+ */
+export function serverText(message: string, code?: string): string {
+  if (hasTranslation(message)) return tr(message)
+  if (code && hasTranslation(`ERR:${code}`)) return tr(`ERR:${code}`)
+  return message
 }
 
 export function errorCode(error: unknown): string | undefined {

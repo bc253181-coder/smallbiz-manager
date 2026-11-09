@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/form'
 import { ErrorState, PageHeader } from '@/components/ui/page'
-import { errorMessage } from '@/lib/api'
+import { errorMessage , serverText } from '@/lib/api'
 import { useFeature, usePlan } from '@/features/billing/api'
 import { useMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -15,13 +15,14 @@ import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
 import { downloadCsv, reportApi, type GroupBy } from '../api'
 import { TrendChart } from '../TrendChart'
 
+import { tr } from '@/lib/i18n'
 type Tab = 'sales' | 'products' | 'customers' | 'purchases' | 'inventory'
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'sales', label: '销售' },
-  { value: 'products', label: '商品排行' },
-  { value: 'customers', label: '客户排行' },
-  { value: 'purchases', label: '采购' },
-  { value: 'inventory', label: '库存' },
+  { value: 'sales', label: tr('销售') },
+  { value: 'products', label: tr('商品排行') },
+  { value: 'customers', label: tr('客户排行') },
+  { value: 'purchases', label: tr('采购') },
+  { value: 'inventory', label: tr('库存') },
 ]
 
 /** 本地日期 → YYYY-MM-DD（避免 toISOString 的 UTC 偏移）。 */
@@ -35,11 +36,11 @@ function presets() {
   const m = now.getMonth()
   const daysAgo = (n: number) => new Date(y, m, now.getDate() - n)
   return [
-    { key: 'month', label: '本月', from: ymd(new Date(y, m, 1)), to: ymd(now) },
-    { key: 'last-month', label: '上月', from: ymd(new Date(y, m - 1, 1)), to: ymd(new Date(y, m, 0)) },
-    { key: '7d', label: '近 7 天', from: ymd(daysAgo(6)), to: ymd(now) },
-    { key: '30d', label: '近 30 天', from: ymd(daysAgo(29)), to: ymd(now) },
-    { key: 'year', label: '今年', from: ymd(new Date(y, 0, 1)), to: ymd(now) },
+    { key: 'month', label: tr('本月'), from: ymd(new Date(y, m, 1)), to: ymd(now) },
+    { key: 'last-month', label: tr('上月'), from: ymd(new Date(y, m - 1, 1)), to: ymd(new Date(y, m, 0)) },
+    { key: '7d', label: tr('近 7 天'), from: ymd(daysAgo(6)), to: ymd(now) },
+    { key: '30d', label: tr('近 30 天'), from: ymd(daysAgo(29)), to: ymd(now) },
+    { key: 'year', label: tr('今年'), from: ymd(new Date(y, 0, 1)), to: ymd(now) },
   ]
 }
 
@@ -67,28 +68,28 @@ export function ReportsPage() {
 
   return (
     <div>
-      <PageHeader title="经营报表" description="已取消的销售单和未收货的采购单不计入统计；日期按店铺时区计算" />
+      <PageHeader title={tr('经营报表')} description={tr('已取消的销售单和未收货的采购单不计入统计；日期按店铺时区计算')} />
 
       {!fullReports && (
         <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
           <Lock className="size-4 shrink-0" aria-hidden />
-          免费版可查看本月和近 30 天的报表；查看更早的数据和导出需要标准版。
+          {tr('免费版可查看本月和近 30 天的报表；查看更早的数据和导出需要标准版。')}
           <Link to="/settings/billing" className="font-medium underline">
-            查看套餐
+            {tr('查看套餐')}
           </Link>
         </p>
       )}
 
       <Card className="mb-6">
         <CardBody className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-1.5" aria-label="快捷日期">
+          <div className="flex flex-wrap gap-1.5" aria-label={tr('快捷日期')}>
             {all.map((p) => (
               <button
                 key={p.key}
                 type="button"
                 aria-pressed={from === p.from && to === p.to}
                 disabled={locked(p.from)}
-                title={locked(p.from) ? '需要标准版' : undefined}
+                title={locked(p.from) ? tr('需要标准版') : undefined}
                 onClick={() => update({ from: p.from, to: p.to })}
                 className={cn(
                   'inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50',
@@ -96,14 +97,14 @@ export function ReportsPage() {
                 )}
               >
                 {p.label}
-                {locked(p.from) && <Lock className="size-3" aria-label="需要标准版" />}
+                {locked(p.from) && <Lock className="size-3" aria-label={tr('需要标准版')} />}
               </button>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Input type="date" aria-label="开始日期" value={from} max={to} min={fullReports ? undefined : earliest} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
-            <span className="text-slate-400">至</span>
-            <Input type="date" aria-label="结束日期" value={to} min={from} onChange={(e) => e.target.value && update({ to: e.target.value })} className="w-40" />
+            <Input type="date" aria-label={tr('开始日期')} value={from} max={to} min={fullReports ? undefined : earliest} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
+            <span className="text-slate-400">{tr('至')}</span>
+            <Input type="date" aria-label={tr('结束日期')} value={to} min={from} onChange={(e) => e.target.value && update({ to: e.target.value })} className="w-40" />
           </div>
         </CardBody>
       </Card>
@@ -125,7 +126,7 @@ export function ReportsPage() {
 
       {invalid ? (
         <Card>
-          <p className="p-6 text-center text-sm text-red-600">开始日期不能晚于结束日期</p>
+          <p className="p-6 text-center text-sm text-red-600">{tr('开始日期不能晚于结束日期')}</p>
         </Card>
       ) : tab === 'sales' ? (
         <SalesTab from={from} to={to} />
@@ -149,9 +150,9 @@ function ExportButton({ path, params, name }: { path: string; params: Record<str
   const canExport = useFeature('EXPORT')
   if (!canExport) {
     return (
-      <Link to="/settings/billing" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-sm text-slate-500 hover:bg-slate-50" title="导出需要标准版">
+      <Link to="/settings/billing" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-sm text-slate-500 hover:bg-slate-50" title={tr('导出需要标准版')}>
         <Lock className="size-3.5" aria-hidden />
-        导出 CSV（标准版）
+        {tr('导出 CSV（标准版）')}
       </Link>
     )
   }
@@ -166,7 +167,7 @@ function ExportButton({ path, params, name }: { path: string; params: Record<str
           try {
             await downloadCsv(path, params, name)
           } catch (e) {
-            toast.error(errorMessage(e, '导出失败'))
+            toast.error(errorMessage(e, tr('导出失败')))
           } finally {
             setBusy(false)
           }
@@ -191,7 +192,7 @@ function GroupToggle({ value, onChange }: { value: GroupBy; onChange: (g: GroupB
           onClick={() => onChange(g)}
           className={cn('whitespace-nowrap rounded-md px-3 py-1 text-sm', value === g ? 'bg-blue-50 font-medium text-blue-700' : 'text-slate-600')}
         >
-          {g === 'DAY' ? '按日' : '按月'}
+          {g === 'DAY' ? tr('按日') : tr('按月')}
         </button>
       ))}
     </div>
@@ -221,7 +222,7 @@ function Table({ head, children, minWidth = 520 }: { head: ReactNode; children: 
 }
 
 function Loading() {
-  return <div className="h-64 animate-pulse rounded-xl bg-slate-100" aria-label="加载中" />
+  return <div className="h-64 animate-pulse rounded-xl bg-slate-100" aria-label={tr('加载中')} />
 }
 
 function percent(part: string | null, whole: string) {
@@ -247,38 +248,38 @@ function SalesTab({ from, to }: { from: string; to: string }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="销售额" value={money(t.amount)} />
-        <Kpi label="订单数" value={String(t.orderCount)} />
-        <Kpi label="毛利" value={money(t.grossProfit)} tone={Number(t.grossProfit) < 0 ? 'red' : 'green'} />
-        <Kpi label="毛利率" value={percent(t.grossProfit, t.amount)} />
+        <Kpi label={tr('销售额')} value={money(t.amount)} />
+        <Kpi label={tr('订单数')} value={String(t.orderCount)} />
+        <Kpi label={tr('毛利')} value={money(t.grossProfit)} tone={Number(t.grossProfit) < 0 ? 'red' : 'green'} />
+        <Kpi label={tr('毛利率')} value={percent(t.grossProfit, t.amount)} />
       </div>
       <Card>
         <CardHeader
-          title="销售额趋势"
+          title={tr('销售额趋势')}
           action={
             <div className="flex flex-wrap items-center gap-2">
               <GroupToggle value={groupBy} onChange={setGroupBy} />
-              <ExportButton path="/reports/sales/export" params={{ from, to, groupBy }} name="销售报表.csv" />
+              <ExportButton path="/reports/sales/export" params={{ from, to, groupBy }} name={tr('销售报表.csv')} />
             </div>
           }
         />
         <CardBody>
-          <TrendChart data={data.points} label="销售额" height={260} />
+          <TrendChart data={data.points} label={tr('销售额')} height={260} />
         </CardBody>
         <Table
           head={
             <tr>
-              <th className="px-4 py-3">{groupBy === 'DAY' ? '日期' : '月份'}</th>
-              <th className="px-4 py-3 text-right">订单数</th>
-              <th className="px-4 py-3 text-right">销售额</th>
-              <th className="px-4 py-3 text-right">成本</th>
-              <th className="px-4 py-3 text-right">毛利</th>
+              <th className="px-4 py-3">{groupBy === 'DAY' ? tr('日期') : tr('月份')}</th>
+              <th className="px-4 py-3 text-right">{tr('订单数')}</th>
+              <th className="px-4 py-3 text-right">{tr('销售额')}</th>
+              <th className="px-4 py-3 text-right">{tr('成本')}</th>
+              <th className="px-4 py-3 text-right">{tr('毛利')}</th>
             </tr>
           }
         >
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">这段时间没有销售</td>
+              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">{tr('这段时间没有销售')}</td>
             </tr>
           ) : (
             [...rows].reverse().map((p) => (
@@ -293,7 +294,7 @@ function SalesTab({ from, to }: { from: string; to: string }) {
           )}
         </Table>
         {groupBy === 'DAY' && rows.length < data.points.length && (
-          <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">表格只列出有销售的日期；图表包含每一天。</p>
+          <p className="border-t border-slate-100 px-4 py-2 text-xs text-slate-500">{tr('表格只列出有销售的日期；图表包含每一天。')}</p>
         )}
       </Card>
     </div>
@@ -316,18 +317,18 @@ function ProductsTab({ from, to }: { from: string; to: string }) {
   return (
     <Card>
       <CardHeader
-        title="商品销售排行"
-        description="销售额为商品小计，未分摊整单优惠"
+        title={tr('商品销售排行')}
+        description={tr('销售额为商品小计，未分摊整单优惠')}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-lg border border-slate-200 p-0.5">
               {(['amount', 'qty'] as const).map((k) => (
                 <button key={k} type="button" aria-pressed={by === k} onClick={() => setBy(k)} className={cn('whitespace-nowrap rounded-md px-3 py-1 text-sm', by === k ? 'bg-blue-50 font-medium text-blue-700' : 'text-slate-600')}>
-                  {k === 'amount' ? '按销售额' : '按销量'}
+                  {k === 'amount' ? tr('按销售额') : tr('按销量')}
                 </button>
               ))}
             </div>
-            <ExportButton path="/reports/top-products/export" params={{ from, to, by }} name="商品销售排行.csv" />
+            <ExportButton path="/reports/top-products/export" params={{ from, to, by }} name={tr('商品销售排行.csv')} />
           </div>
         }
       />
@@ -336,16 +337,16 @@ function ProductsTab({ from, to }: { from: string; to: string }) {
         head={
           <tr>
             <th className="w-12 px-4 py-3">#</th>
-            <th className="px-4 py-3">商品</th>
-            <th className="px-4 py-3 text-right">销量</th>
-            <th className="px-4 py-3 text-right">销售额</th>
-            <th className="px-4 py-3 text-right">毛利</th>
+            <th className="px-4 py-3">{tr('商品')}</th>
+            <th className="px-4 py-3 text-right">{tr('销量')}</th>
+            <th className="px-4 py-3 text-right">{tr('销售额')}</th>
+            <th className="px-4 py-3 text-right">{tr('毛利')}</th>
           </tr>
         }
       >
         {data.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-4 py-8 text-center text-slate-500">这段时间没有销售</td>
+            <td colSpan={5} className="px-4 py-8 text-center text-slate-500">{tr('这段时间没有销售')}</td>
           </tr>
         ) : (
           data.map((p, i) => (
@@ -386,23 +387,23 @@ function CustomersTab({ from, to }: { from: string; to: string }) {
   return (
     <Card>
       <CardHeader
-        title="客户消费排行"
-        description="按实收金额排序，不含散客"
-        action={<ExportButton path="/reports/top-customers/export" params={{ from, to }} name="客户消费排行.csv" />}
+        title={tr('客户消费排行')}
+        description={tr('按实收金额排序，不含散客')}
+        action={<ExportButton path="/reports/top-customers/export" params={{ from, to }} name={tr('客户消费排行.csv')} />}
       />
       <Table
         head={
           <tr>
             <th className="w-12 px-4 py-3">#</th>
-            <th className="px-4 py-3">客户</th>
-            <th className="px-4 py-3 text-right">订单数</th>
-            <th className="px-4 py-3 text-right">消费金额</th>
+            <th className="px-4 py-3">{tr('客户')}</th>
+            <th className="px-4 py-3 text-right">{tr('订单数')}</th>
+            <th className="px-4 py-3 text-right">{tr('消费金额')}</th>
           </tr>
         }
       >
         {data.length === 0 ? (
           <tr>
-            <td colSpan={4} className="px-4 py-8 text-center text-slate-500">这段时间没有记名客户的订单</td>
+            <td colSpan={4} className="px-4 py-8 text-center text-slate-500">{tr('这段时间没有记名客户的订单')}</td>
           </tr>
         ) : (
           data.map((c, i) => (
@@ -438,26 +439,26 @@ function PurchasesTab({ from, to }: { from: string; to: string }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="采购金额" value={money(data.total.amount)} />
-        <Kpi label="收货单数" value={String(data.total.orderCount)} />
+        <Kpi label={tr('采购金额')} value={money(data.total.amount)} />
+        <Kpi label={tr('收货单数')} value={String(data.total.orderCount)} />
       </div>
       <Card>
-        <CardHeader title="采购金额趋势" description="按收货日期统计已收货的采购单" action={<GroupToggle value={groupBy} onChange={setGroupBy} />} />
+        <CardHeader title={tr('采购金额趋势')} description={tr('按收货日期统计已收货的采购单')} action={<GroupToggle value={groupBy} onChange={setGroupBy} />} />
         <CardBody>
-          <TrendChart data={data.points} label="采购金额" countLabel="收货" height={240} />
+          <TrendChart data={data.points} label={tr('采购金额')} countLabel={tr('收货')} height={240} />
         </CardBody>
         <Table
           head={
             <tr>
-              <th className="px-4 py-3">{groupBy === 'DAY' ? '日期' : '月份'}</th>
-              <th className="px-4 py-3 text-right">收货单数</th>
-              <th className="px-4 py-3 text-right">采购金额</th>
+              <th className="px-4 py-3">{groupBy === 'DAY' ? tr('日期') : tr('月份')}</th>
+              <th className="px-4 py-3 text-right">{tr('收货单数')}</th>
+              <th className="px-4 py-3 text-right">{tr('采购金额')}</th>
             </tr>
           }
         >
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={3} className="px-4 py-8 text-center text-slate-500">这段时间没有收货</td>
+              <td colSpan={3} className="px-4 py-8 text-center text-slate-500">{tr('这段时间没有收货')}</td>
             </tr>
           ) : (
             [...rows].reverse().map((p) => (
@@ -484,26 +485,26 @@ function InventoryTab() {
   const total = data.reduce((s, c) => s + Number(c.value), 0)
   return (
     <Card>
-      <CardHeader title="按分类的库存" description="当前库存（不受日期范围影响），价值按进货成本计算" />
+      <CardHeader title={tr('按分类的库存')} description={tr('当前库存（不受日期范围影响），价值按进货成本计算')} />
       <Table
         head={
           <tr>
-            <th className="px-4 py-3">分类</th>
-            <th className="px-4 py-3 text-right">商品数</th>
-            <th className="px-4 py-3 text-right">库存数量</th>
-            <th className="px-4 py-3 text-right">库存价值</th>
-            <th className="px-4 py-3 text-right">占比</th>
+            <th className="px-4 py-3">{tr('分类')}</th>
+            <th className="px-4 py-3 text-right">{tr('商品数')}</th>
+            <th className="px-4 py-3 text-right">{tr('库存数量')}</th>
+            <th className="px-4 py-3 text-right">{tr('库存价值')}</th>
+            <th className="px-4 py-3 text-right">{tr('占比')}</th>
           </tr>
         }
       >
         {data.length === 0 ? (
           <tr>
-            <td colSpan={5} className="px-4 py-8 text-center text-slate-500">还没有商品</td>
+            <td colSpan={5} className="px-4 py-8 text-center text-slate-500">{tr('还没有商品')}</td>
           </tr>
         ) : (
           data.map((c) => (
             <tr key={c.categoryId ?? 'none'}>
-              <td className="px-4 py-2.5 text-slate-700">{c.categoryName}</td>
+              <td className="px-4 py-2.5 text-slate-700">{serverText(c.categoryName)}</td>
               <td className="px-4 py-2.5 text-right tabular-nums">{c.productCount}</td>
               <td className="px-4 py-2.5 text-right tabular-nums">{c.quantity}</td>
               <td className="px-4 py-2.5 text-right font-medium tabular-nums">{money(c.value)}</td>

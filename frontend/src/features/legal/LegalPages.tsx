@@ -1,32 +1,41 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Brand } from '@/components/layout/Brand'
+import { getLang } from '@/lib/i18n'
+import { PrivacyContentEn, TermsContentEn } from './LegalPagesEn'
 
 /** 与后端 LegalTerms.CURRENT_VERSION 保持一致；修改协议内容时两边一起更新。 */
 export const LEGAL_VERSION = '2026-11-09'
 const SUPPORT_WECHAT = 'Pianzibudehaosi_1A'
 
+const EN = () => getLang() === 'en'
+
 function LegalLayout({ title, children }: { title: string; children: ReactNode }) {
+  const en = EN()
   return (
     <div className="min-h-dvh bg-slate-50 px-4 py-8">
       <article className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
-        <Link to="/" aria-label="返回首页">
+        <Link to="/" aria-label={en ? 'Home' : '返回首页'}>
           <Brand />
         </Link>
         <h1 className="mt-8 text-2xl font-semibold text-slate-900">{title}</h1>
-        <p className="mt-1 text-sm text-slate-500">版本日期：{LEGAL_VERSION}</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {en ? 'Version: ' : '版本日期：'}
+          {LEGAL_VERSION}
+          {en && ' · In case of any difference, the Chinese version prevails.'}
+        </p>
         <div className="mt-6 space-y-6 text-sm leading-7 text-slate-700 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-slate-900 [&_li]:ml-5 [&_li]:list-disc">
           {children}
         </div>
         <p className="mt-10 flex flex-wrap gap-4 border-t border-slate-100 pt-6 text-sm">
           <Link to="/terms" className="text-blue-600 hover:underline">
-            用户协议
+            {en ? 'Terms of Service' : '用户协议'}
           </Link>
           <Link to="/privacy" className="text-blue-600 hover:underline">
-            隐私政策
+            {en ? 'Privacy Policy' : '隐私政策'}
           </Link>
           <Link to="/register" className="text-blue-600 hover:underline">
-            返回注册
+            {en ? 'Back to sign up' : '返回注册'}
           </Link>
         </p>
       </article>
@@ -35,6 +44,13 @@ function LegalLayout({ title, children }: { title: string; children: ReactNode }
 }
 
 export function TermsPage() {
+  if (EN()) {
+    return (
+      <LegalLayout title="SmallBiz Manager Terms of Service">
+        <TermsContentEn />
+      </LegalLayout>
+    )
+  }
   return (
     <LegalLayout title="SmallBiz Manager 用户协议">
       <p>
@@ -106,6 +122,13 @@ export function TermsPage() {
 }
 
 export function PrivacyPage() {
+  if (EN()) {
+    return (
+      <LegalLayout title="SmallBiz Manager Privacy Policy">
+        <PrivacyContentEn />
+      </LegalLayout>
+    )
+  }
   return (
     <LegalLayout title="SmallBiz Manager 隐私政策">
       <p>本政策说明我们收集哪些信息、为什么收集，以及如何保护这些信息。我们只收集提供服务所必需的信息。</p>

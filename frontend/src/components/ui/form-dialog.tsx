@@ -3,6 +3,7 @@ import { Dialog } from 'radix-ui'
 import type { FormEventHandler, ReactNode } from 'react'
 import { Button } from './button'
 
+import { tr } from '@/lib/i18n'
 /** 表单弹窗外壳：桌面居中，手机从底部弹出。 */
 export function FormDialog({
   open,
@@ -36,7 +37,7 @@ export function FormDialog({
               <Dialog.Title className="text-base font-semibold text-slate-900">{title}</Dialog.Title>
               {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
             </div>
-            <Dialog.Close className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="关闭" disabled={saving}>
+            <Dialog.Close className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label={tr('关闭')} disabled={saving}>
               <X className="size-5" />
             </Dialog.Close>
           </div>
@@ -44,7 +45,7 @@ export function FormDialog({
             {children}
             <div className="flex gap-2 pt-2">
               <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
-                取消
+                {tr('取消')}
               </Button>
               <Button type="submit" className="flex-1" loading={saving}>
                 {submitText}

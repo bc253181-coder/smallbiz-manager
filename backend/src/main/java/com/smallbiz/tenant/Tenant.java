@@ -26,6 +26,9 @@ public class Tenant extends BaseEntity {
     @Column(nullable = false, length = 3)
     private String currency = "CNY";
 
+    @Column(name = "currency_confirmed", nullable = false)
+    private boolean currencyConfirmed;
+
     @Column(nullable = false, length = 50)
     private String timezone = "Asia/Shanghai";
 
@@ -101,8 +104,14 @@ public class Tenant extends BaseEntity {
         return currency;
     }
 
+    /** 设置币种（开店时选择或店主修改），之后有业务数据时锁定。 */
     public void setCurrency(String currency) {
         this.currency = currency;
+        this.currencyConfirmed = true;
+    }
+
+    public boolean isCurrencyConfirmed() {
+        return currencyConfirmed;
     }
 
     public String getTimezone() {

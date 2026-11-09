@@ -12,6 +12,7 @@ import { useCanManage } from '@/lib/hooks'
 import { categoryApi } from '../api'
 import type { CategoryNode } from '../types'
 
+import { tr } from '@/lib/i18n'
 export function CategoriesPage() {
   const canManage = useCanManage()
   const queryClient = useQueryClient()
@@ -25,27 +26,27 @@ export function CategoriesPage() {
     onSuccess: async () => {
       await refresh()
       await queryClient.invalidateQueries({ queryKey: ['products'] })
-      toast.success('分类已删除')
+      toast.success(tr('分类已删除'))
       setToDelete(null)
     },
     onError: (e) => {
       setToDelete(null)
-      toast.error(errorMessage(e, '删除失败'))
+      toast.error(errorMessage(e, tr('删除失败')))
     },
   })
 
   return (
     <div>
       <PageHeader
-        title="商品分类"
-        description="最多两级，例如「手机配件 → 数据线」"
-        back={{ to: '/products', label: '返回商品列表' }}
+        title={tr('商品分类')}
+        description={tr('最多两级，例如「手机配件 → 数据线」')}
+        back={{ to: '/products', label: tr('返回商品列表') }}
       />
 
       <Card>
         {canManage && (
           <div className="border-b border-slate-100 p-4">
-            <AddCategoryForm parentId={null} placeholder="新增一级分类，例如：手机配件" onDone={refresh} />
+            <AddCategoryForm parentId={null} placeholder={tr('新增一级分类，例如：手机配件')} onDone={refresh} />
           </div>
         )}
         {isLoading ? (
@@ -53,7 +54,7 @@ export function CategoriesPage() {
         ) : isError ? (
           <ErrorState onRetry={() => void refetch()} />
         ) : !data || data.length === 0 ? (
-          <EmptyState icon={FolderTree} title="还没有分类" description="分类可以帮助你更快地筛选和统计商品" />
+          <EmptyState icon={FolderTree} title={tr('还没有分类')} description={tr('分类可以帮助你更快地筛选和统计商品')} />
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.map((root) => (
@@ -67,7 +68,7 @@ export function CategoriesPage() {
                   ))}
                   {canManage && (
                     <li className="pt-1">
-                      <AddCategoryForm parentId={root.id} placeholder={`在「${root.name}」下新增子分类`} onDone={refresh} compact />
+                      <AddCategoryForm parentId={root.id} placeholder={tr('在「{{name}}」下新增子分类', { name: root.name })} onDone={refresh} compact />
                     </li>
                   )}
                 </ul>
@@ -80,9 +81,9 @@ export function CategoriesPage() {
       <ConfirmDialog
         open={!!toDelete}
         onOpenChange={(o) => !o && setToDelete(null)}
-        title={`删除分类「${toDelete?.name ?? ''}」？`}
-        description="只能删除没有商品和子分类的分类。"
-        confirmText="删除"
+        title={tr('删除分类「{{v0}}」？', { v0: toDelete?.name ?? '' })}
+        description={tr('只能删除没有商品和子分类的分类。')}
+        confirmText={tr('删除')}
         danger
         loading={remove.isPending}
         onConfirm={() => toDelete && remove.mutate(toDelete.id)}
@@ -109,9 +110,9 @@ function CategoryRow({
     onSuccess: async () => {
       await onChanged()
       setEditing(false)
-      toast.success('已重命名')
+      toast.success(tr('已重命名'))
     },
-    onError: (e) => toast.error(errorMessage(e, '重命名失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('重命名失败'))),
   })
 
   const isRoot = node.parentId === null
@@ -126,15 +127,15 @@ function CategoryRow({
           if (name.trim()) rename.mutate()
         }}
       >
-        <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} autoFocus aria-label="分类名称" className="h-9" />
-        <Button type="submit" size="icon" className="size-9 shrink-0" loading={rename.isPending} aria-label="保存">
+        <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} autoFocus aria-label={tr('分类名称')} className="h-9" />
+        <Button type="submit" size="icon" className="size-9 shrink-0" loading={rename.isPending} aria-label={tr('保存')}>
           {!rename.isPending && <Check />}
         </Button>
         <Button
           variant="ghost"
           size="icon"
           className="size-9 shrink-0"
-          aria-label="取消"
+          aria-label={tr('取消')}
           onClick={() => {
             setName(node.name)
             setEditing(false)
@@ -149,14 +150,14 @@ function CategoryRow({
   return (
     <div className="flex items-center gap-2">
       <span className={isRoot ? 'font-medium text-slate-900' : 'text-sm text-slate-700'}>{node.name}</span>
-      <span className="text-xs text-slate-500">{count} 件商品</span>
+      <span className="text-xs text-slate-500">{count} {tr('件商品')}</span>
       <span className="flex-1" />
       {canManage && (
         <>
-          <Button variant="ghost" size="icon" className="size-8" aria-label={`重命名 ${node.name}`} onClick={() => setEditing(true)}>
+          <Button variant="ghost" size="icon" className="size-8" aria-label={tr('重命名 {{name}}', { name: node.name })} onClick={() => setEditing(true)}>
             <Pencil />
           </Button>
-          <Button variant="ghost" size="icon" className="size-8 hover:text-red-600" aria-label={`删除 ${node.name}`} onClick={() => onDelete(node)}>
+          <Button variant="ghost" size="icon" className="size-8 hover:text-red-600" aria-label={tr('删除 {{name}}', { name: node.name })} onClick={() => onDelete(node)}>
             <Trash2 />
           </Button>
         </>
@@ -182,9 +183,9 @@ function AddCategoryForm({
     onSuccess: async () => {
       await onDone()
       setName('')
-      toast.success('分类已添加')
+      toast.success(tr('分类已添加'))
     },
-    onError: (e) => toast.error(errorMessage(e, '添加失败')),
+    onError: (e) => toast.error(errorMessage(e, tr('添加失败'))),
   })
 
   function submit(e: FormEvent) {
@@ -204,7 +205,7 @@ function AddCategoryForm({
       />
       <Button type="submit" variant={compact ? 'secondary' : 'primary'} size={compact ? 'sm' : 'md'} loading={create.isPending} disabled={!name.trim()} className={compact ? 'h-9' : undefined}>
         <Plus aria-hidden />
-        添加
+        {tr('添加')}
       </Button>
     </form>
   )

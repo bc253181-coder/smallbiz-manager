@@ -11,6 +11,7 @@ import { SidebarNav } from './SidebarNav'
 import { StoreSwitcher } from './StoreSwitcher'
 import { UserMenu } from './UserMenu'
 
+import { tr } from '@/lib/i18n'
 /** 登录后的主界面框架：桌面左侧导航；手机/平板为抽屉菜单。 */
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -41,7 +42,7 @@ export function AppShell() {
                   <Brand />
                 </div>
               </Dialog.Title>
-              <Dialog.Close className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="关闭菜单">
+              <Dialog.Close className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={tr('关闭菜单')}>
                 <X className="size-5" />
               </Dialog.Close>
             </div>
@@ -58,7 +59,7 @@ export function AppShell() {
           type="button"
           className="-ml-2 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
           onClick={() => setDrawerOpen(true)}
-          aria-label="打开菜单"
+          aria-label={tr('打开菜单')}
         >
           <Menu className="size-5" />
         </button>

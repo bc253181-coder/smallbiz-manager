@@ -50,6 +50,7 @@ import {
   SupplierListPage,
 } from '@/lazyPages'
 
+import { tr } from '@/lib/i18n'
 /** 未登录 → 去登录页（登录后回到原页面）。 */
 function RequireAuth() {
   const { status } = useAuth()
@@ -106,9 +107,9 @@ function NotFoundPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-center">
       <p className="text-5xl font-bold text-slate-200">404</p>
-      <p className="text-slate-600">页面不存在</p>
+      <p className="text-slate-600">{tr('页面不存在')}</p>
       <Link to="/" className="text-sm font-medium text-blue-600 hover:underline">
-        返回首页
+        {tr('返回首页')}
       </Link>
     </div>
   )

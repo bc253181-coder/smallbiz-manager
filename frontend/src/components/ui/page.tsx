@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
 
+import { tr } from '@/lib/i18n'
 export function PageHeader({
   title,
   description,
@@ -60,12 +61,12 @@ export function EmptyState({
   )
 }
 
-export function ErrorState({ onRetry, message = '加载失败' }: { onRetry: () => void; message?: string }) {
+export function ErrorState({ onRetry, message = tr('加载失败') }: { onRetry: () => void; message?: string }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
       <p className="text-sm text-slate-600">{message}</p>
       <Button variant="secondary" size="sm" onClick={onRetry}>
-        重试
+        {tr('重试')}
       </Button>
     </div>
   )
