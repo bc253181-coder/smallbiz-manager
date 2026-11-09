@@ -85,7 +85,7 @@ test('扫码枪开单、条码唯一、店内码、打印标签', async ({ page,
 
   // 打印标签：免费版提示升级
   await go(page, `/products/labels?ids=${a.id},${b.id}`)
-  await expect(page.getByRole('heading', { name: /是标准版功能/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /是高级会员功能/ })).toBeVisible()
   await go(page, '/settings/billing')
   await page.getByLabel('激活码').fill(await createActivationCode(baseURL!, 30, 'STANDARD'))
   await page.getByRole('button', { name: '兑换' }).click()

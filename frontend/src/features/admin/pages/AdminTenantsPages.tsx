@@ -62,6 +62,7 @@ export function AdminTenantsPage() {
   const [q, setQ] = useState('')
   const query = useDebouncedValue(q.trim())
   const [editing, setEditing] = useState<TenantRow | null>(null)
+  const [membershipFor, setMembershipFor] = useState<TenantRow | null>(null)
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'tenants', query],
     queryFn: () => adminApi.tenants(query),
@@ -69,7 +70,7 @@ export function AdminTenantsPage() {
 
   return (
     <div>
-      <PageHeader title="店铺" description="手动调整套餐会记录原因，店铺可在「套餐变更记录」中看到" />
+      <PageHeader title="店铺" description="会员跟着店主账号：设为高级永久会员后，店主名下所有店铺都是高级会员。调整会记录原因" />
       <Card>
         <CardHeader
           title={data ? `共 ${data.length} 家` : '店铺列表'}
@@ -109,16 +110,22 @@ export function AdminTenantsPage() {
                     <td className="px-5 py-2.5">
                       <p className="text-slate-700">{t.ownerName ?? '—'}</p>
                       <p className="text-xs text-slate-500">{t.ownerEmail ?? '—'}</p>
+                      {t.ownerMembership === 'LIFETIME' && <Badge tone="amber" className="mt-1">高级永久会员</Badge>}
                     </td>
                     <td className="px-5 py-2.5">
-                      <Badge tone={t.plan === 'FREE' ? 'slate' : 'green'}>{PLAN_LABELS[t.plan]}</Badge>
+                      <Badge tone={t.plan === 'FREE' ? 'slate' : 'green'}>{t.plan !== 'FREE' && !t.planExpiresAt ? '高级永久会员' : PLAN_LABELS[t.plan]}</Badge>
                       {t.rawPlan !== t.plan && <span className="ml-1 text-xs text-slate-400">（{PLAN_LABELS[t.rawPlan]}已过期）</span>}
                       {t.trialUsed && <span className="ml-1 text-xs text-slate-400">已体验</span>}
                     </td>
                     <td className="whitespace-nowrap px-5 py-2.5 text-slate-600">{formatDateTime(t.planExpiresAt)}</td>
                     <td className="whitespace-nowrap px-5 py-2.5 text-slate-600">{formatDateTime(t.createdAt)}</td>
-                    <td className="px-5 py-2.5 text-right">
-                      <Button size="sm" variant="secondary" onClick={() => setEditing(t)}>
+                    <td className="space-x-1 whitespace-nowrap px-5 py-2.5 text-right">
+                      {t.ownerId && (
+                        <Button size="sm" variant="secondary" onClick={() => setMembershipFor(t)}>
+                          {t.ownerMembership === 'LIFETIME' ? '取消永久会员' : '设为永久会员'}
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" onClick={() => setEditing(t)}>
                         调整套餐
                       </Button>
                     </td>
@@ -130,6 +137,7 @@ export function AdminTenantsPage() {
         )}
       </Card>
       {editing && <SetPlanDialog tenant={editing} onClose={() => setEditing(null)} />}
+      {membershipFor && <MembershipDialog tenant={membershipFor} onClose={() => setMembershipFor(null)} />}
     </div>
   )
 }
@@ -191,6 +199,54 @@ function SetPlanDialog({ tenant, onClose }: { tenant: TenantRow; onClose: () => 
       )}
       <Field label="原因" htmlFor="sp-note" error={errors.note} required>
         <Input id="sp-note" value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} invalid={!!errors.note} placeholder="例如：线下收款 / 故障补偿 7 天" />
+      </Field>
+    </FormDialog>
+  )
+}
+
+/** 设置 / 取消店主的高级永久会员（必须填写原因，记录在会员变更记录中）。 */
+function MembershipDialog({ tenant, onClose }: { tenant: TenantRow; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const target = tenant.ownerMembership === 'LIFETIME' ? 'FREE' : 'LIFETIME'
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const save = useMutation({
+    mutationFn: () => adminApi.setMembership(tenant.ownerId!, target, note.trim()),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['admin'] })
+      toast.success(target === 'LIFETIME' ? '已设为高级永久会员' : '已取消高级永久会员')
+      onClose()
+    },
+    onError: (e) => toast.error(errorMessage(e, '操作失败')),
+  })
+  return (
+    <FormDialog
+      open
+      onClose={onClose}
+      title={target === 'LIFETIME' ? '设为高级永久会员' : '取消高级永久会员'}
+      description={`${tenant.ownerName ?? ''}（${tenant.ownerEmail ?? ''}）名下所有店铺都会${target === 'LIFETIME' ? '成为高级会员' : '回到普通会员，数据全部保留'}`}
+      submitText="确认"
+      saving={save.isPending}
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!note.trim()) {
+          setError('请填写原因')
+          return
+        }
+        save.mutate()
+      }}
+    >
+      <Field label="原因" htmlFor="ms-note" error={error ?? undefined} required>
+        <Input
+          id="ms-note"
+          value={note}
+          maxLength={200}
+          placeholder={target === 'LIFETIME' ? '例如：线下付款 / 补偿' : '例如：退款'}
+          onChange={(e) => {
+            setNote(e.target.value)
+            setError(null)
+          }}
+        />
       </Field>
     </FormDialog>
   )

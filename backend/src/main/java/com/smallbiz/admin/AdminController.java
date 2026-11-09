@@ -86,7 +86,7 @@ public class AdminController {
     }
 
     public record TenantRow(Long id, String name, Plan plan, Plan rawPlan, Instant planExpiresAt, boolean trialUsed,
-            String ownerEmail, String ownerName, Instant createdAt) {
+            String ownerEmail, String ownerName, Instant createdAt, Long ownerId, String ownerMembership) {
     }
 
     public record SetPlanRequest(@NotNull(message = "请选择套餐") Plan plan, LocalDate expiresOn,
@@ -94,12 +94,12 @@ public class AdminController {
     }
 
     public record BatchRequest(@NotBlank(message = "请填写批次名称") @Size(max = 100) String name,
-            @NotNull Plan plan, @Min(1) @Max(3660) int durationDays, boolean trial,
+            @NotNull Plan plan, @Min(0) @Max(3660) int durationDays, boolean trial, Boolean lifetime,
             @Min(value = 1, message = "数量至少 1") @Max(value = 1000, message = "每批最多 1000 个") int quantity,
             LocalDate expiresOn) {
     }
 
-    public record BatchRow(Long id, String name, Plan plan, int durationDays, boolean trial, int quantity, long redeemed,
+    public record BatchRow(Long id, String name, Plan plan, int durationDays, boolean trial, boolean lifetime, int quantity, long redeemed,
             long voided, Instant expiresAt, Instant createdAt) {
     }
 
@@ -158,13 +158,19 @@ public class AdminController {
     private final UnmatchedQueryRepository unmatched;
     private final ImageStorage storage;
     private final com.smallbiz.billing.online.OnlinePaymentService online;
+    private final com.smallbiz.billing.membership.MembershipService membership;
+    private final com.smallbiz.billing.membership.MembershipConfigService membershipConfig;
 
     public AdminController(TenantRepository tenants, TenantMemberRepository members, UserRepository users,
             PlanService plans, ActivationService activation, ActivationCodeBatchRepository batches,
             ActivationCodeRepository codes, PaymentService payments, PaymentOrderRepository paymentOrders,
             PaymentMethodRepository methods, PlanPriceRepository prices, SupportFaqRepository faqs,
             UnmatchedQueryRepository unmatched, ImageStorage storage,
-            com.smallbiz.billing.online.OnlinePaymentService online) {
+            com.smallbiz.billing.online.OnlinePaymentService online,
+            com.smallbiz.billing.membership.MembershipService membership,
+            com.smallbiz.billing.membership.MembershipConfigService membershipConfig) {
+        this.membership = membership;
+        this.membershipConfig = membershipConfig;
         this.online = online;
         this.tenants = tenants;
         this.members = members;
@@ -211,7 +217,8 @@ public class AdminController {
                     User owner = owners.containsKey(t.getId()) ? userById.get(owners.get(t.getId()).getUserId()) : null;
                     return new TenantRow(t.getId(), t.getName(), t.effectivePlan(now), t.getPlan(), t.getPlanExpiresAt(),
                             t.isTrialUsed(), owner == null ? null : owner.getEmail(),
-                            owner == null ? null : owner.getDisplayName(), t.getCreatedAt());
+                            owner == null ? null : owner.getDisplayName(), t.getCreatedAt(), owner == null ? null : owner.getId(),
+                    owner == null ? null : owner.getMembership());
                 })
                 .filter(r -> query.isEmpty() || r.name().toLowerCase(Locale.ROOT).contains(query)
                         || (r.ownerEmail() != null && r.ownerEmail().contains(query)))
@@ -234,7 +241,8 @@ public class AdminController {
     public ResponseEntity<CreatedBatch> createBatch(@Valid @RequestBody BatchRequest req) {
         Instant expires = req.expiresOn() == null ? null : req.expiresOn().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
         ActivationService.CreatedBatch created = activation.createBatch(new ActivationService.BatchRequest(req.name(),
-                req.plan(), req.durationDays(), req.trial(), req.quantity(), expires), CurrentUser.userId());
+                req.plan(), req.durationDays(), req.trial(), Boolean.TRUE.equals(req.lifetime()), req.quantity(), expires),
+                CurrentUser.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new CreatedBatch(row(created.batch()), created.codes()));
     }
 
@@ -251,7 +259,7 @@ public class AdminController {
     }
 
     private BatchRow row(ActivationCodeBatch b) {
-        return new BatchRow(b.getId(), b.getName(), b.getPlan(), b.getDurationDays(), b.isTrial(), b.getQuantity(),
+        return new BatchRow(b.getId(), b.getName(), b.getPlan(), b.getDurationDays(), b.isTrial(), b.isLifetime(), b.getQuantity(),
                 codes.countByBatchIdAndStatus(b.getId(), ActivationCode.Status.REDEEMED),
                 codes.countByBatchIdAndStatus(b.getId(), ActivationCode.Status.VOIDED), b.getExpiresAt(), b.getCreatedAt());
     }
@@ -284,6 +292,38 @@ public class AdminController {
     @PostMapping("/payment-orders/{id}/reject")
     public PaymentOrderView reject(@PathVariable Long id, @Valid @RequestBody RejectRequest req) {
         return adminView(payments.reject(id, CurrentUser.userId(), req.reason()));
+    }
+
+    // ---------------- 会员 ----------------
+
+    public record MembershipRequest(@NotBlank @jakarta.validation.constraints.Pattern(regexp = "FREE|LIFETIME") String membership,
+            @NotBlank(message = "请填写原因") @Size(max = 200) String note) {
+    }
+
+    public record MembershipConfigView(int maxStores, int maxProducts, int reportDays, boolean advancedTools,
+            boolean advancedTemplates, boolean export, boolean advancedAnalytics) {
+    }
+
+    @GetMapping("/membership/config")
+    public com.smallbiz.billing.membership.FreeLimits membershipConfig() {
+        return membershipConfig.current();
+    }
+
+    @PutMapping("/membership/config")
+    public com.smallbiz.billing.membership.FreeLimits updateMembershipConfig(@Valid @RequestBody MembershipConfigView v) {
+        return membershipConfig.update(new com.smallbiz.billing.membership.FreeLimits(v.maxStores(), v.maxProducts(),
+                v.reportDays(), v.advancedTools(), v.advancedTemplates(), v.export(), v.advancedAnalytics()), CurrentUser.userId());
+    }
+
+    /** 设置账号的会员等级（开通 / 取消高级永久会员），记录原因。 */
+    @PostMapping("/users/{userId}/membership")
+    @Transactional
+    public Map<String, Object> setMembership(@PathVariable Long userId, @Valid @RequestBody MembershipRequest req) {
+        User u = "LIFETIME".equals(req.membership())
+                ? membership.grantLifetime(userId, com.smallbiz.billing.PlanChangeLog.Source.ADMIN_MANUAL, null, null,
+                        CurrentUser.userId(), req.note().trim())
+                : membership.revokeLifetime(userId, CurrentUser.userId(), req.note().trim());
+        return Map.of("userId", u.getId(), "membership", u.getMembership());
     }
 
     /** 异常已处理（例如已在支付渠道后台退款，或已手动调整套餐）。 */

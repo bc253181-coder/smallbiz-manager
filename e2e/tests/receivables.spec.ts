@@ -29,7 +29,7 @@ test('专业版：赊账 → 收款 → 对账单 → 作废收款', async ({ pa
 
   // 免费版：应收账款是专业版功能
   await go(page, '/receivables')
-  await expect(page.getByRole('heading', { name: /是专业版功能/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /是高级会员功能/ })).toBeVisible()
 
   // 兑换专业版激活码
   await go(page, '/settings/billing')

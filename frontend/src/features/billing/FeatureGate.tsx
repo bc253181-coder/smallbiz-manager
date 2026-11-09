@@ -5,8 +5,8 @@ import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
-import { PLAN_LABELS } from '@/features/auth/types'
-import { FEATURE_LABELS, FEATURE_PLAN, usePlan, type Feature } from './api'
+import { formatMoney } from '@/lib/format'
+import { FEATURE_LABELS, useLifetimePrice, usePlan, type Feature } from './api'
 
 import { tr } from '@/lib/i18n'
 const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
@@ -16,15 +16,11 @@ const FEATURE_DESCRIPTIONS: Partial<Record<Feature, string>> = {
   RECEIVABLES: tr('客户可以先拿货后付款：记录赊账和收款，查看谁欠多少、欠了多久，打印对账单给客户核对。'),
 }
 
-const PLAN_PRICE_HINT: Record<'STANDARD' | 'PRO', string> = {
-  STANDARD: tr('标准版 ¥6.99/月 起，首月体验只需 ¥1.99 / RM 1.00。'),
-  PRO: tr('专业版 ¥9.9/月 · RM 6.9/月，包含标准版全部功能。标准版剩余天数会折算后加到专业版上。'),
-}
-
 /** 套餐未包含的页面：显示升级说明代替页面内容（数据不会被删除）。 */
 export function UpgradePrompt({ feature, className }: { feature: Feature; className?: string }) {
   const { session } = useAuth()
   const isOwner = session?.currentTenant?.role === 'OWNER'
+  const price = useLifetimePrice()
   return (
     <Card className={cn('mx-auto max-w-lg', className)}>
       <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
@@ -33,19 +29,21 @@ export function UpgradePrompt({ feature, className }: { feature: Feature; classN
         </span>
         {/* 代替整个页面显示，因此作为页面主标题 */}
         <h1 className="text-lg font-semibold text-slate-900">
-          「{FEATURE_LABELS[feature]}{tr('」是')}{PLAN_LABELS[FEATURE_PLAN[feature]]}{tr('功能')}
+          {tr('「{{name}}」是高级会员功能', { name: FEATURE_LABELS[feature] })}
         </h1>
         {FEATURE_DESCRIPTIONS[feature] && <p className="text-sm text-slate-600">{FEATURE_DESCRIPTIONS[feature]}</p>}
         <p className="text-sm text-slate-500">
-          {PLAN_PRICE_HINT[FEATURE_PLAN[feature] === 'PRO' ? 'PRO' : 'STANDARD']}{tr('套餐到期后已有数据会保留，续费后即可继续使用。')}
-        </p>
-        {isOwner ? (
+          {price
+            ? tr('高级永久会员 {{price}}，一次性付款，永久解锁全部功能，无需自动续费。', { price: formatMoney(price.amount, price.currency) })
+            : tr('升级高级永久会员，一次性付款，永久解锁全部功能。')}
+          {tr('已有数据会保留。')}
+        </p>        {isOwner ? (
           <Link to="/settings/billing" className={cn(buttonVariants(), 'mt-2')}>
             <Sparkles aria-hidden />
-            {tr('查看套餐与升级')}
+            {tr('立即升级')}
           </Link>
         ) : (
-          <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">{tr('请联系店主升级套餐')}</p>
+          <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">{tr('请联系店主升级高级永久会员')}</p>
         )}
       </div>
     </Card>

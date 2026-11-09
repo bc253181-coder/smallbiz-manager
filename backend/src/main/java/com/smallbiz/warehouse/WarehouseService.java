@@ -163,7 +163,7 @@ public class WarehouseService {
         if (!w.isDefault() && use == Use.OPERATE
                 && !PlanPolicy.allows(planGuard.currentPlan(tenantId), Feature.WAREHOUSES)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "PLAN_FEATURE_REQUIRED",
-                    "多仓库需要专业版。到期期间「" + w.getName() + "」只能把库存调拨出去，续费后恢复",
+                    "多仓库是高级会员功能。到期期间「" + w.getName() + "」只能把库存调拨出去，升级高级永久会员后恢复",
                     Map.of("feature", Feature.WAREHOUSES.name(), "requiredPlan", Plan.PRO.name()));
         }
         return w;

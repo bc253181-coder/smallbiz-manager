@@ -18,7 +18,8 @@ import jakarta.persistence.Table;
 @Table(name = "plan_prices")
 public class PlanPrice {
 
-    public enum Period { TRIAL_MONTH, MONTH, YEAR }
+    /** LIFETIME：高级永久会员（一次性付款，开通对象是账号）。 */
+    public enum Period { TRIAL_MONTH, MONTH, YEAR, LIFETIME }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -88,6 +89,10 @@ public class PlanPrice {
 
     public int getSortOrder() {
         return sortOrder;
+    }
+
+    public boolean isLifetime() {
+        return period == Period.LIFETIME;
     }
 
     public boolean isTrial() {

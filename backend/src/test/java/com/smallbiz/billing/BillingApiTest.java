@@ -1,6 +1,7 @@
 package com.smallbiz.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -55,20 +56,25 @@ class BillingApiTest extends IntegrationTest {
         Session s = registerWithFreeTenant("bill-free", "免费店");
         MockHttpServletResponse cur = send(get("/api/v1/billing/current"), s, null);
         assertThat((String) read(cur, "$.plan")).isEqualTo("FREE");
-        assertThat((Integer) read(cur, "$.maxProducts")).isEqualTo(100);
+        assertThat((Integer) read(cur, "$.maxProducts")).isEqualTo(3);
+        assertThat((String) read(cur, "$.membership.membership")).isEqualTo("FREE");
+        assertThat((Integer) read(cur, "$.membership.storesMax")).isEqualTo(2);
+        assertThat((Integer) read(cur, "$.membership.storesUsed")).isEqualTo(1);
         assertThat((Boolean) read(cur, "$.features.PURCHASING")).isFalse();
 
         MockHttpServletResponse customers = send(get("/api/v1/customers"), s, null);
         assertThat(customers.getStatus()).isEqualTo(403);
         assertThat((String) read(customers, "$.code")).isEqualTo("PLAN_FEATURE_REQUIRED");
-        assertThat((String) read(customers, "$.details.requiredPlan")).isEqualTo("STANDARD");
+        assertThat((String) read(customers, "$.details.requiredPlan")).isEqualTo("LIFETIME");
         assertThat(send(get("/api/v1/suppliers"), s, null).getStatus()).isEqualTo(403);
         assertThat(send(get("/api/v1/purchase-orders"), s, null).getStatus()).isEqualTo(403);
         assertThat(send(get("/api/v1/reports/sales/export"), s, null).getStatus()).isEqualTo(403);
-        String longAgo = java.time.LocalDate.now().minusDays(90).toString();
-        assertThat((String) read(send(get("/api/v1/reports/sales?from=" + longAgo), s, null), "$.code"))
-                .isEqualTo("PLAN_FEATURE_REQUIRED");
-        assertThat(send(get("/api/v1/reports/sales"), s, null).getStatus()).isEqualTo(200); // 本月可以
+        // 高级数据分析（趋势、排行、毛利）默认不开放；今日 / 本月合计和库存报表可以看
+        assertThat((String) read(send(get("/api/v1/reports/sales"), s, null), "$.code")).isEqualTo("PLAN_FEATURE_REQUIRED");
+        assertThat(send(get("/api/v1/dashboard/sales-trend"), s, null).getStatus()).isEqualTo(403);
+        assertThat(send(get("/api/v1/reports/top-products"), s, null).getStatus()).isEqualTo(403);
+        assertThat(send(get("/api/v1/dashboard/summary"), s, null).getStatus()).isEqualTo(200);
+        assertThat(send(get("/api/v1/reports/inventory"), s, null).getStatus()).isEqualTo(200);
 
         Long p = ((Number) read(send(post("/api/v1/products"), s, """
                 {"name":"商品","unit":"个","costPrice":"1","retailPrice":"5","wholesalePrice":"3","lowStockThreshold":0,"initialStock":10}
@@ -82,21 +88,45 @@ class BillingApiTest extends IntegrationTest {
     }
 
     @Test
-    void freePlanProductLimit() throws Exception {
+    void freePlanProductLimit_countsPerAccount_deleteDoesNotRefund_upgradeLifts() throws Exception {
         Session s = registerWithFreeTenant("bill-limit", "限额店");
-        Long tenantId = currentTenantId(s, mvc);
-        // 直接写入 99 个商品（加速），再通过接口新增第 100 个
-        for (int i = 0; i < 99; i++) {
-            jdbcTemplate.update("insert into products (tenant_id, sku, name, unit, created_at, updated_at) "
-                    + "values (?, ?, ?, '个', utc_timestamp(6), utc_timestamp(6))", tenantId, "BULK" + i, "批量" + i);
-        }
         String body = "{\"name\":\"第%d个\",\"unit\":\"个\",\"costPrice\":\"1\",\"retailPrice\":\"2\",\"lowStockThreshold\":0,\"initialStock\":0}";
-        assertThat(send(post("/api/v1/products"), s, body.formatted(100)).getStatus()).isEqualTo(201);
-        MockHttpServletResponse over = send(post("/api/v1/products"), s, body.formatted(101));
+        long first = 0;
+        for (int i = 1; i <= 3; i++) {
+            MockHttpServletResponse ok = send(post("/api/v1/products"), s, body.formatted(i));
+            assertThat(ok.getStatus()).as(ok.getContentAsString()).isEqualTo(201);
+            if (i == 1) {
+                first = ((Number) read(ok, "$.id")).longValue();
+            }
+        }
+        MockHttpServletResponse over = send(post("/api/v1/products"), s, body.formatted(4));
         assertThat(over.getStatus()).isEqualTo(403);
         assertThat((String) read(over, "$.code")).isEqualTo("PLAN_LIMIT_REACHED");
-    }
+        assertThat((String) read(over, "$.details.limit")).isEqualTo("products");
+        assertThat((Integer) read(over, "$.details.max")).isEqualTo(3);
 
+        // 已有商品照常查看、修改
+        assertThat(send(get("/api/v1/products/" + first), s, null).getStatus()).isEqualTo(200);
+        // 删除不返还次数
+        assertThat(send(delete("/api/v1/products/" + first), s, null).getStatus()).isEqualTo(204);
+        assertThat(send(post("/api/v1/products"), s, body.formatted(5)).getStatus()).isEqualTo(403);
+        // 次数按账号累计：同一账号新开的第二家店也不能再建
+        Session s2 = createTenant(s, "限额店二");
+        assertThat(send(post("/api/v1/products"), s2, body.formatted(6)).getStatus()).isEqualTo(403);
+        assertThat((Integer) read(send(get("/api/v1/billing/current"), s2, null), "$.membership.productsUsed")).isEqualTo(3);
+
+        // 升级永久会员后立即解除限制，名下两家店都是高级会员
+        Session admin = admin();
+        assertThat(send(post("/api/v1/admin/users/" + s.userId() + "/membership"), admin,
+                "{\"membership\":\"LIFETIME\",\"note\":\"测试\"}").getStatus()).isEqualTo(200);
+        assertThat(send(post("/api/v1/products"), s2, body.formatted(7)).getStatus()).isEqualTo(201);
+        MockHttpServletResponse cur = send(get("/api/v1/billing/current"), s2, null);
+        assertThat((Boolean) read(cur, "$.lifetime")).isTrue();
+        assertThat((String) read(cur, "$.plan")).isEqualTo("PRO");
+        assertThat((Object) read(cur, "$.expiresAt")).isNull();
+        assertThat((Object) read(cur, "$.maxProducts")).isNull();
+        assertThat(send(get("/api/v1/customers"), s2, null).getStatus()).isEqualTo(200);
+    }
     // ---------------- 激活码 ----------------
 
     @Test
@@ -201,25 +231,22 @@ class BillingApiTest extends IntegrationTest {
         assertThat(count).isEqualTo(1); // 数据仍在
     }
 
-    // ---------------- 价格（2026-11-09 调价，V9） ----------------
+    // ---------------- 价格（V18：只卖高级永久会员） ----------------
 
     @Test
-    void currentPricesAfterRepricing() throws Exception {
+    void onlyLifetimeMembershipIsForSale() throws Exception {
         Session s = registerWithFreeTenant("bill-price", "价格店");
         MockHttpServletResponse cny = send(get("/api/v1/billing/prices?currency=CNY"), s, null);
-        // 专业版随应收账款一起开卖（V10）
-        assertThat((List<String>) read(cny, "$[*].amount")).containsExactly("1.99", "6.99", "69.90", "9.90", "109.90");
-        assertThat((List<String>) read(cny, "$[*].plan")).containsExactly("STANDARD", "STANDARD", "STANDARD", "PRO", "PRO");
+        assertThat((List<String>) read(cny, "$[*].amount")).containsExactly("29.90");
+        assertThat((List<String>) read(cny, "$[*].period")).containsExactly("LIFETIME");
         MockHttpServletResponse myr = send(get("/api/v1/billing/prices?currency=MYR"), s, null);
-        assertThat((List<String>) read(myr, "$[*].amount")).containsExactly("1.00", "4.99", "49.90", "6.90", "69.90");
+        assertThat((List<String>) read(myr, "$[*].amount")).containsExactly("19.90");
 
+        // 以前的订阅价格保留在后台（已停售）
         Session admin = admin();
         MockHttpServletResponse all = send(get("/api/v1/admin/plan-prices"), admin, null);
-        assertThat((List<String>) read(all, "$[?(@.plan == 'PRO' && @.currency == 'CNY')].amount")).containsExactly("9.90", "109.90");
-        assertThat((List<String>) read(all, "$[?(@.plan == 'PRO' && @.currency == 'MYR')].amount")).containsExactly("6.90", "69.90");
-        assertThat((List<String>) read(all, "$[?(@.plan == 'PRO' && @.period == 'TRIAL_MONTH')]")).isEmpty(); // 首月体验只针对标准版
+        assertThat((List<Boolean>) read(all, "$[?(@.period != 'LIFETIME')].enabled")).isNotEmpty().allMatch(e -> !e);
     }
-
     // ---------------- 扫码付款 ----------------
 
     @Test
@@ -227,8 +254,8 @@ class BillingApiTest extends IntegrationTest {
         Session owner = registerWithFreeTenant("bill-pay", "付款店");
         Session admin = admin();
 
-        List<Integer> cnyIds = read(send(get("/api/v1/billing/prices?currency=CNY"), owner, null), "$[?(@.period == 'TRIAL_MONTH')].id");
-        List<Integer> myrIds = read(send(get("/api/v1/billing/prices?currency=MYR"), owner, null), "$[?(@.period == 'MONTH')].id");
+        List<Integer> cnyIds = read(send(get("/api/v1/billing/prices?currency=CNY"), owner, null), "$[?(@.period == 'LIFETIME')].id");
+        List<Integer> myrIds = read(send(get("/api/v1/billing/prices?currency=MYR"), owner, null), "$[?(@.period == 'LIFETIME')].id");
         assertThat((List<?>) read(send(get("/api/v1/billing/prices?currency=CNY"), owner, null), "$[?(@.plan == 'PRO' && @.period == 'TRIAL_MONTH')]")).isEmpty();
         MockHttpServletResponse methods = send(get("/api/v1/billing/payment-methods"), owner, null);
         List<Integer> wechat = read(methods, "$[?(@.code == 'WECHAT_PAY')].id");
@@ -243,7 +270,7 @@ class BillingApiTest extends IntegrationTest {
         MockHttpServletResponse created = send(post("/api/v1/billing/payment-orders"), owner,
                 "{\"priceId\":%d,\"paymentMethodId\":%d}".formatted(cnyIds.get(0), wechat.get(0)));
         assertThat(created.getStatus()).as(created.getContentAsString()).isEqualTo(201);
-        assertThat((String) read(created, "$.amount")).isEqualTo("1.99");
+        assertThat((String) read(created, "$.amount")).isEqualTo("29.90");
         assertThat((String) read(created, "$.referenceCode")).matches("SBZ-[A-Z2-9]{4}");
         assertThat((String) read(created, "$.status")).isEqualTo("AWAITING_PAYMENT");
         Long id = ((Number) read(created, "$.id")).longValue();
@@ -275,13 +302,15 @@ class BillingApiTest extends IntegrationTest {
         assertThat(send(post("/api/v1/admin/payment-orders/" + id + "/approve"), admin, null).getStatus()).isEqualTo(409);
 
         MockHttpServletResponse cur = send(get("/api/v1/billing/current"), owner, null);
-        assertThat((String) read(cur, "$.plan")).isEqualTo("STANDARD");
-        assertThat((Boolean) read(cur, "$.trialUsed")).isTrue();
+        assertThat((String) read(cur, "$.plan")).isEqualTo("PRO");
+        assertThat((Boolean) read(cur, "$.lifetime")).isTrue();
+        assertThat((String) read(cur, "$.membership.membership")).isEqualTo("LIFETIME");
+        assertThat((String) read(send(get("/api/v1/billing/history"), owner, null), "$[0].source")).isEqualTo("MANUAL_PAYMENT");
 
-        // 首月体验用过后不能再下首月体验单；同一交易单号不能再次提交
+        // 已经是永久会员不能再买；同一交易单号不能再次提交
         assertThat((String) read(send(post("/api/v1/billing/payment-orders"), owner,
                 "{\"priceId\":%d,\"paymentMethodId\":%d}".formatted(cnyIds.get(0), wechat.get(0))), "$.code"))
-                .isEqualTo("TRIAL_ALREADY_USED");
+                .isEqualTo("ALREADY_LIFETIME");
         MockHttpServletResponse otherOrder = send(post("/api/v1/billing/payment-orders"), other,
                 "{\"priceId\":%d,\"paymentMethodId\":%d}".formatted(cnyIds.get(0), wechat.get(0)));
         Long otherId = ((Number) read(otherOrder, "$.id")).longValue();

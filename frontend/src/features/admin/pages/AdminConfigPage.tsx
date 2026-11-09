@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Field, Input, Textarea } from '@/components/ui/form'
 import { ErrorState, PageHeader } from '@/components/ui/page'
-import { PLAN_LABELS } from '@/features/auth/types'
-import { PERIOD_LABELS, type MethodView, type PriceView } from '@/features/billing/api'
+import { orderTitle, type FreeLimits, type MethodView, type PriceView } from '@/features/billing/api'
 import { errorMessage } from '@/lib/api'
 import { adminApi } from '../api'
 
@@ -17,9 +16,10 @@ export function AdminConfigPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="价格与收款" description="改价只影响之后新建的付款单；已创建的付款单按原价格" />
+      <PageHeader title="会员、价格与收款" description="改价只影响之后新建的付款单；已创建的付款单按原价格" />
+      <MembershipConfigCard />
       <Card>
-        <CardHeader title="套餐价格" description="停用的价格不会在商户端显示（专业版暂未开放）" />
+        <CardHeader title="价格" description="停用的价格不会在商户端显示。现在只卖高级永久会员；以前的订阅价格已停用" />
         {prices.isLoading ? (
           <div className="m-5 h-40 animate-pulse rounded-lg bg-slate-100" />
         ) : prices.isError ? (
@@ -80,9 +80,9 @@ function PriceRow({ price }: { price: PriceView }) {
     <tr>
       <td className="px-5 py-2">{price.currency}</td>
       <td className="px-5 py-2">
-        {PLAN_LABELS[price.plan]} · {PERIOD_LABELS[price.period]}
+        {orderTitle(price)}
       </td>
-      <td className="px-5 py-2 tabular-nums">{price.durationDays}</td>
+      <td className="px-5 py-2 tabular-nums">{price.period === 'LIFETIME' ? '永久' : price.durationDays}</td>
       <td className="px-5 py-2">
         <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="h-9 w-28" invalid={!valid} aria-label="价格" />
       </td>
@@ -182,6 +182,71 @@ function MethodCard({ method }: { method: MethodView }) {
           </div>
         </form>
       </CardBody>
+    </Card>
+  )
+}
+
+/** 普通会员的限制（修改后立即生效，限制由服务端执行）。 */
+function MembershipConfigCard() {
+  const queryClient = useQueryClient()
+  const cfg = useQuery({ queryKey: ['admin', 'membership-config'], queryFn: adminApi.membershipConfig })
+  const [v, setV] = useState<FreeLimits | null>(null)
+  const value = v ?? cfg.data ?? null
+  const save = useMutation({
+    mutationFn: () => adminApi.updateMembershipConfig(value!),
+    onSuccess: (c) => {
+      queryClient.setQueryData(['admin', 'membership-config'], c)
+      void queryClient.invalidateQueries({ queryKey: ['billing'] })
+      setV(null)
+      toast.success('普通会员限制已保存，立即生效')
+    },
+    onError: (e) => toast.error(errorMessage(e, '保存失败')),
+  })
+  const set = <K extends keyof FreeLimits>(k: K, x: FreeLimits[K]) => setV({ ...(value as FreeLimits), [k]: x })
+
+  return (
+    <Card>
+      <CardHeader title="普通会员限制" description="次数按账号累计，删除不返还；高级永久会员不受限制。已有数据不受影响" />
+      {cfg.isLoading || !value ? (
+        <div className="m-5 h-32 animate-pulse rounded-lg bg-slate-100" />
+      ) : cfg.isError ? (
+        <ErrorState onRetry={() => void cfg.refetch()} />
+      ) : (
+        <CardBody className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="店铺上限（1–5）" htmlFor="mc-stores">
+              <Input id="mc-stores" type="number" min={1} max={5} value={value.maxStores} onChange={(e) => set('maxStores', Number(e.target.value))} />
+            </Field>
+            <Field label="商品上限" htmlFor="mc-products">
+              <Input id="mc-products" type="number" min={0} value={value.maxProducts} onChange={(e) => set('maxProducts', Number(e.target.value))} />
+            </Field>
+            <Field label="报表可查看天数" htmlFor="mc-days">
+              <Input id="mc-days" type="number" min={1} value={value.reportDays} onChange={(e) => set('reportDays', Number(e.target.value))} />
+            </Field>
+          </div>
+          <fieldset className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-700">
+            <legend className="mb-2 text-sm font-medium text-slate-700">对普通会员开放</legend>
+            {(
+              [
+                ['advancedTools', '高级工具（客户、供应商、采购、批发价、赊账、员工、多仓库、协议价）'],
+                ['advancedTemplates', '高级模板（打印条码标签）'],
+                ['export', '导出 CSV / Excel'],
+                ['advancedAnalytics', '高级数据分析（趋势、排行、毛利）'],
+              ] as const
+            ).map(([k, label]) => (
+              <label key={k} className="flex items-center gap-2">
+                <input type="checkbox" className="size-4 accent-blue-600" checked={value[k]} onChange={(e) => set(k, e.target.checked)} />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <div className="flex justify-end">
+            <Button disabled={!v} loading={save.isPending} onClick={() => save.mutate()}>
+              保存
+            </Button>
+          </div>
+        </CardBody>
+      )}
     </Card>
   )
 }

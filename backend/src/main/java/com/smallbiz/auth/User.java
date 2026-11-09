@@ -40,6 +40,13 @@ public class User extends BaseEntity {
     @Column(name = "is_platform_admin", nullable = false)
     private boolean platformAdmin = false;
 
+    /** 会员等级（跟着账号）：FREE 普通会员 / LIFETIME 高级永久会员。 */
+    @Column(nullable = false, length = 20)
+    private String membership = "FREE";
+
+    @Column(name = "lifetime_since")
+    private java.time.Instant lifetimeSince;
+
     @Column(name = "terms_version", length = 20)
     private String termsVersion;
 
@@ -125,5 +132,22 @@ public class User extends BaseEntity {
 
     public Instant getTermsAcceptedAt() {
         return termsAcceptedAt;
+    }
+
+    public boolean isLifetime() {
+        return "LIFETIME".equals(membership);
+    }
+
+    public String getMembership() {
+        return membership;
+    }
+
+    public java.time.Instant getLifetimeSince() {
+        return lifetimeSince;
+    }
+
+    public void setMembership(String membership, java.time.Instant since) {
+        this.membership = membership;
+        this.lifetimeSince = since;
     }
 }

@@ -43,7 +43,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             <Icon className="size-4.5 shrink-0" aria-hidden />
             <span className="flex-1">{item.label}</span>
             {item.feature && plan.data && !plan.data.features[item.feature] && (
-              <Lock className="size-3.5 text-slate-400" aria-label={tr('需要标准版')} />
+              <Lock className="size-3.5 text-slate-400" aria-label={tr('高级会员功能')} />
             )}
           </NavLink>
         )

@@ -18,8 +18,13 @@ public final class BillingDtos {
     }
 
     /** proUpgradeBonusDays：现在升级专业版时，标准版剩余时间可折算的专业版天数（非标准版时为 0）。 */
+    /**
+     * 当前店铺的会员情况。lifetime：店铺属于高级永久会员（永久有效）；membership：当前账号的会员等级和普通会员用量。
+     * maxProducts 为普通会员的商品上限（按店主账号累计），不限时为空。
+     */
     public record CurrentPlan(Plan plan, Instant expiresAt, boolean trialUsed, long productCount, Integer maxProducts,
-            Map<Feature, Boolean> features, int proUpgradeBonusDays) {
+            Map<Feature, Boolean> features, int proUpgradeBonusDays, boolean lifetime,
+            com.smallbiz.billing.membership.MembershipService.Usage membership) {
     }
 
     public record PriceView(Long id, Plan plan, PlanPrice.Period period, int durationDays, String currency,

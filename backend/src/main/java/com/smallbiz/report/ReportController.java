@@ -49,6 +49,8 @@ public class ReportController {
         return service.dashboard(CurrentUser.requireTenantId(), hideCost());
     }
 
+    // 高级数据分析：普通会员默认不开放（后台可开）
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.FULL_REPORTS)
     @GetMapping("/dashboard/sales-trend")
     public SalesReport salesTrend(@RequestParam(defaultValue = "30") int days) {
         return service.salesTrend(CurrentUser.requireTenantId(), days, hideCost());
@@ -56,6 +58,8 @@ public class ReportController {
 
     // ---------------- 报表 ----------------
 
+    // 高级数据分析：普通会员默认不开放（后台可开）
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.FULL_REPORTS)
     @GetMapping("/reports/sales")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     public SalesReport sales(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -64,6 +68,8 @@ public class ReportController {
         return service.sales(CurrentUser.requireTenantId(), from, to, groupBy, false);
     }
 
+    // 高级数据分析：普通会员默认不开放（后台可开）
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.FULL_REPORTS)
     @GetMapping("/reports/purchases")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     public PurchaseReport purchases(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -72,6 +78,8 @@ public class ReportController {
         return service.purchases(CurrentUser.requireTenantId(), from, to, groupBy);
     }
 
+    // 高级数据分析：普通会员默认不开放（后台可开）
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.FULL_REPORTS)
     @GetMapping("/reports/top-products")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     public List<ProductRank> topProducts(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -80,6 +88,8 @@ public class ReportController {
         return service.topProducts(CurrentUser.requireTenantId(), from, to, by, limit);
     }
 
+    // 高级数据分析：普通会员默认不开放（后台可开）
+    @com.smallbiz.billing.RequiresFeature(com.smallbiz.billing.Feature.FULL_REPORTS)
     @GetMapping("/reports/top-customers")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
     public List<CustomerRank> topCustomers(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,

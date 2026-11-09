@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, CheckCircle2, ChevronRight, Circle, HandCoins, PackageCheck, Plus } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ChevronRight, Circle, HandCoins, Lock, PackageCheck, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button'
@@ -35,7 +35,9 @@ export function DashboardPage() {
   const tenant = session?.currentTenant
 
   const summary = useQuery({ queryKey: ['sales', 'dashboard'], queryFn: reportApi.dashboard })
-  const trend = useQuery({ queryKey: ['sales', 'trend', 30], queryFn: () => reportApi.trend(30) })
+  // 销售趋势属于高级数据分析：普通会员默认不加载，显示升级提示
+  const analytics = useFeature('FULL_REPORTS')
+  const trend = useQuery({ queryKey: ['sales', 'trend', 30], queryFn: () => reportApi.trend(30), enabled: analytics })
   const inventory = useQuery({ queryKey: ['inventory', 'summary'], queryFn: inventoryApi.summary })
   const lowStock = useQuery({ queryKey: ['inventory', 'low-stock', 5], queryFn: () => inventoryApi.lowStock(5) })
   const recent = useQuery({ queryKey: ['sales', { recent: true }], queryFn: () => saleApi.list({ size: 5 }) })
@@ -143,7 +145,19 @@ export function DashboardPage() {
             }
           />
           <CardBody>
-            {trend.data ? <TrendChart data={trend.data.points} label={tr('销售额')} /> : <div className="h-60 animate-pulse rounded-lg bg-slate-50" />}
+            {!analytics ? (
+              <div className="flex h-60 flex-col items-center justify-center gap-2 rounded-lg bg-slate-50 text-center text-sm text-slate-500">
+                <Lock className="size-5 text-slate-400" aria-hidden />
+                {tr('销售趋势是高级会员功能')}
+                <Link to="/settings/billing" className="font-medium text-blue-600 hover:underline">
+                  {tr('立即升级')}
+                </Link>
+              </div>
+            ) : trend.data ? (
+              <TrendChart data={trend.data.points} label={tr('销售额')} />
+            ) : (
+              <div className="h-60 animate-pulse rounded-lg bg-slate-50" />
+            )}
           </CardBody>
         </Card>
 

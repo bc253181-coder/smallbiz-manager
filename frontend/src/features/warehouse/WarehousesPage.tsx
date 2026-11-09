@@ -62,10 +62,10 @@ export function WarehousesPage() {
         <>
           {!wh.data?.allowed ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-              <p className="font-medium">{tr('多仓库是专业版功能')}</p>
+              <p className="font-medium">{tr('多仓库是高级会员功能')}</p>
               <p className="mt-1 text-amber-800">
-                {tr('专业版最多 5 个仓库，支持仓库间调拨、按仓库开单和盘点。')}
-                {wh.all.length > 1 && tr('专业版到期期间，主仓库照常使用；其他仓库只能把库存调拨出去，续费后恢复。')}
+                {tr('高级会员最多 5 个仓库，支持仓库间调拨、按仓库开单和盘点。')}
+                {wh.all.length > 1 && tr('高级会员到期期间，主仓库照常使用；其他仓库只能把库存调拨出去，升级高级永久会员后恢复。')}
               </p>
               <Link to="/settings/billing" className={buttonVariants({ size: 'sm', className: 'mt-3' })}>
                 {tr('查看套餐')}

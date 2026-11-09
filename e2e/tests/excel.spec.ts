@@ -67,9 +67,11 @@ test('导入商品 → 预检错误 → 导入成功 → 导出 Excel', async ({
   await expect(page.getByText(`E2E 手机壳 ${stamp}`).first()).toBeVisible()
   await expect(page.getByRole('row').filter({ hasText: `E2E 数据线 ${stamp}` })).toContainText('10')
 
-  // 免费版导出 Excel 提示升级
+  // 普通会员导出 Excel：弹出升级窗口
   await page.getByRole('button', { name: '导出 Excel' }).click()
-  await expect(page.getByText('导出 Excel 是专业版功能')).toBeVisible()
+  const upgrade = page.getByRole('alertdialog')
+  await expect(upgrade.getByText('「导出 Excel 表格」是高级会员功能。', { exact: false })).toBeVisible()
+  await upgrade.getByRole('button', { name: '以后再说' }).click()
 
   // 开通专业版后导出
   await go(page, '/settings/billing')

@@ -26,7 +26,7 @@ test('专业版：邀请店员 → 店员开单 → 按开单人筛选 → 移�
 
   // 免费版：员工管理提示需要专业版
   await go(page, '/settings/staff')
-  await expect(page.getByText('员工账号是专业版功能')).toBeVisible()
+  await expect(page.getByText('员工账号是高级会员功能')).toBeVisible()
   await go(page, '/settings/billing')
   await page.getByLabel('激活码').fill(await createActivationCode(baseURL!, 30, 'PRO'))
   await page.getByRole('button', { name: '兑换' }).click()

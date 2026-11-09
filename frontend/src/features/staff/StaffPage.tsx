@@ -81,10 +81,10 @@ export function StaffPage() {
           <>
             {!data.allowed ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-                <p className="font-medium">{tr('员工账号是专业版功能')}</p>
+                <p className="font-medium">{tr('员工账号是高级会员功能')}</p>
                 <p className="mt-1 text-amber-800">
-                  {tr('专业版 ¥9.9/月 · RM 6.9/月，店主以外最多 5 名员工。')}
-                  {data.members.length > 1 && tr('专业版到期期间，已加入的员工暂时不能进入店铺，续费后自动恢复。')}
+                  {tr('高级永久会员一次性付款，每家店店主以外最多 5 名员工。')}
+                  {data.members.length > 1 && tr('高级会员到期期间，已加入的员工暂时不能进入店铺，升级高级永久会员后自动恢复。')}
                 </p>
                 <Link to="/settings/billing" className={buttonVariants({ size: 'sm', className: 'mt-3' })}>
                   {tr('查看套餐')}

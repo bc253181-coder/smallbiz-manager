@@ -155,11 +155,15 @@ public class ImportService {
     private final com.smallbiz.pricing.CustomerPriceService customerPriceService;
     private final Map<Long, Deque<Instant>> rate = new ConcurrentHashMap<>();
 
+    private final com.smallbiz.billing.membership.MembershipService membership;
+
     public ImportService(ProductRepository products, ProductService productService, CategoryRepository categories,
             CategoryService categoryService, CustomerRepository customers, CustomerService customerService,
             SupplierRepository suppliers, SupplierService supplierService, PlanGuard planGuard, Validator validator,
             com.smallbiz.pricing.CustomerPriceRepository customerPrices,
-            com.smallbiz.pricing.CustomerPriceService customerPriceService) {
+            com.smallbiz.pricing.CustomerPriceService customerPriceService,
+            com.smallbiz.billing.membership.MembershipService membership) {
+        this.membership = membership;
         this.customerPrices = customerPrices;
         this.customerPriceService = customerPriceService;
         this.products = products;
@@ -340,10 +344,11 @@ public class ImportService {
             }
         }
 
-        Integer max = PlanPolicy.maxProducts(planGuard.currentPlan(tenantId));
-        if (max != null && products.count() + plan.created > max) {
-            plan.errors.add(0, new RowError(0, null, "免费版最多 " + max + " 个商品，现有 " + products.count()
-                    + " 个，本次要新增 " + plan.created + " 个。升级标准版可不限数量"));
+        // 普通会员：新建商品次数按店主账号累计，超出剩余次数时整批拒绝
+        Integer remaining = membership.remainingProducts(tenantId);
+        if (remaining != null && plan.created > remaining) {
+            plan.errors.add(0, new RowError(0, null, "已达到免费使用次数：普通会员还可以新建 " + remaining + " 个商品，本次要新增 "
+                    + plan.created + " 个。升级高级永久会员即可不受限制"));
         }
         if (stockIgnored) {
             plan.notes.add("已有商品的「初始库存」不会导入：库存请通过入库、出库或盘点修改，以便追溯");

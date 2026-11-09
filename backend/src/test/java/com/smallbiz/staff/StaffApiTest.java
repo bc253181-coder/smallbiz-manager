@@ -311,7 +311,7 @@ class StaffApiTest extends IntegrationTest {
         Session owner = registerWithTenant("st-std", "标准版店");
         MockHttpServletResponse res = send(post("/api/v1/invitations"), owner, "{\"role\":\"STAFF\"}");
         assertThat(res.getStatus()).isEqualTo(403);
-        assertThat((String) read(res, "$.details.requiredPlan")).isEqualTo("PRO");
+        assertThat((String) read(res, "$.details.requiredPlan")).isEqualTo("LIFETIME");
         MockHttpServletResponse list = send(get("/api/v1/members"), owner, null);
         assertThat((Boolean) read(list, "$.allowed")).isFalse();
         assertThat((Integer) read(list, "$.max")).isEqualTo(0);

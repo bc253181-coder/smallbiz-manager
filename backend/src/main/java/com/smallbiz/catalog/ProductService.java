@@ -50,10 +50,13 @@ public class ProductService {
     private final ImageStorage images;
     private final UserRepository users;
     private final PlanGuard planGuard;
+    private final com.smallbiz.billing.membership.MembershipService membership;
 
     public ProductService(ProductRepository products, CategoryRepository categories, CategoryService categoryService,
             InventoryService inventory, StockMovementRepository movements, SequenceService sequences,
-            ImageStorage images, UserRepository users, PlanGuard planGuard) {
+            ImageStorage images, UserRepository users, PlanGuard planGuard,
+            com.smallbiz.billing.membership.MembershipService membership) {
+        this.membership = membership;
         this.planGuard = planGuard;
         this.products = products;
         this.categories = categories;
@@ -119,10 +122,8 @@ public class ProductService {
 
     @Transactional
     public ProductView create(CreateProductRequest req, Long tenantId, Long userId) {
-        Integer max = PlanPolicy.maxProducts(planGuard.currentPlan(tenantId));
-        if (max != null && products.count() >= max) {
-            throw PlanGuard.limitReached("products", max);
-        }
+        // 普通会员：新建商品次数按店主账号累计（删除不返还）；高级会员不计数
+        membership.chargeProducts(tenantId, 1);
         String sku = blankToNull(req.sku());
         if (sku == null) {
             sku = nextAutoSku(tenantId);

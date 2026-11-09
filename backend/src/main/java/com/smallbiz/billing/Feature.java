@@ -6,7 +6,7 @@ public enum Feature {
     SUPPLIERS("供应商管理"),
     PURCHASING("采购管理"),
     WHOLESALE_PRICE("批发价开单"),
-    FULL_REPORTS("完整报表（超过 30 天）"),
+    FULL_REPORTS("高级数据分析（趋势、排行、毛利）"),
     EXPORT("数据导出"),
     /** 专业版：赊账、收款记录、客户欠款与对账单。 */
     RECEIVABLES("应收账款"),
@@ -29,5 +29,17 @@ public enum Feature {
 
     public String label() {
         return label;
+    }
+
+    /** 普通会员的开关分组（平台后台按组开放给普通会员）。 */
+    public enum Group { ADVANCED_TOOLS, ADVANCED_TEMPLATES, EXPORT, ADVANCED_ANALYTICS }
+
+    public Group group() {
+        return switch (this) {
+            case LABEL_PRINTING -> Group.ADVANCED_TEMPLATES;
+            case EXPORT, EXCEL_EXPORT -> Group.EXPORT;
+            case FULL_REPORTS -> Group.ADVANCED_ANALYTICS;
+            default -> Group.ADVANCED_TOOLS;
+        };
     }
 }

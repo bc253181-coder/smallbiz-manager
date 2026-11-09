@@ -301,8 +301,20 @@ class AuthFlowTest extends IntegrationTest {
 
     @Test
     void ownedTenantLimitIsEnforced() throws Exception {
+        // 普通会员：最多 2 家店（docs/16），第 3 家返回升级提示
         Session s = register("limit");
-        for (int i = 1; i <= 5; i++) {
+        for (int i = 1; i <= 2; i++) {
+            s = createTenant(s, "店" + i);
+        }
+        mvc.perform(withAuth(post("/api/v1/tenants"), s).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"店3\",\"businessType\":\"RETAIL\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PLAN_LIMIT_REACHED"))
+                .andExpect(jsonPath("$.details.limit").value("stores"));
+
+        // 高级永久会员：不受普通会员限制，合理使用上限每个账号 5 家
+        jdbcTemplate.update("update users set membership = 'LIFETIME' where id = ?", s.userId());
+        for (int i = 3; i <= 5; i++) {
             s = createTenant(s, "店" + i);
         }
         mvc.perform(withAuth(post("/api/v1/tenants"), s).contentType(MediaType.APPLICATION_JSON)

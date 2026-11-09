@@ -63,7 +63,10 @@ export function MockCheckoutPage() {
             <>
               <div>
                 <p className="text-sm text-slate-500">
-                  {PLAN_LABELS[summary.data.plan]} · {summary.data.durationDays} {tr('天')} · {summary.data.orderNo}
+                  {summary.data.durationDays > 0
+                    ? `${PLAN_LABELS[summary.data.plan]} · ${summary.data.durationDays} ${tr('天')}`
+                    : tr('高级永久会员')}{' '}
+                  · {summary.data.orderNo}
                 </p>
                 <p className="text-3xl font-semibold tabular-nums text-slate-900">
                   {formatMoney(summary.data.amount, summary.data.currency)}

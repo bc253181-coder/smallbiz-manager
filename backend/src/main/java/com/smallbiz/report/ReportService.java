@@ -81,13 +81,19 @@ public class ReportService {
         if (ChronoUnit.DAYS.between(f, t) >= MAX_DAYS) {
             throw ApiException.badRequest("RANGE_TOO_LONG", "日期范围最长 366 天");
         }
-        // 免费版只能看近 30 天（以及本月），更早的数据需要标准版
-        LocalDate earliestFree = today.minusDays(PlanPolicy.FREE_REPORT_DAYS - 1L);
-        if (today.withDayOfMonth(1).isBefore(earliestFree)) {
-            earliestFree = today.withDayOfMonth(1);
-        }
-        if (f.isBefore(earliestFree) && !PlanPolicy.allows(planGuard.currentPlan(tenantId), Feature.FULL_REPORTS)) {
-            throw PlanGuard.featureRequired(Feature.FULL_REPORTS);
+        // 普通会员只能查看最近 N 天（后台可改）；没指定开始日期时自动从最早可看的那天开始。原始单据不受影响
+        if (planGuard.currentPlan(tenantId) == com.smallbiz.tenant.Plan.FREE) {
+            int days = PlanPolicy.freeReportDays();
+            LocalDate earliestFree = today.minusDays(days - 1L);
+            if (f.isBefore(earliestFree)) {
+                if (from != null) {
+                    throw new ApiException(org.springframework.http.HttpStatus.FORBIDDEN, "PLAN_FEATURE_REQUIRED",
+                            "普通会员的报表只能查看最近 " + days + " 天，升级高级永久会员即可查看全部历史",
+                            java.util.Map.of("feature", Feature.FULL_REPORTS.name(), "requiredPlan", "LIFETIME",
+                                    "reportDays", days));
+                }
+                f = earliestFree.isAfter(t) ? t : earliestFree;
+            }
         }
         return new Range(f, t, zone);
     }

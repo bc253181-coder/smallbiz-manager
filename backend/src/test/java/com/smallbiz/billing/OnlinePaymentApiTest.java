@@ -29,7 +29,7 @@ import com.smallbiz.billing.online.PaymentGateway.Paid;
 import com.smallbiz.billing.online.ReconcileRun;
 import com.smallbiz.support.IntegrationTest;
 
-/** 在线支付（模拟支付渠道）：开通、签名、金额、重复与并发、对账、过期后付款、首月体验、隔离与后台。 */
+/** 在线支付（模拟支付渠道，购买高级永久会员）：开通、签名、金额、重复与并发、对账、过期后付款、重复购买、隔离与后台。 */
 class OnlinePaymentApiTest extends IntegrationTest {
 
     @Autowired
@@ -110,8 +110,8 @@ class OnlinePaymentApiTest extends IntegrationTest {
         List<String> channels = read(send(get("/api/v1/billing/online-channels?currency=CNY"), owner, null), "$[*].channel");
         assertThat(channels).containsExactly("MOCK");
 
-        Order o = start(owner, priceId(owner, "CNY", "STANDARD", "TRIAL_MONTH"));
-        assertThat(o.amount()).isEqualTo("1.99"); // 金额来自价格表
+        Order o = start(owner, priceId(owner, "CNY", "PRO", "LIFETIME"));
+        assertThat(o.amount()).isEqualTo("29.90"); // 金额来自价格表
         assertThat(o.checkoutUrl()).isEqualTo("/pay/mock/" + o.orderNo());
         assertThat(status(owner, o)).isEqualTo("AWAITING_PAYMENT");
         assertThat(plan(owner)).isEqualTo("FREE");
@@ -120,8 +120,9 @@ class OnlinePaymentApiTest extends IntegrationTest {
         MockHttpServletResponse paid = mockPay(owner, o, "SUCCESS");
         assertThat(paid.getStatus()).isEqualTo(200);
         assertThat(status(owner, o)).isEqualTo("APPROVED");
-        assertThat(plan(owner)).isEqualTo("STANDARD");
-        assertThat(Duration.between(Instant.now(), expires(owner)).toDays()).isBetween(29L, 30L);
+        assertThat(plan(owner)).isEqualTo("PRO");
+        assertThat(expires(owner)).isNull(); // 永久有效
+        assertThat((Boolean) read(send(get("/api/v1/billing/current"), owner, null), "$.lifetime")).isTrue();
 
         MockHttpServletResponse view = send(get("/api/v1/billing/payment-orders/" + o.id()), owner, null);
         assertThat((String) read(view, "$.channel")).isEqualTo("MOCK");
@@ -142,7 +143,7 @@ class OnlinePaymentApiTest extends IntegrationTest {
     @Test
     void forgedOrTamperedNotificationsDoNotActivate() throws Exception {
         Session owner = registerWithFreeTenant("online-forge", "伪造店");
-        Order o = start(owner, priceId(owner, "CNY", "STANDARD", "MONTH"));
+        Order o = start(owner, priceId(owner, "CNY", "PRO", "LIFETIME"));
 
         // 签名不对：拒绝，不开通
         MockPaymentGateway.Notification real = gateway.notification(
@@ -166,7 +167,7 @@ class OnlinePaymentApiTest extends IntegrationTest {
                 new Paid(o.orderNo(), "MOCK-LOW1", new BigDecimal("0.01"), "CNY", Instant.now())));
         assertThat(res.getStatus()).isEqualTo(200);
         assertThat(plan(owner)).isEqualTo("FREE");
-        assertThat(anomaly(o)).startsWith("金额不符：收到 CNY 0.01，应付 CNY 6.99");
+        assertThat(anomaly(o)).startsWith("金额不符：收到 CNY 0.01，应付 CNY 29.90");
         // 币种不符同样不开通
         Order o2 = startAfterCancel(owner, o);
         webhook(gateway.notification(new Paid(o2.orderNo(), "MOCK-CUR1", new BigDecimal(o2.amount()), "MYR", Instant.now())));
@@ -181,13 +182,13 @@ class OnlinePaymentApiTest extends IntegrationTest {
     /** 金额不符的付款单仍是待付款状态：取消后重新下单。 */
     private Order startAfterCancel(Session owner, Order o) throws Exception {
         send(post("/api/v1/billing/payment-orders/" + o.id() + "/cancel"), owner, null);
-        return start(owner, priceId(owner, "CNY", "STANDARD", "MONTH"));
+        return start(owner, priceId(owner, "CNY", "PRO", "LIFETIME"));
     }
 
     @Test
     void duplicateAndConcurrentNotificationsActivateOnce() throws Exception {
         Session owner = registerWithFreeTenant("online-dup", "重复店");
-        Order o = start(owner, priceId(owner, "CNY", "STANDARD", "MONTH"));
+        Order o = start(owner, priceId(owner, "CNY", "PRO", "LIFETIME"));
         MockPaymentGateway.Notification n = gateway.simulatePayment(o.orderNo(), new BigDecimal(o.amount()), "CNY");
 
         // 8 条相同通知 + 对账同时到达
@@ -213,7 +214,9 @@ class OnlinePaymentApiTest extends IntegrationTest {
         pool.shutdown();
 
         assertThat(grants(o)).isEqualTo(1);
-        assertThat(Duration.between(Instant.now(), expires(owner)).toDays()).isBetween(29L, 30L);
+        assertThat(expires(owner)).isNull();
+        assertThat(jdbc.queryForObject("select count(*) from membership_logs where payment_order_id = ?", Integer.class, o.id()))
+                .isEqualTo(1);
         assertThat(webhook(n).getStatus()).isEqualTo(200); // 之后再收到也只是记录为重复
         assertThat(grants(o)).isEqualTo(1);
 
@@ -226,8 +229,8 @@ class OnlinePaymentApiTest extends IntegrationTest {
     @Test
     void lostNotificationIsFixedByReconcile() throws Exception {
         Session owner = registerWithFreeTenant("online-lost", "对账店");
-        Order o = start(owner, priceId(owner, "MYR", "STANDARD", "MONTH"));
-        assertThat(o.amount()).isEqualTo("4.99");
+        Order o = start(owner, priceId(owner, "MYR", "PRO", "LIFETIME"));
+        assertThat(o.amount()).isEqualTo("19.90");
         mockPay(owner, o, "LOST"); // 用户付了款，但通知没送到
         assertThat(status(owner, o)).isEqualTo("AWAITING_PAYMENT");
         assertThat(plan(owner)).isEqualTo("FREE");
@@ -235,13 +238,13 @@ class OnlinePaymentApiTest extends IntegrationTest {
         ReconcileRun run = online.reconcile();
         assertThat(run.getFixed()).isGreaterThanOrEqualTo(1);
         assertThat(status(owner, o)).isEqualTo("APPROVED");
-        assertThat(plan(owner)).isEqualTo("STANDARD");
+        assertThat(plan(owner)).isEqualTo("PRO");
         assertThat(online.reconcile().getFixed()).isZero(); // 再次对账不会重复开通
         assertThat(grants(o)).isEqualTo(1);
 
         // 付款失败：什么都不变，可以取消后重新付款
         Session other = registerWithFreeTenant("online-fail", "失败店");
-        Order f = start(other, priceId(other, "CNY", "STANDARD", "MONTH"));
+        Order f = start(other, priceId(other, "CNY", "PRO", "LIFETIME"));
         mockPay(other, f, "FAIL");
         online.reconcile();
         assertThat(status(other, f)).isEqualTo("AWAITING_PAYMENT");
@@ -251,69 +254,64 @@ class OnlinePaymentApiTest extends IntegrationTest {
     @Test
     void paymentAfterExpiryOrCancelIsStillActivatedAndFlagged() throws Exception {
         Session owner = registerWithFreeTenant("online-late", "晚付店");
-        Order o = start(owner, priceId(owner, "CNY", "STANDARD", "MONTH"));
+        Order o = start(owner, priceId(owner, "CNY", "PRO", "LIFETIME"));
         jdbc.update("update payment_orders set expires_at = ? where id = ?", java.sql.Timestamp.from(Instant.now().minusSeconds(60)), o.id());
         assertThat(status(owner, o)).isEqualTo("EXPIRED");
         mockPay(owner, o, "SUCCESS");
         assertThat(status(owner, o)).isEqualTo("APPROVED");
-        assertThat(plan(owner)).isEqualTo("STANDARD");
+        assertThat(plan(owner)).isEqualTo("PRO");
         assertThat(anomaly(o)).isEqualTo("付款单过期后才付款，已照常开通");
 
-        // 续费：从当前到期日顺延
-        Instant before = expires(owner);
-        Order renew = start(owner, priceId(owner, "CNY", "STANDARD", "YEAR"));
-        mockPay(owner, renew, "SUCCESS");
-        assertThat(Duration.between(before, expires(owner)).toDays()).isEqualTo(365);
+        // 已经是永久会员：不能再下单
+        assertThat((String) read(startRaw(owner, priceId(owner, "CNY", "PRO", "LIFETIME")), "$.code"))
+                .isEqualTo("ALREADY_LIFETIME");
     }
 
     @Test
-    void trialPaidTwiceIsOnlyActivatedOnce() throws Exception {
-        Session owner = registerWithFreeTenant("online-trial", "体验店");
-        long trial = priceId(owner, "CNY", "STANDARD", "TRIAL_MONTH");
-        Order a = start(owner, trial);
+    void lifetimePaidTwiceIsOnlyActivatedOnce() throws Exception {
+        Session owner = registerWithFreeTenant("online-twice", "两单店");
+        long lifetime = priceId(owner, "CNY", "PRO", "LIFETIME");
+        Order a = start(owner, lifetime);
         assertThat(send(post("/api/v1/billing/payment-orders/" + a.id() + "/cancel"), owner, null).getStatus()).isEqualTo(200);
-        Order b = start(owner, trial);
+        Order b = start(owner, lifetime);
         mockPay(owner, b, "SUCCESS");
-        Instant afterB = expires(owner);
-        // 用户之后又在旧付款页付了款
+        assertThat(plan(owner)).isEqualTo("PRO");
+        // 用户之后又在旧付款页付了款：不重复开通，提示退款
         mockPay(owner, a, "SUCCESS");
-        assertThat(expires(owner)).isEqualTo(afterB);
         assertThat(grants(a)).isZero();
-        assertThat(anomaly(a)).contains("首月体验已经用过");
-        // 下单时也会拦住
-        assertThat((String) read(startRaw(owner, trial), "$.code")).isEqualTo("TRIAL_ALREADY_USED");
+        assertThat(anomaly(a)).contains("已经是高级永久会员");
+        assertThat(jdbc.queryForObject("select count(*) from membership_logs where user_id = ?", Integer.class, owner.userId()))
+                .isEqualTo(1);
     }
-
     @Test
     void ordersAreIsolatedAndOwnerOnly_andDowngradeIsRejected() throws Exception {
         Session a = registerWithFreeTenant("online-iso-a", "隔离A");
         Session b = registerWithFreeTenant("online-iso-b", "隔离B");
-        Order o = start(a, priceId(a, "CNY", "STANDARD", "MONTH"));
+        Order o = start(a, priceId(a, "CNY", "PRO", "LIFETIME"));
         assertThat(send(get("/api/v1/payments/mock/" + o.orderNo()), b, null).getStatus()).isEqualTo(404);
         assertThat(mockPay(b, o, "SUCCESS").getStatus()).isEqualTo(404);
         assertThat(send(get("/api/v1/billing/payment-orders/" + o.id()), b, null).getStatus()).isEqualTo(404);
         assertThat(plan(a)).isEqualTo("FREE");
 
         // 有未完成的付款单时不能再下一单
-        assertThat((String) read(startRaw(a, priceId(a, "CNY", "STANDARD", "YEAR")), "$.code")).isEqualTo("PAYMENT_IN_PROGRESS");
+        assertThat((String) read(startRaw(a, priceId(a, "CNY", "PRO", "LIFETIME")), "$.code")).isEqualTo("PAYMENT_IN_PROGRESS");
         // 未登录不能下单
         assertThat(mvc.perform(post("/api/v1/billing/online-payments").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"priceId\":1,\"channel\":\"MOCK\"}")).andReturn().getResponse().getStatus()).isEqualTo(401);
         // 渠道不存在
         assertThat((String) read(send(post("/api/v1/billing/online-payments"), b,
-                "{\"priceId\":%d,\"channel\":\"NOPE\"}".formatted(priceId(b, "CNY", "STANDARD", "MONTH"))), "$.code"))
+                "{\"priceId\":%d,\"channel\":\"NOPE\"}".formatted(priceId(b, "CNY", "PRO", "LIFETIME"))), "$.code"))
                 .isEqualTo("CHANNEL_NOT_AVAILABLE");
 
-        // 专业版有效期内不能买标准版
+        // 以前的专业版订阅用户可以升级为永久会员
         Session pro = registerWithProTenant("online-pro", "专业店");
-        assertThat((String) read(startRaw(pro, priceId(pro, "CNY", "STANDARD", "MONTH")), "$.code"))
-                .isEqualTo("PLAN_DOWNGRADE_NOT_ALLOWED");
+        assertThat(startRaw(pro, priceId(pro, "CNY", "PRO", "LIFETIME")).getStatus()).isEqualTo(201);
     }
 
     @Test
     void adminSeesAnomaliesAndReconcileStatus() throws Exception {
         Session owner = registerWithFreeTenant("online-admin", "异常店");
-        Order o = start(owner, priceId(owner, "CNY", "STANDARD", "MONTH"));
+        Order o = start(owner, priceId(owner, "CNY", "PRO", "LIFETIME"));
         webhook(gateway.notification(new Paid(o.orderNo(), "MOCK-ADM1", new BigDecimal("1.00"), "CNY", Instant.now())));
 
         Session admin = admin();

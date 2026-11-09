@@ -317,4 +317,13 @@ public class PaymentOrder extends BaseEntity {
     public Instant getAnomalyResolvedAt() {
         return anomalyResolvedAt;
     }
+
+    /** 下单的账号（永久会员开通给这个账号）。 */
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public boolean isLifetime() {
+        return period == PlanPrice.Period.LIFETIME;
+    }
 }

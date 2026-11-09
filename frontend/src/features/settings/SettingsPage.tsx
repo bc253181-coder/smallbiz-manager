@@ -14,8 +14,8 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/form'
 import { authApi, tenantApi } from '@/features/auth/api'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { BUSINESS_TYPE_LABELS, PLAN_LABELS, ROLE_LABELS, type BusinessType } from '@/features/auth/types'
-import { useFeature, usePlan } from '@/features/billing/api'
+import { BUSINESS_TYPE_LABELS, ROLE_LABELS, type BusinessType } from '@/features/auth/types'
+import { membershipLabel, useFeature, usePlan } from '@/features/billing/api'
 import { useWarehouses } from '@/features/warehouse/api'
 import { useCanManage } from '@/lib/hooks'
 import { applySession, errorMessage, fieldErrors } from '@/lib/api'
@@ -66,9 +66,9 @@ function PlanLink() {
         <CreditCard className="size-5" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-medium text-slate-900">{tr('套餐与续费')}</span>
+        <span className="block font-medium text-slate-900">{tr('会员')}</span>
         <span className="block text-sm text-slate-500">
-          {data ? tr('当前：{{v0}}{{v1}}', { v0: PLAN_LABELS[data.plan], v1: data.expiresAt ? tr('，{{expiresAt}} 到期', { expiresAt: formatDay(data.expiresAt) }) : '' }) : tr('查看套餐、兑换激活码')}
+          {data ? tr('当前：{{v0}}{{v1}}', { v0: membershipLabel(data.plan, data.expiresAt), v1: data.expiresAt ? tr('，{{expiresAt}} 到期', { expiresAt: formatDay(data.expiresAt) }) : '' }) : tr('查看会员、升级、兑换激活码')}
         </span>
       </span>
       <ChevronRight className="size-5 text-slate-400" aria-hidden />
@@ -96,7 +96,7 @@ function MembershipLink() {
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2 font-medium text-slate-900">
             {tr('员工管理')}
-            {!staffAllowed && <Lock className="size-3.5 text-slate-400" aria-label={tr('需要专业版')} />}
+            {!staffAllowed && <Lock className="size-3.5 text-slate-400" aria-label={tr('高级会员功能')} />}
           </span>
           <span className="block text-sm text-slate-500">{tr('邀请员工用自己的账号登录，设置店员或管理员权限')}</span>
         </span>
@@ -152,7 +152,7 @@ function WarehouseLink() {
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2 font-medium text-slate-900">
           {tr('仓库')}
-          {!allowed && <Lock className="size-3.5 text-slate-400" aria-label={tr('需要专业版')} />}
+          {!allowed && <Lock className="size-3.5 text-slate-400" aria-label={tr('高级会员功能')} />}
         </span>
         <span className="block text-sm text-slate-500">
           {wh.multi ? tr('已启用 {{length}} 个仓库，可分开记录库存、互相调拨', { length: wh.active.length }) : tr('有门店和仓库等多个放货地点时，分开记录库存')}

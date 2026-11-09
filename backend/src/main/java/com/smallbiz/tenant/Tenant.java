@@ -66,12 +66,29 @@ public class Tenant extends BaseEntity {
         this.createdBy = createdBy;
     }
 
-    /** 当前实际生效的套餐：付费套餐过期后视为免费版（数据保留）。 */
+    /**
+     * 当前实际生效的套餐：付费套餐过期后视为免费版（数据保留）。
+     * 付费套餐且没有到期时间 = 店主是高级永久会员（永久有效）。
+     */
     public Plan effectivePlan(Instant now) {
         if (plan == Plan.FREE) {
             return Plan.FREE;
         }
-        return (planExpiresAt != null && planExpiresAt.isAfter(now)) ? plan : Plan.FREE;
+        if (planExpiresAt == null) {
+            return plan;
+        }
+        return planExpiresAt.isAfter(now) ? plan : Plan.FREE;
+    }
+
+    /** 永久有效（店主是高级永久会员）。 */
+    public boolean isLifetime() {
+        return plan != Plan.FREE && planExpiresAt == null;
+    }
+
+    /** 设为永久（高级永久会员）。 */
+    public void makeLifetime() {
+        this.plan = Plan.PRO;
+        this.planExpiresAt = null;
     }
 
     /** 开通/续期/调整套餐。FREE 时到期时间为空。 */

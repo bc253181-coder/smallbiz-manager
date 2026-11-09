@@ -49,7 +49,7 @@ export function RegisterPage() {
   })
 
   return (
-    <AuthLayout title={tr('注册账号')} subtitle={tr('1 分钟开通，免费版长期可用')}>
+    <AuthLayout title={tr('注册账号')} subtitle={tr('1 分钟开通，普通会员免费使用')}>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormError message={formError} />
         <Field label={tr('昵称')} htmlFor="displayName" error={errors.displayName?.message}>
