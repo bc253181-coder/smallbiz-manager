@@ -21,3 +21,6 @@ smallbiz:
   # 定时任务（对账）在测试里直接调用
   scheduling:
     enabled: false
+  # 测试用的激活码加密密钥（仅测试）
+  codes:
+    encryption-key: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=

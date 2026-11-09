@@ -58,6 +58,9 @@ smallbiz:
     # 首次启动时从这里导入收款码图片
     payment-assets-dir: ${PAYMENT_ASSETS_DIR:../assets/payment}
 
+  # 激活码原文加密密钥（Base64 32 字节：openssl rand -base64 32）。不配置时发码台关闭
+  codes:
+    encryption-key: ${CODE_ENCRYPTION_KEY:}
   # 在线支付：模拟支付只用于开发和测试（prod 环境无论如何都不会启用）
   payment:
     mock-enabled: ${PAYMENT_MOCK_ENABLED:false}

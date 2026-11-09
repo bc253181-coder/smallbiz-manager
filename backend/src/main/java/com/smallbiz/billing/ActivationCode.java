@@ -11,7 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** 激活码：数据库只保存哈希，原文只在生成时导出一次。 */
+/** 激活码：兑换只比对哈希；配置了密钥时原文加密保存，供发码台取码（docs/17）。 */
 @Entity
 @Table(name = "activation_codes")
 public class ActivationCode {
@@ -31,6 +31,10 @@ public class ActivationCode {
     @Column(name = "code_hint", nullable = false, length = 8)
     private String codeHint;
 
+    /** 加密的原文（IV + 密文）；以前生成的旧码为空。 */
+    @Column(name = "code_encrypted")
+    private byte[] codeEncrypted;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Status status = Status.UNUSED;
@@ -44,13 +48,30 @@ public class ActivationCode {
     @Column(name = "redeemed_at")
     private Instant redeemedAt;
 
+    /** 发给了哪个小红书订单。 */
+    @Column(name = "order_ref", length = 100)
+    private String orderRef;
+
+    @Column(name = "dispensed_at")
+    private Instant dispensedAt;
+
+    @Column(name = "dispensed_by")
+    private Long dispensedBy;
+
     protected ActivationCode() {
     }
 
-    public ActivationCode(Long batchId, String codeHash, String codeHint) {
+    public ActivationCode(Long batchId, String codeHash, String codeHint, byte[] codeEncrypted) {
         this.batchId = batchId;
         this.codeHash = codeHash;
         this.codeHint = codeHint;
+        this.codeEncrypted = codeEncrypted;
+    }
+
+    public void dispense(String orderRef, Long adminId, Instant now) {
+        this.orderRef = orderRef;
+        this.dispensedBy = adminId;
+        this.dispensedAt = now;
     }
 
     public void redeem(Long tenantId, Long userId, Instant now) {
@@ -86,5 +107,25 @@ public class ActivationCode {
 
     public Instant getRedeemedAt() {
         return redeemedAt;
+    }
+
+    public byte[] getCodeEncrypted() {
+        return codeEncrypted;
+    }
+
+    public String getOrderRef() {
+        return orderRef;
+    }
+
+    public Instant getDispensedAt() {
+        return dispensedAt;
+    }
+
+    public Long getDispensedBy() {
+        return dispensedBy;
+    }
+
+    public Long getRedeemedBy() {
+        return redeemedBy;
     }
 }

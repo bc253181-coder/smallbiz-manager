@@ -41,11 +41,14 @@ public class ActivationService {
     private final PlanService plans;
     private final com.smallbiz.billing.membership.MembershipService membership;
     private final com.smallbiz.tenant.TenantRepository tenants;
+    private final CodeCrypto crypto;
     private final SecureRandom random = new SecureRandom();
     private final Map<Long, List<Instant>> attempts = new ConcurrentHashMap<>();
 
     public ActivationService(ActivationCodeRepository codes, ActivationCodeBatchRepository batches, PlanService plans,
-            com.smallbiz.billing.membership.MembershipService membership, com.smallbiz.tenant.TenantRepository tenants) {
+            com.smallbiz.billing.membership.MembershipService membership, com.smallbiz.tenant.TenantRepository tenants,
+            CodeCrypto crypto) {
+        this.crypto = crypto;
         this.membership = membership;
         this.tenants = tenants;
         this.codes = codes;
@@ -76,7 +79,9 @@ public class ActivationService {
         for (int i = 0; i < req.quantity(); i++) {
             String code = generate();
             raw.add(code);
-            codes.save(new ActivationCode(batch.getId(), TokenService.sha256(normalize(code)), code.substring(code.length() - 4)));
+            // 配置了密钥时原文加密保存（发码台用）；兑换只比对哈希
+            codes.save(new ActivationCode(batch.getId(), TokenService.sha256(normalize(code)), code.substring(code.length() - 4),
+                    crypto.available() ? crypto.encrypt(code) : null));
         }
         return new CreatedBatch(batch, raw);
     }

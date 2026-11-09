@@ -43,6 +43,7 @@ services:
       AI_SUPPORT_MODEL: ${AI_SUPPORT_MODEL:-claude-haiku-5-5}
       AI_SUPPORT_DAILY_LIMIT: ${AI_SUPPORT_DAILY_LIMIT:-1000}
       AI_SUPPORT_PER_IP_DAILY_LIMIT: ${AI_SUPPORT_PER_IP_DAILY_LIMIT:-30}
+      CODE_ENCRYPTION_KEY: ${CODE_ENCRYPTION_KEY:-}
       TZ: UTC
     volumes:
       - app-data:/data

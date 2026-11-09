@@ -33,7 +33,7 @@ export function AdminCodesPage() {
     <div className="space-y-6">
       <PageHeader
         title="激活码"
-        description="激活码只在生成时显示一次（数据库只保存无法还原的摘要），请立即下载保存"
+        description="高级永久会员激活码会加密保存，可以在「发码台」按订单取出（需要服务器配置 CODE_ENCRYPTION_KEY）；也可以下载表格备用"
         actions={
           <Button onClick={() => setCreating(true)}>
             <Plus aria-hidden />
@@ -46,7 +46,7 @@ export function AdminCodesPage() {
         <Card className="border-emerald-300 ring-1 ring-emerald-200">
           <CardHeader
             title={`已生成 ${created.codes.length} 个激活码：${created.batch.name}`}
-            description="离开页面后将无法再次查看，请先下载"
+            description="永久会员码可以在「发码台」按订单取出；需要的话也可以下载表格备用"
             action={
               <div className="flex gap-2">
                 <Button
