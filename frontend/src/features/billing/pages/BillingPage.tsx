@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronRight, Crown, CreditCard, KeyRound, Lock, QrCode } from 'lucide-react'
+import { Check, Crown, KeyRound, Lock } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,18 +10,18 @@ import { Field, Input } from '@/components/ui/form'
 import { ErrorState, PageHeader } from '@/components/ui/page'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { PLAN_LABELS } from '@/features/auth/types'
-import { errorCode, errorMessage, refreshSession } from '@/lib/api'
+import { errorMessage, refreshSession } from '@/lib/api'
 import { formatDateTime, formatMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import {
   billingApi,
-  channelLabel,
   FEATURE_LABELS,
   membershipLabel,
   orderTitle,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_TONES,
   SOURCE_LABELS,
+  useLifetimePrice,
   usePlan,
   type CurrentPlan,
   type Feature,
@@ -38,7 +38,7 @@ export function BillingPage() {
     <div className="space-y-6">
       <PageHeader
         title={tr('会员')}
-        description={tr('普通会员免费使用；高级永久会员一次性付款，解锁全部功能。已有数据不会因为会员等级被删除或锁定')}
+        description={tr('普通会员免费使用；高级永久会员一次性购买，解锁全部功能。已有数据不会因为会员等级被删除或锁定')}
         back={{ to: '/settings', label: tr('设置') }}
       />
       {plan.isLoading ? (
@@ -50,28 +50,22 @@ export function BillingPage() {
       ) : (
         <>
           <MembershipCard data={plan.data} />
-          {isOwner ? (
-            <div className="grid gap-6 lg:grid-cols-5 [&>*]:min-w-0">
-              <div className="space-y-6 lg:col-span-3">
-                {plan.data.membership.membership === 'LIFETIME' ? <LifetimeThanks data={plan.data} /> : <UpgradeCard />}
-              </div>
-              <div className="space-y-6 lg:col-span-2">
-                {plan.data.membership.membership !== 'LIFETIME' && <RedeemCard />}
-                <PaymentsCard />
-              </div>
-            </div>
+          {plan.data.membership.membership === 'LIFETIME' ? (
+            <LifetimeThanks data={plan.data} />
+          ) : isOwner ? (
+            <RedeemCard />
           ) : (
             <Card>
               <CardBody className="text-sm text-slate-600">{tr('店铺的会员等级由店主决定。如需升级高级永久会员，请联系店主。')}</CardBody>
             </Card>
           )}
+          {isOwner && <PaymentsCard />}
           {(role === 'OWNER' || role === 'ADMIN') && <HistoryCard />}
         </>
       )}
     </div>
   )
 }
-
 // ---------------- 当前会员与用量 ----------------
 
 function daysLeft(iso: string) {
@@ -163,171 +157,15 @@ function LifetimeThanks({ data }: { data: CurrentPlan }) {
   )
 }
 
-// ---------------- 升级高级永久会员 ----------------
+// ---------------- 激活码开通高级永久会员 ----------------
 
-function UpgradeCard() {
-  const { session } = useAuth()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const plan = usePlan()
-  const [currency, setCurrency] = useState(session?.currentTenant?.currency === 'MYR' ? 'MYR' : 'CNY')
-  // 付款方式：'online:渠道' 或 'qr:收款方式 id'
-  const [pick, setPick] = useState<string | null>(null)
-
-  const prices = useQuery({ queryKey: ['billing', 'prices', currency], queryFn: () => billingApi.prices(currency) })
-  const methods = useQuery({ queryKey: ['billing', 'methods'], queryFn: billingApi.methods })
-  const channels = useQuery({ queryKey: ['billing', 'online-channels', currency], queryFn: () => billingApi.onlineChannels(currency) })
-  const payments = useQuery({ queryKey: ['billing', 'payments'], queryFn: billingApi.payments })
-  const open = payments.data?.find((p) => p.status === 'AWAITING_PAYMENT' || p.status === 'PENDING_REVIEW')
-
-  const lifetime = prices.data?.find((p) => p.period === 'LIFETIME')
-  const free = plan.data?.membership.freeLimits
-  const payOptions = [
-    ...(channels.data ?? []).map((c) => ({ key: `online:${c.channel}`, online: true, label: channelLabel(c.channel) })),
-    ...(methods.data ?? []).filter((m) => m.currency === currency).map((m) => ({ key: `qr:${m.id}`, online: false, label: m.displayName })),
-  ]
-  const payOption = payOptions.find((o) => o.key === pick) ?? payOptions[0]
-
-  const create = useMutation({
-    mutationFn: async () => {
-      const [kind, value] = payOption!.key.split(':')
-      if (kind === 'online') {
-        const started = await billingApi.startOnline(lifetime!.id, value)
-        return { id: started.order.id, checkoutUrl: started.checkoutUrl }
-      }
-      const order = await billingApi.createPayment(lifetime!.id, Number(value))
-      return { id: order.id, checkoutUrl: null }
-    },
-    onSuccess: ({ id, checkoutUrl }) => {
-      void queryClient.invalidateQueries({ queryKey: ['billing', 'payments'] })
-      if (!checkoutUrl) navigate(`/settings/billing/pay/${id}`)
-      // 在线支付：跳转到支付渠道的付款页（站内地址用路由跳转，外部地址整页跳转）
-      else if (checkoutUrl.startsWith('/')) navigate(checkoutUrl)
-      else window.location.assign(checkoutUrl)
-    },
-    onError: (e) => {
-      toast.error(errorMessage(e, tr('创建付款单失败')))
-      if (errorCode(e) === 'PAYMENT_IN_PROGRESS') void payments.refetch()
-    },
-  })
-
-  return (
-    <Card>
-      <CardHeader
-        title={tr('升级高级永久会员')}
-        description={tr('一次性付款，永久享有高级会员权益，无需自动续费')}
-        action={
-          <div className="inline-flex shrink-0 self-start rounded-lg border border-slate-200 p-0.5" role="radiogroup" aria-label={tr('币种')}>
-            {[
-              { v: 'CNY', label: tr('人民币') },
-              { v: 'MYR', label: tr('马币 RM') },
-            ].map((c) => (
-              <button
-                key={c.v}
-                type="button"
-                role="radio"
-                aria-checked={currency === c.v}
-                onClick={() => {
-                  setCurrency(c.v)
-                  setPick(null)
-                }}
-                className={cn('rounded-md px-3 py-1 text-sm', currency === c.v ? 'bg-blue-50 font-medium text-blue-700' : 'text-slate-600')}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-        }
-      />
-      <CardBody className="space-y-5">
-        {open && (
-          <Link
-            to={`/settings/billing/pay/${open.id}`}
-            className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 hover:bg-blue-100"
-          >
-            <span>
-              {tr('你有一张')}{PAYMENT_STATUS_LABELS[open.status]}{tr('的付款单（')}{orderTitle(open)}{' '}
-              {formatMoney(open.amount, open.currency)}）
-            </span>
-            <ChevronRight className="size-4 shrink-0" aria-hidden />
-          </Link>
-        )}
-
-        {/* 两种会员对比（数字来自平台配置） */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 p-4 text-sm">
-            <p className="font-semibold text-slate-900">{tr('普通会员')}</p>
-            <p className="text-xs text-slate-500">{tr('免费')}</p>
-            {free && (
-              <ul className="mt-3 space-y-1 text-slate-600">
-                <li>{tr('最多开 {{n}} 家店', { n: free.maxStores })}</li>
-                <li>{tr('最多新建 {{n}} 个商品', { n: free.maxProducts })}</li>
-                <li>{tr('开单、库存管理、扫码')}</li>
-                <li>{tr('报表最近 {{n}} 天', { n: free.reportDays })}</li>
-                {!free.advancedTools && <li className="text-slate-400">{tr('不含高级工具（客户、供应商、采购、赊账、员工、多仓库等）')}</li>}
-                {!free.export && <li className="text-slate-400">{tr('不能导出')}</li>}
-              </ul>
-            )}
-          </div>
-          <div className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-4 text-sm">
-            <p className="flex items-center gap-1.5 font-semibold text-slate-900">
-              <Crown className="size-4 text-amber-500" aria-hidden />
-              {tr('高级永久会员')}
-            </p>
-            <p className="text-2xl font-semibold tabular-nums text-slate-900" data-testid="lifetime-price">
-              {lifetime ? formatMoney(lifetime.amount, lifetime.currency) : '—'}
-            </p>
-            <ul className="mt-2 space-y-1 text-slate-700">
-              <li>{tr('店铺、商品不限量（合理使用）')}</li>
-              <li>{tr('全部高级工具和模板')}</li>
-              <li>{tr('完整报表、高级数据分析、导出')}</li>
-              <li>{tr('名下所有店铺都有效，包括以后新开的')}</li>
-              <li>{tr('以后新增的高级功能')}</li>
-            </ul>
-          </div>
-        </div>
-
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium text-slate-700">{tr('付款方式')}</legend>
-          {payOptions.length === 0 ? (
-            <p className="text-sm text-slate-500">{tr('该币种暂无可用的付款方式')}</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {payOptions.map((o) => (
-                <button
-                  key={o.key}
-                  type="button"
-                  aria-pressed={payOption?.key === o.key}
-                  onClick={() => setPick(o.key)}
-                  className={cn(
-                    'flex items-center gap-3 rounded-xl border p-3 text-left text-sm',
-                    payOption?.key === o.key ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:bg-slate-50',
-                  )}
-                >
-                  {o.online ? <CreditCard className="size-5 shrink-0 text-slate-500" aria-hidden /> : <QrCode className="size-5 shrink-0 text-slate-500" aria-hidden />}
-                  <span className="min-w-0">
-                    <span className="block font-medium text-slate-800">{o.online ? tr('在线支付 · {{v0}}', { v0: o.label }) : o.label}</span>
-                    <span className="block text-xs text-slate-500">{o.online ? tr('付款后立即开通') : tr('扫码付款，上传截图后人工核对')}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </fieldset>
-
-        <Button size="lg" className="w-full" disabled={!lifetime || !payOption || !!open} loading={create.isPending} onClick={() => create.mutate()}>
-          <Crown aria-hidden />
-          {lifetime ? tr('立即升级 {{v0}}', { v0: formatMoney(lifetime.amount, lifetime.currency) }) : tr('立即升级')}
-        </Button>
-        <p className="text-center text-xs text-slate-500">{tr('一次性付款，永久享有高级会员权益，无需自动续费。')}</p>
-      </CardBody>
-    </Card>
-  )
-}
-// ---------------- 激活码 ----------------
-
+/** 开通高级永久会员：只用激活码（在小红书购买），兑换正确立即开通。 */
 function RedeemCard() {
   const queryClient = useQueryClient()
+  const [params] = useSearchParams()
+  const plan = usePlan()
+  const price = useLifetimePrice()
+  const free = plan.data?.membership.freeLimits
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -349,49 +187,104 @@ function RedeemCard() {
 
   return (
     <Card>
-      <CardHeader title={tr('使用激活码')} description={tr('在小红书店铺购买的激活码在这里兑换')} />
-      <CardBody>
-        <form
-          className="space-y-3"
-          noValidate
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!code.trim()) {
-              setError(tr('请输入激活码'))
-              return
-            }
-            redeem.mutate()
-          }}
-        >
-          <Field label={tr('激活码')} htmlFor="redeem-code" error={error ?? undefined} hint={tr('格式如 SBZ-XXXX-XXXX-XXXX，不区分大小写')}>
-            <Input
-              id="redeem-code"
-              value={code}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="SBZ-"
-              className="font-mono uppercase"
-              invalid={!!error}
-              onChange={(e) => {
-                setCode(e.target.value)
-                setError(null)
-              }}
-            />
-          </Field>
-          <Button type="submit" variant="secondary" className="w-full" loading={redeem.isPending}>
-            <KeyRound aria-hidden />
-            {tr('兑换')}
-          </Button>
-        </form>
+      <CardHeader title={tr('开通高级永久会员')} description={tr('一次性购买，永久享有高级会员权益，无需自动续费')} />
+      <CardBody className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
+        <div className="space-y-4">
+          {/* 两种会员对比（数字来自平台配置） */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 p-4 text-sm">
+              <p className="font-semibold text-slate-900">{tr('普通会员')}</p>
+              <p className="text-xs text-slate-500">{tr('免费')}</p>
+              {free && (
+                <ul className="mt-3 space-y-1 text-slate-600">
+                  <li>{tr('最多开 {{n}} 家店', { n: free.maxStores })}</li>
+                  <li>{tr('最多新建 {{n}} 个商品', { n: free.maxProducts })}</li>
+                  <li>{tr('开单、库存管理、扫码')}</li>
+                  <li>{tr('报表最近 {{n}} 天', { n: free.reportDays })}</li>
+                  {!free.advancedTools && <li className="text-slate-400">{tr('不含高级工具（客户、供应商、采购、赊账、员工、多仓库等）')}</li>}
+                  {!free.export && <li className="text-slate-400">{tr('不能导出')}</li>}
+                </ul>
+              )}
+            </div>
+            <div className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-4 text-sm">
+              <p className="flex items-center gap-1.5 font-semibold text-slate-900">
+                <Crown className="size-4 text-amber-500" aria-hidden />
+                {tr('高级永久会员')}
+              </p>
+              <p className="text-2xl font-semibold tabular-nums text-slate-900" data-testid="lifetime-price">
+                {price ? formatMoney(price.amount, price.currency) : '—'}
+              </p>
+              <ul className="mt-2 space-y-1 text-slate-700">
+                <li>{tr('店铺、商品不限量（合理使用）')}</li>
+                <li>{tr('全部高级工具和模板')}</li>
+                <li>{tr('完整报表、高级数据分析、导出')}</li>
+                <li>{tr('名下所有店铺都有效，包括以后新开的')}</li>
+                <li>{tr('以后新增的高级功能')}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <ol className="space-y-2 text-sm text-slate-600">
+            <li className="flex gap-2">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">1</span>
+              {tr('在小红书购买「SmallBiz 高级永久会员」激活码')}
+            </li>
+            <li className="flex gap-2">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">2</span>
+              {tr('收到激活码后，在下面输入并点「兑换并开通」')}
+            </li>
+            <li className="flex gap-2">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-semibold text-blue-700">3</span>
+              {tr('激活码正确即刻开通，你名下所有店铺都成为高级会员')}
+            </li>
+          </ol>
+          <form
+            className="space-y-3"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!code.trim()) {
+                setError(tr('请输入激活码'))
+                return
+              }
+              redeem.mutate()
+            }}
+          >
+            <Field label={tr('激活码')} htmlFor="redeem-code" error={error ?? undefined} hint={tr('格式如 SBZ-XXXX-XXXX-XXXX，不区分大小写')}>
+              <Input
+                id="redeem-code"
+                value={code}
+                autoComplete="off"
+                spellCheck={false}
+                autoFocus={params.has('redeem')}
+                placeholder="SBZ-"
+                className="font-mono uppercase"
+                invalid={!!error}
+                onChange={(e) => {
+                  setCode(e.target.value)
+                  setError(null)
+                }}
+              />
+            </Field>
+            <Button type="submit" size="lg" className="w-full" loading={redeem.isPending}>
+              <KeyRound aria-hidden />
+              {tr('兑换并开通')}
+            </Button>
+          </form>
+          <p className="text-center text-xs text-slate-500">{tr('一次性购买，永久享有高级会员权益，无需自动续费。每个激活码只能使用一次。')}</p>
+        </div>
       </CardBody>
     </Card>
   )
 }
-
 // ---------------- 付款记录 ----------------
 
 function PaymentsCard() {
   const { data, isLoading } = useQuery({ queryKey: ['billing', 'payments'], queryFn: billingApi.payments })
+  // 以前的付款记录（现在只用激活码开通）：没有记录时不显示
+  if (!isLoading && !data?.length) return null
   return (
     <Card>
       <CardHeader title={tr('付款记录')} />
@@ -399,9 +292,7 @@ function PaymentsCard() {
         <CardBody>
           <div className="h-16 animate-pulse rounded-lg bg-slate-100" />
         </CardBody>
-      ) : !data?.length ? (
-        <CardBody className="text-sm text-slate-500">{tr('还没有付款记录')}</CardBody>
-      ) : (
+      ) : !data?.length ? null : (
         <ul className="divide-y divide-slate-100">
           {data.slice(0, 10).map((o) => (
             <li key={o.id}>

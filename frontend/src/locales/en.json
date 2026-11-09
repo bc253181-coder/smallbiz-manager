@@ -1509,5 +1509,14 @@
   "多仓库是高级会员功能": "Multiple warehouses are a Premium feature",
   "高级会员最多 5 个仓库，支持仓库间调拨、按仓库开单和盘点。": "Premium includes up to 5 warehouses, with transfers and per-warehouse sales and stock counts.",
   "高级会员到期期间，主仓库照常使用；其他仓库只能把库存调拨出去，升级高级永久会员后恢复。": "While Premium is expired, the main warehouse works as usual; other warehouses can only transfer stock out until you upgrade to Lifetime Premium.",
-  "高级数据分析（趋势、排行、毛利）": "Advanced analytics (trends, rankings, profit)"
+  "高级数据分析（趋势、排行、毛利）": "Advanced analytics (trends, rankings, profit)",
+  "普通会员免费使用；高级永久会员一次性购买，解锁全部功能。已有数据不会因为会员等级被删除或锁定": "The Free membership costs nothing; Lifetime Premium is a one-time purchase that unlocks everything. Your data is never deleted or locked because of your membership.",
+  "开通高级永久会员": "Activate Lifetime Premium",
+  "一次性购买，永久享有高级会员权益，无需自动续费": "Buy once, keep Premium forever — no auto-renewal",
+  "在小红书购买「SmallBiz 高级永久会员」激活码": "Buy a \"SmallBiz Lifetime Premium\" activation code on Xiaohongshu",
+  "收到激活码后，在下面输入并点「兑换并开通」": "When you receive the code, enter it below and tap \"Redeem and activate\"",
+  "激活码正确即刻开通，你名下所有店铺都成为高级会员": "A valid code activates instantly, and all your stores become Premium",
+  "兑换并开通": "Redeem and activate",
+  "一次性购买，永久享有高级会员权益，无需自动续费。每个激活码只能使用一次。": "Buy once, keep Premium forever — no auto-renewal. Each code can be used only once.",
+  "在小红书购买激活码，兑换后立即开通。": "Buy an activation code on Xiaohongshu; it activates as soon as you redeem it."
 }

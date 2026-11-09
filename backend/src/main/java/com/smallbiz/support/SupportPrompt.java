@@ -83,6 +83,7 @@ public class SupportPrompt {
                 + (l.advancedTools() ? "，高级工具已开放" : "，客户、供应商、采购等高级工具不可用")
                 + (l.export() ? "，可以导出" : "，不能导出") + "\n");
         byCurrency.values().forEach(sb::append);
+        sb.append("- 开通方式：只能在小红书购买高级永久会员激活码，在「设置 → 会员」兑换后立即开通；网站不提供其他付款方式\n");
         sb.append("- 以前购买的标准版、专业版订阅在有效期内照常使用，现在不再销售\n");
         return sb.toString();
     }
