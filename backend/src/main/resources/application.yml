@@ -58,6 +58,18 @@ smallbiz:
     # 首次启动时从这里导入收款码图片
     payment-assets-dir: ${PAYMENT_ASSETS_DIR:../assets/payment}
 
+  # AI 客服：没有 ANTHROPIC_API_KEY 时关闭，只用关键词匹配
+  ai-support:
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${AI_SUPPORT_MODEL:claude-haiku-5-5}
+    daily-limit: ${AI_SUPPORT_DAILY_LIMIT:1000}
+    per-ip-daily-limit: ${AI_SUPPORT_PER_IP_DAILY_LIMIT:30}
+    timeout: 20s
+    # 估算费用用（美元 / 每百万 token），换模型时一起改
+    input-price: ${AI_SUPPORT_INPUT_PRICE:0.10}
+    cache-read-price: ${AI_SUPPORT_CACHE_READ_PRICE:0.01}
+    output-price: ${AI_SUPPORT_OUTPUT_PRICE:0.50}
+
 management:
   endpoints:
     web:

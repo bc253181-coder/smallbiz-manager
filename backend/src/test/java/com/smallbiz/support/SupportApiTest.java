@@ -25,6 +25,9 @@ class SupportApiTest extends IntegrationTest {
         MockHttpServletResponse welcome = mvc.perform(get("/api/v1/support/welcome")).andReturn().getResponse();
         assertThat(welcome.getStatus()).isEqualTo(200);
         assertThat((List<?>) read(welcome, "$.quickReplies")).hasSizeGreaterThanOrEqualTo(4);
+        // 测试环境没有配置 API 密钥：AI 关闭，回答全部来自关键词匹配
+        assertThat((Boolean) read(welcome, "$.ai")).isFalse();
+        assertThat((String) read(ask("客人买东西我在哪记一下", "10.0.0.9"), "$.source")).isEqualTo("KEYWORD");
 
         // 各种常见问法都能命中
         for (String[] c : new String[][] {

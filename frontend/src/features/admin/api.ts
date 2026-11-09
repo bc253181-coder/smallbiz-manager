@@ -67,6 +67,48 @@ export interface UnmatchedRow {
   lastSeenAt: string
 }
 
+export interface AiUsage {
+  calls: number
+  inputTokens: number
+  cacheReadTokens: number
+  outputTokens: number
+  estimatedUsd: number
+}
+
+export interface AiStats {
+  enabled: boolean
+  model: string
+  dailyLimit: number
+  perIpDailyLimit: number
+  today: AiUsage
+  month: AiUsage
+}
+
+export interface AiLogRow {
+  id: number
+  question: string
+  answer: string | null
+  status: 'ANSWERED' | 'HANDOFF' | 'INVALID'
+  faqIds: number[]
+  lang: string
+  model: string | null
+  inputTokens: number
+  cacheReadTokens: number
+  outputTokens: number
+  latencyMs: number
+  helpful: boolean | null
+  flagged: boolean
+  createdAt: string
+}
+
+export interface AiLogPage {
+  items: AiLogRow[]
+  page: number
+  size: number
+  totalItems: number
+  totalPages: number
+}
+
 export const adminApi = {
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
   tenants: (q: string) => api.get<TenantRow[]>('/admin/tenants', { params: { q: q || undefined } }).then((r) => r.data),
@@ -102,4 +144,8 @@ export const adminApi = {
   deleteFaq: (id: number) => api.delete(`/admin/support/faqs/${id}`),
   unmatched: () => api.get<UnmatchedRow[]>('/admin/support/unmatched').then((r) => r.data),
   resolveUnmatched: (id: number) => api.post(`/admin/support/unmatched/${id}/resolve`),
+  aiStats: () => api.get<AiStats>('/admin/support/ai/stats').then((r) => r.data),
+  aiLogs: (flagged: boolean, page: number) =>
+    api.get<AiLogPage>('/admin/support/ai/logs', { params: { flagged, page } }).then((r) => r.data),
+  flagAiLog: (id: number, flagged: boolean) => api.post(`/admin/support/ai/logs/${id}/flag`, { flagged }),
 }

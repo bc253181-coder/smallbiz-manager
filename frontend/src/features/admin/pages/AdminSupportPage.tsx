@@ -12,6 +12,7 @@ import { ErrorState, PageHeader } from '@/components/ui/page'
 import { errorMessage, fieldErrors } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import { adminApi, type FaqInput, type FaqRow } from '../api'
+import { AiLogsCard } from './AiLogsCard'
 
 const EMPTY: FaqInput = {
   category: '',
@@ -50,7 +51,7 @@ export function AdminSupportPage() {
     <div className="space-y-6">
       <PageHeader
         title="客服话术"
-        description="客服按关键词匹配回答（关键词越长权重越高）；答不上来的问题会转人工微信，并记录在下方"
+        description="关键词明确命中时直接回答（关键词越长权重越高）；其余问题由 AI 根据这些话术回答。答不上来的会转人工微信，并记录在下方"
         actions={
           <Button onClick={() => setEditing({ id: null, values: EMPTY })}>
             <Plus aria-hidden />
@@ -58,6 +59,8 @@ export function AdminSupportPage() {
           </Button>
         }
       />
+
+      <AiLogsCard />
 
       <Card>
         <CardHeader title="未能回答的问题" description="可据此补充话术；处理后点「已处理」" />

@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { api, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-import { tr } from '@/lib/i18n'
+import { getLang, tr } from '@/lib/i18n'
 interface Handoff {
   wechatId: string
   tip: string
@@ -20,22 +20,32 @@ interface Answer {
   actionLabel: string | null
   actionPath: string | null
   handoff: Handoff | null
+  source?: 'KEYWORD' | 'AI'
+  logId?: number | null
 }
 
 interface Welcome {
   greeting: string
   quickReplies: { id: number; question: string }[]
+  ai: boolean
+}
+
+interface HistoryItem {
+  role: 'user' | 'bot'
+  text: string
 }
 
 type NewMessage = { role: 'user'; text: string } | { role: 'bot'; answer: Answer; feedback?: 'up' | 'down' }
 type Message = NewMessage & { id: number }
 
 const supportApi = {
-  welcome: () => api.get<Welcome>('/support/welcome').then((r) => r.data),
-  ask: (message: string) => api.post<Answer>('/support/ask', { message }).then((r) => r.data),
+  welcome: () => api.get<Welcome>('/support/welcome', { params: { lang: getLang() } }).then((r) => r.data),
+  ask: (message: string, history: HistoryItem[]) =>
+    api.post<Answer>('/support/ask', { message, history, lang: getLang() }).then((r) => r.data),
   faq: (id: number) => api.get<Answer>(`/support/faqs/${id}`).then((r) => r.data),
-  contact: () => api.get<Handoff>('/support/contact').then((r) => r.data),
+  contact: () => api.get<Handoff>('/support/contact', { params: { lang: getLang() } }).then((r) => r.data),
   feedback: (id: number, helpful: boolean) => api.post(`/support/faqs/${id}/feedback`, { helpful }),
+  aiFeedback: (logId: number, helpful: boolean) => api.post(`/support/ai/${logId}/feedback`, { helpful }),
 }
 
 let nextId = 1
@@ -49,7 +59,8 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
   const listRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
-  const welcome = useQuery({ queryKey: ['support', 'welcome'], queryFn: supportApi.welcome, enabled: open, staleTime: 600_000 })
+  const welcome = useQuery({ queryKey: ['support', 'welcome', getLang()], queryFn: supportApi.welcome, enabled: open, staleTime: 600_000 })
+  const ai = welcome.data?.ai === true
 
   const push = (m: NewMessage) => setMessages((ms) => [...ms, { ...m, id: nextId++ }])
   const reply = useMutation({
@@ -65,9 +76,16 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
   function ask(text: string) {
     const q = text.trim()
     if (!q || reply.isPending) return
+    // 最近几轮对话（只在内存里，关闭页面即清空），让 AI 能理解追问
+    const history = messages
+      .slice(-6)
+      .map((m): HistoryItem | null =>
+        m.role === 'user' ? { role: 'user', text: m.text } : m.answer.answer ? { role: 'bot', text: m.answer.answer } : null,
+      )
+      .filter((h): h is HistoryItem => h !== null)
     push({ role: 'user', text: q })
     setInput('')
-    reply.mutate(() => supportApi.ask(q.slice(0, 300)))
+    reply.mutate(() => supportApi.ask(q.slice(0, 300), history))
   }
 
   function quick(id: number, question: string) {
@@ -86,9 +104,11 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
   }
 
   function feedback(m: Message & { role: 'bot' }, helpful: boolean) {
-    if (!m.answer.faqId || m.feedback) return
+    const { faqId, logId } = m.answer
+    if ((!faqId && !logId) || m.feedback) return
     setMessages((ms) => ms.map((x) => (x.id === m.id ? { ...x, feedback: helpful ? 'up' : 'down' } : x)))
-    supportApi.feedback(m.answer.faqId, helpful).catch(() => undefined)
+    const req = logId ? supportApi.aiFeedback(logId, helpful) : supportApi.feedback(faqId!, helpful)
+    req.catch(() => undefined)
   }
 
   return (
@@ -104,8 +124,8 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
         >
           <div className="flex items-center justify-between border-b border-slate-100 bg-blue-600 px-4 py-3 text-white">
             <div>
-              <p className="text-sm font-semibold">{tr('SmallBiz 小助手')}</p>
-              <p className="text-xs text-blue-100">{tr('自动回复 · 答不上来会转人工')}</p>
+              <p className="text-sm font-semibold">{ai ? tr('SmallBiz AI 小助手') : tr('SmallBiz 小助手')}</p>
+              <p className="text-xs text-blue-100">{ai ? tr('根据帮助文档回答 · 答不上来会转人工') : tr('自动回复 · 答不上来会转人工')}</p>
             </div>
             <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-1.5 hover:bg-white/15" aria-label={tr('关闭客服')}>
               <X className="size-5" />
@@ -157,11 +177,12 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
                       }}
                       className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
                     >
-                      {m.answer.actionLabel} →
+                      {tr(m.answer.actionLabel)} →
                     </button>
                   )}
-                  {m.answer.handoff && <HandoffCard handoff={m.answer.handoff} unmatched={m.answer.question !== HUMAN} />}
-                  {m.answer.faqId && (
+                  {m.answer.handoff && <HandoffCard handoff={m.answer.handoff} unmatched={m.answer.question !== HUMAN && !m.answer.answer} />}
+                  {m.answer.source === 'AI' && m.answer.matched && <p className="mt-1.5 text-[11px] text-slate-400">{tr('AI 生成，仅供参考')}</p>}
+                  {(m.answer.faqId || (m.answer.logId && m.answer.matched)) && (
                     <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
                       {m.feedback ? (
                         <span>{m.feedback === 'up' ? tr('感谢反馈！') : tr('抱歉没帮上忙，可以点「人工客服」')}</span>
@@ -181,7 +202,7 @@ export function SupportWidget({ withTabBar }: { withTabBar?: boolean }) {
                 </BotBubble>
               ),
             )}
-            {reply.isPending && <BotBubble>{tr('正在查找答案…')}</BotBubble>}
+            {reply.isPending && <BotBubble>{ai ? tr('正在思考…') : tr('正在查找答案…')}</BotBubble>}
           </div>
 
           <form
