@@ -51,7 +51,9 @@ export function refreshSession(): Promise<SessionResponse | null> {
         applySession(res.data)
         return res.data
       })
-      .catch(() => {
+      .catch((err) => {
+        // 断网（没有收到服务器响应）不代表登录失效：保持现状，联网后再恢复；服务器明确拒绝才退出登录
+        if (axios.isAxiosError(err) && !err.response) return null
         applySession(null)
         return null
       })

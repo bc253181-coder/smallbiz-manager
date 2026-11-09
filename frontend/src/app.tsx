@@ -5,6 +5,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { toast, Toaster } from 'sonner'
+import { PwaLayer } from '@/components/PwaLayer'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { errorCode } from '@/lib/api'
 import { router } from '@/router'
@@ -44,6 +45,7 @@ export function renderApp() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <RouterProvider router={router} />
+        <PwaLayer />
       </AuthProvider>
       <Toaster position="top-center" richColors closeButton />
     </QueryClientProvider>

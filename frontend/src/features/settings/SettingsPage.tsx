@@ -2,7 +2,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { ChevronRight, CreditCard, Lock, Users, Warehouse as WarehouseIcon } from 'lucide-react'
+import { ChevronRight, CreditCard, Download, Lock, Smartphone, Users, Warehouse as WarehouseIcon } from 'lucide-react'
+import { useCanInstall } from '@/components/PwaLayer'
+import { isIosSafari, isStandalone, promptInstall } from '@/lib/install'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -44,6 +46,7 @@ export function SettingsPage() {
       <PlanLink />
       <MembershipLink />
       <WarehouseLink />
+      <InstallApp />
       <StoreSettings />
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileSettings />
@@ -157,6 +160,37 @@ function WarehouseLink() {
       </span>
       <ChevronRight className="size-5 text-slate-400" aria-hidden />
     </Link>
+  )
+}
+
+// ---------------- 安装到手机 ----------------
+
+function InstallApp() {
+  const canInstall = useCanInstall()
+  if (isStandalone()) return null
+  const ios = isIosSafari()
+  return (
+    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm" data-testid="install-app">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+        <Smartphone className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium text-slate-900">{tr('安装到手机')}</span>
+        <span className="block text-sm text-slate-500">
+          {canInstall
+            ? tr('像 App 一样从桌面打开，更快、全屏')
+            : ios
+              ? tr('在 Safari 中点底部的「分享」，再选「添加到主屏幕」')
+              : tr('用手机浏览器打开本网站，在浏览器菜单中选择「安装应用」或「添加到主屏幕」')}
+        </span>
+      </span>
+      {canInstall && (
+        <Button size="sm" onClick={() => void promptInstall()}>
+          <Download aria-hidden />
+          {tr('安装')}
+        </Button>
+      )}
+    </div>
   )
 }
 
