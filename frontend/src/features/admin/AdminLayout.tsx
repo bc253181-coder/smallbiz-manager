@@ -9,6 +9,7 @@ const TABS = [
   { to: '/admin', label: '概况', end: true },
   { to: '/admin/payments', label: '付款审核' },
   { to: '/admin/tenants', label: '店铺' },
+  { to: '/admin/dispenser', label: '发码台' },
   { to: '/admin/codes', label: '激活码' },
   { to: '/admin/config', label: '价格与收款' },
   { to: '/admin/support', label: '客服话术' },

@@ -13,6 +13,7 @@ import { CreateStorePage } from '@/features/tenant/pages/CreateStorePage'
 import { SelectStorePage } from '@/features/tenant/pages/SelectStorePage'
 import {
   AdminCodesPage,
+  AdminDispenserPage,
   AdminConfigPage,
   AdminOverviewPage,
   AdminPaymentsPage,
@@ -141,6 +142,7 @@ export const router = createBrowserRouter([
           { index: true, element: <AdminOverviewPage /> },
           { path: 'payments', element: <AdminPaymentsPage /> },
           { path: 'tenants', element: <AdminTenantsPage /> },
+          { path: 'dispenser', element: <AdminDispenserPage /> },
           { path: 'codes', element: <AdminCodesPage /> },
           { path: 'config', element: <AdminConfigPage /> },
           { path: 'support', element: <AdminSupportPage /> },

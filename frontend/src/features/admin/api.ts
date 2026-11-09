@@ -122,7 +122,40 @@ export interface OnlineStatus {
   openAnomalies: number
 }
 
+export interface DispensedCode {
+  id: number
+  code: string
+  hint: string
+}
+
+export interface DispenserRow {
+  id: number
+  hint: string
+  batchName: string
+  state: 'UNUSED' | 'DISPENSED' | 'REDEEMED' | 'VOIDED'
+  hasRaw: boolean
+  orderRef: string | null
+  dispensedAt: string | null
+  dispensedByName: string | null
+  redeemedAt: string | null
+  redeemedTenantName: string | null
+}
+
+export interface DispenserStock {
+  keyConfigured: boolean
+  available: number
+  lowStockThreshold: number
+  low: boolean
+}
+
 export const adminApi = {
+  dispenserStock: () => api.get<DispenserStock>('/admin/code-dispenser/stock').then((r) => r.data),
+  dispense: (orderRef: string, quantity: number, confirmRepeat: boolean) =>
+    api.post<DispensedCode[]>('/admin/code-dispenser/dispense', { orderRef, quantity, confirmRepeat }).then((r) => r.data),
+  dispenserCodes: (q: string) => api.get<DispenserRow[]>('/admin/code-dispenser/codes', { params: { q: q || undefined } }).then((r) => r.data),
+  revealCode: (id: number) => api.post<DispensedCode>(`/admin/code-dispenser/codes/${id}/reveal`).then((r) => r.data),
+  voidOrder: (orderRef: string) =>
+    api.post<{ voided: number; alreadyRedeemed: string[] }>('/admin/code-dispenser/void-order', { orderRef }).then((r) => r.data),
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
   tenants: (q: string) => api.get<TenantRow[]>('/admin/tenants', { params: { q: q || undefined } }).then((r) => r.data),
   setPlan: (id: number, body: { plan: Plan; expiresOn: string | null; note: string }) =>

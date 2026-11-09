@@ -13,6 +13,7 @@ import { PLAN_LABELS, type Plan } from '@/features/auth/types'
 import { errorMessage, fieldErrors } from '@/lib/api'
 import { formatDateTime } from '@/lib/format'
 import { useDebouncedValue } from '@/lib/hooks'
+import { DispenserStockNotice } from './AdminDispenserPage'
 import { adminApi, type TenantRow } from '../api'
 
 export function AdminOverviewPage() {
@@ -28,6 +29,7 @@ export function AdminOverviewPage() {
   return (
     <div>
       <PageHeader title="概况" description="平台后台只显示店铺的套餐信息和店主联系方式，不查看店铺的经营数据" />
+      <DispenserStockNotice />
       {isLoading ? (
         <div className="h-28 animate-pulse rounded-xl bg-slate-100" />
       ) : isError ? (
