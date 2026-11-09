@@ -28,7 +28,8 @@ public class ActivationService {
     static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     static final int MAX_ATTEMPTS_PER_HOUR = 10;
 
-    public record BatchRequest(String name, Plan plan, int durationDays, boolean trial, int quantity,
+    /** lifetime：高级永久会员激活码（忽略套餐和天数）。 */
+    public record BatchRequest(String name, Plan plan, int durationDays, boolean trial, boolean lifetime, int quantity,
             Instant expiresAt) {
     }
 
@@ -38,10 +39,15 @@ public class ActivationService {
     private final ActivationCodeRepository codes;
     private final ActivationCodeBatchRepository batches;
     private final PlanService plans;
+    private final com.smallbiz.billing.membership.MembershipService membership;
+    private final com.smallbiz.tenant.TenantRepository tenants;
     private final SecureRandom random = new SecureRandom();
     private final Map<Long, List<Instant>> attempts = new ConcurrentHashMap<>();
 
-    public ActivationService(ActivationCodeRepository codes, ActivationCodeBatchRepository batches, PlanService plans) {
+    public ActivationService(ActivationCodeRepository codes, ActivationCodeBatchRepository batches, PlanService plans,
+            com.smallbiz.billing.membership.MembershipService membership, com.smallbiz.tenant.TenantRepository tenants) {
+        this.membership = membership;
+        this.tenants = tenants;
         this.codes = codes;
         this.batches = batches;
         this.plans = plans;
@@ -49,7 +55,9 @@ public class ActivationService {
 
     @Transactional
     public CreatedBatch createBatch(BatchRequest req, Long adminId) {
-        if (req.plan() == Plan.FREE) {
+        if (req.lifetime()) {
+            req = new BatchRequest(req.name(), Plan.PRO, 0, false, true, req.quantity(), req.expiresAt());
+        } else if (req.plan() == Plan.FREE) {
             throw ApiException.badRequest("INVALID_PLAN", "激活码只能用于付费套餐");
         }
         if (req.trial() && req.plan() != Plan.STANDARD) {
@@ -58,12 +66,12 @@ public class ActivationService {
         if (req.quantity() < 1 || req.quantity() > 1000) {
             throw ApiException.badRequest("INVALID_QUANTITY", "每批数量为 1–1000");
         }
-        if (req.durationDays() < 1 || req.durationDays() > 3660) {
+        if (!req.lifetime() && (req.durationDays() < 1 || req.durationDays() > 3660)) {
             throw ApiException.badRequest("INVALID_DURATION", "天数为 1–3660");
         }
         String name = req.name() == null || req.name().isBlank() ? "未命名批次" : req.name().trim();
         ActivationCodeBatch batch = batches.save(new ActivationCodeBatch(name, req.plan(), req.durationDays(),
-                req.trial(), req.quantity(), req.expiresAt(), adminId));
+                req.trial(), req.lifetime(), req.quantity(), req.expiresAt(), adminId));
         List<String> raw = new ArrayList<>();
         for (int i = 0; i < req.quantity(); i++) {
             String code = generate();
@@ -91,8 +99,16 @@ public class ActivationService {
         if (batch.getExpiresAt() != null && batch.getExpiresAt().isBefore(now)) {
             throw ApiException.conflict("CODE_EXPIRED", "该激活码已过兑换期限");
         }
-        Tenant t = plans.grant(tenantId, batch.getPlan(), batch.getDurationDays(), batch.isTrial(),
-                PlanChangeLog.Source.ACTIVATION_CODE, code.getId(), null, userId, "激活码 ****" + code.getCodeHint());
+        Tenant t;
+        if (batch.isLifetime()) {
+            // 永久会员码：开通对象是兑换的账号（名下所有店铺）
+            membership.grantLifetime(userId, PlanChangeLog.Source.ACTIVATION_CODE, null, code.getId(), userId,
+                    "激活码 ****" + code.getCodeHint());
+            t = tenants.findById(tenantId).orElseThrow();
+        } else {
+            t = plans.grant(tenantId, batch.getPlan(), batch.getDurationDays(), batch.isTrial(),
+                    PlanChangeLog.Source.ACTIVATION_CODE, code.getId(), null, userId, "激活码 ****" + code.getCodeHint());
+        }
         code.redeem(tenantId, userId, now);
         attempts.remove(tenantId);
         return t;

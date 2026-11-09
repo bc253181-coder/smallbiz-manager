@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { ExcelExportButton } from '@/features/excel/ExcelExportButton'
 import { downloadCsv, reportApi, type GroupBy } from '../api'
 import { TrendChart } from '../TrendChart'
+import { UpgradePrompt } from '@/features/billing/FeatureGate'
 
 import { tr } from '@/lib/i18n'
 type Tab = 'sales' | 'products' | 'customers' | 'purchases' | 'inventory'
@@ -48,14 +49,18 @@ export function ReportsPage() {
   const [params, setParams] = useSearchParams()
   const all = presets()
   const tab = (params.get('tab') as Tab | null) ?? 'sales'
-  const from = params.get('from') ?? all[0].from
+  const plan = usePlan()
+  // 高级数据分析（趋势、排行、毛利）：普通会员默认不开放（平台可开）
+  const fullReports = plan.data ? plan.data.features.FULL_REPORTS : true
+  // 普通会员的报表只能查看最近 N 天（平台可改）；高级会员不限
+  const reportDays = plan.data?.membership.reportDays ?? null
+  const now = new Date()
+  const earliest = reportDays ? ymd(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (reportDays - 1))) : null
+  const locked = (d: string) => earliest !== null && d < earliest
+  const defaultFrom = earliest && all[0].from < earliest ? earliest : all[0].from
+  const from = params.get('from') ?? defaultFrom
   const to = params.get('to') ?? all[0].to
   const invalid = from > to
-  const plan = usePlan()
-  const fullReports = plan.data ? plan.data.features.FULL_REPORTS : true
-  // 免费版：可查看近 30 天和本月（取两者中更早的一天）
-  const earliest = [all[0].from, all[3].from].sort()[0]
-  const locked = (d: string) => !fullReports && d < earliest
 
   function update(changes: Record<string, string | null>) {
     const next = new URLSearchParams(params)
@@ -70,12 +75,14 @@ export function ReportsPage() {
     <div>
       <PageHeader title={tr('经营报表')} description={tr('已取消的销售单和未收货的采购单不计入统计；日期按店铺时区计算')} />
 
-      {!fullReports && (
+      {(!fullReports || reportDays !== null) && (
         <p className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
           <Lock className="size-4 shrink-0" aria-hidden />
-          {tr('免费版可查看本月和近 30 天的报表；查看更早的数据和导出需要标准版。')}
+          {!fullReports
+            ? tr('普通会员可以查看库存报表；销售趋势、商品和客户排行、毛利分析是高级会员功能。')
+            : tr('普通会员的报表只能查看最近 {{days}} 天。', { days: reportDays ?? '' })}
           <Link to="/settings/billing" className="font-medium underline">
-            {tr('查看套餐')}
+            {tr('立即升级')}
           </Link>
         </p>
       )}
@@ -89,7 +96,7 @@ export function ReportsPage() {
                 type="button"
                 aria-pressed={from === p.from && to === p.to}
                 disabled={locked(p.from)}
-                title={locked(p.from) ? tr('需要标准版') : undefined}
+                title={locked(p.from) ? tr('高级会员功能') : undefined}
                 onClick={() => update({ from: p.from, to: p.to })}
                 className={cn(
                   'inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50',
@@ -97,12 +104,12 @@ export function ReportsPage() {
                 )}
               >
                 {p.label}
-                {locked(p.from) && <Lock className="size-3" aria-label={tr('需要标准版')} />}
+                {locked(p.from) && <Lock className="size-3" aria-label={tr('高级会员功能')} />}
               </button>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Input type="date" aria-label={tr('开始日期')} value={from} max={to} min={fullReports ? undefined : earliest} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
+            <Input type="date" aria-label={tr('开始日期')} value={from} max={to} min={earliest ?? undefined} onChange={(e) => e.target.value && update({ from: e.target.value })} className="w-40" />
             <span className="text-slate-400">{tr('至')}</span>
             <Input type="date" aria-label={tr('结束日期')} value={to} min={from} onChange={(e) => e.target.value && update({ to: e.target.value })} className="w-40" />
           </div>
@@ -128,6 +135,8 @@ export function ReportsPage() {
         <Card>
           <p className="p-6 text-center text-sm text-red-600">{tr('开始日期不能晚于结束日期')}</p>
         </Card>
+      ) : !fullReports && tab !== 'inventory' ? (
+        <UpgradePrompt feature="FULL_REPORTS" />
       ) : tab === 'sales' ? (
         <SalesTab from={from} to={to} />
       ) : tab === 'products' ? (
@@ -150,9 +159,9 @@ function ExportButton({ path, params, name }: { path: string; params: Record<str
   const canExport = useFeature('EXPORT')
   if (!canExport) {
     return (
-      <Link to="/settings/billing" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-sm text-slate-500 hover:bg-slate-50" title={tr('导出需要标准版')}>
+      <Link to="/settings/billing" className="inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-sm text-slate-500 hover:bg-slate-50" title={tr('导出是高级会员功能')}>
         <Lock className="size-3.5" aria-hidden />
-        {tr('导出 CSV（标准版）')}
+        {tr('导出 CSV（高级会员）')}
       </Link>
     )
   }

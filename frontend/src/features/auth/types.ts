@@ -71,7 +71,7 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
 }
 
 export const PLAN_LABELS: Record<Plan, string> = {
-  FREE: tr('免费版'),
+  FREE: tr('普通会员'),
   STANDARD: tr('标准版'),
   PRO: tr('专业版'),
 }

@@ -3,7 +3,7 @@ import { adminCredentials } from './helpers'
 
 /**
  * 在线支付（开发环境的模拟支付渠道）：
- * 选择套餐 → 在线支付 → 模拟付款页「付款成功」→ 回到结果页自动显示已开通 → 套餐和付款记录正确；
+ * 升级高级永久会员 → 在线支付 → 模拟付款页「付款成功」→ 回到结果页自动显示已开通 → 套餐和付款记录正确；
  * 付款失败 → 订单保持待付款，可以继续付款或取消；通知丢失 → 平台对账后补开通。
  */
 async function newOwner(page: Page, tag: string) {
@@ -19,12 +19,11 @@ async function newOwner(page: Page, tag: string) {
   expect(store.status()).toBe(201)
 }
 
-async function chooseOnlineAndPay(page: Page, period: RegExp) {
+async function chooseOnlineAndPay(page: Page) {
   await page.goto('/settings/billing')
   await expect(page.getByText('在线支付 · 模拟支付（测试）')).toBeVisible()
-  await page.getByRole('button', { name: period }).click()
   await page.getByRole('button', { name: /在线支付 · 模拟支付（测试）/ }).click()
-  await page.getByRole('button', { name: /^去付款/ }).click()
+  await page.getByRole('button', { name: /^立即升级/ }).click()
   await expect(page).toHaveURL(/\/pay\/mock\/PAY-/)
   await expect(page.getByRole('heading', { name: '模拟支付' })).toBeVisible()
 }
@@ -34,8 +33,8 @@ test('在线支付：付款成功自动开通、付款失败可继续付款', as
   await newOwner(page, 'ok')
 
   // 付款失败：停留在付款页，订单仍是待付款，可以从付款单继续付款
-  await chooseOnlineAndPay(page, /月付/)
-  await expect(page.getByText('¥6.99')).toBeVisible()
+  await chooseOnlineAndPay(page)
+  await expect(page.getByText('¥29.90')).toBeVisible()
   await page.getByRole('button', { name: '模拟付款失败' }).click()
   await expect(page.getByText('付款失败（模拟）')).toBeVisible()
   await page.goto('/settings/billing')
@@ -54,7 +53,7 @@ test('在线支付：付款成功自动开通、付款失败可继续付款', as
 
   // 套餐页：已是标准版；付款记录显示在线支付；变更记录来源为在线支付
   await page.goto('/settings/billing')
-  await expect(page.getByText('标准版').first()).toBeVisible()
+  await expect(page.getByTestId('membership-level')).toHaveText('高级永久会员')
   await expect(page.getByText(/· 在线支付$/).first()).toBeVisible()
   await expect(page.getByRole('cell', { name: '在线支付' }).first()).toBeVisible()
 })
@@ -62,7 +61,7 @@ test('在线支付：付款成功自动开通、付款失败可继续付款', as
 test('在线支付：通知丢失时，对账后补开通', async ({ page, request }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', '付款流程在桌面项目中验证')
   await newOwner(page, 'lost')
-  await chooseOnlineAndPay(page, /月付/)
+  await chooseOnlineAndPay(page)
   await page.getByRole('button', { name: /通知丢失/ }).click()
   await expect(page.getByRole('heading', { name: '正在确认付款…' })).toBeVisible()
 

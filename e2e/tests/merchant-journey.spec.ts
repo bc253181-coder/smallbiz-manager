@@ -43,7 +43,7 @@ test('商户从注册到看报表的完整流程', async ({ page, baseURL }, tes
 
   // ---------- 免费版不能采购 ----------
   await go(page, '/purchases')
-  await expect(page.getByText('「采购入库」是标准版功能')).toBeVisible()
+  await expect(page.getByText('「采购入库」是高级会员功能')).toBeVisible()
 
   // ---------- 兑换激活码 → 标准版 ----------
   const code = await createActivationCode(baseURL!)

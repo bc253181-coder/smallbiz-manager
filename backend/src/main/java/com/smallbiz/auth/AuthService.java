@@ -41,6 +41,9 @@ public class AuthService {
     private final LoginAttemptService loginAttempts;
     private final com.smallbiz.config.PlatformProperties platform;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.smallbiz.billing.membership.AccountUsageRepository accountUsage;
+
     public AuthService(UserRepository users, RefreshTokenRepository refreshTokens, TenantRepository tenants,
             TenantMemberRepository members, PasswordEncoder passwordEncoder, TokenService tokenService,
             SecurityProperties props, LoginAttemptService loginAttempts,
@@ -67,6 +70,8 @@ public class AuthService {
             throw ApiException.conflict("EMAIL_EXISTS", "该邮箱已注册，请直接登录");
         }
         User user = users.save(new User(email, passwordEncoder.encode(req.password()), req.displayName().trim()));
+        // 普通会员的用量行在注册时建好（之后计数直接锁这一行）
+        accountUsage.save(new com.smallbiz.billing.membership.AccountUsage(user.getId()));
         Instant now = Instant.now();
         user.setLastLoginAt(now);
         user.acceptTerms(LegalTerms.CURRENT_VERSION, now);
@@ -247,7 +252,7 @@ public class AuthService {
     }
 
     public static ApiException storePlanExpired() {
-        return ApiException.forbidden("STORE_PLAN_EXPIRED", "这家店铺的专业版已到期，员工暂时不能进入，请联系店主续费");
+        return ApiException.forbidden("STORE_PLAN_EXPIRED", "这家店铺的高级会员已到期，员工暂时不能进入，请联系店主升级高级永久会员");
     }
 
     private List<TenantMember> activeMemberships(Long userId) {

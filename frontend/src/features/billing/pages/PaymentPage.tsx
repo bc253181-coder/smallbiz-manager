@@ -9,7 +9,6 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Field, Input } from '@/components/ui/form'
 import { ErrorState, PageHeader } from '@/components/ui/page'
-import { PLAN_LABELS } from '@/features/auth/types'
 import { errorMessage, refreshSession } from '@/lib/api'
 import { formatDateTime, formatMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -17,9 +16,9 @@ import {
   billingApi,
   channelLabel,
   fetchImageBlob,
+  orderTitle,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_TONES,
-  PERIOD_LABELS,
   type PaymentOrder,
 } from '../api'
 
@@ -81,7 +80,7 @@ function PaymentBody({ order }: { order: PaymentOrder }) {
         <CardBody className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm text-slate-500">
-              {PLAN_LABELS[order.plan]} · {PERIOD_LABELS[order.period]}（{order.durationDays} {tr('天）')}
+              {orderTitle(order)}{order.period !== 'LIFETIME' && <>（{order.durationDays} {tr('天）')}</>}
             </p>
             <p className="text-3xl font-semibold tabular-nums text-slate-900">{formatMoney(order.amount, order.currency)}</p>
           </div>
@@ -94,7 +93,7 @@ function PaymentBody({ order }: { order: PaymentOrder }) {
       {order.status === 'AWAITING_PAYMENT' && (order.channel ? <OnlineAwaiting order={order} /> : <AwaitingPayment order={order} />)}
       {order.status === 'PENDING_REVIEW' && (
         <StatusCard icon={Clock} tone="blue" title={tr('已提交，等待人工核对')}>
-          {tr('我们会核对到账金额和付款备注，通常几小时内开通（夜间可能顺延到第二天）。开通后刷新页面即可使用标准版功能。')}
+          {tr('我们会核对到账金额和付款备注，通常几小时内开通（夜间可能顺延到第二天）。开通后刷新页面即可使用高级会员功能。')}
           <ProofSummary order={order} />
         </StatusCard>
       )}
@@ -194,7 +193,7 @@ function Receipt({ order }: { order: PaymentOrder }) {
       <dd className="font-mono">{order.orderNo}</dd>
       <dt className="text-slate-500">{tr('套餐')}</dt>
       <dd>
-        {PLAN_LABELS[order.plan]} · {PERIOD_LABELS[order.period]}（{order.durationDays} {tr('天）')}
+        {orderTitle(order)}{order.period !== 'LIFETIME' && <>（{order.durationDays} {tr('天）')}</>}
       </dd>
       <dt className="text-slate-500">{tr('金额')}</dt>
       <dd className="tabular-nums">{formatMoney(order.amount, order.currency)}</dd>

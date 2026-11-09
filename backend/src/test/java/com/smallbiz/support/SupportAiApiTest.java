@@ -104,7 +104,7 @@ class SupportAiApiTest extends IntegrationTest {
     @Test
     void otherWordingGoesToAi_answerAndButtonComeFromCitedFaqs() throws Exception {
         long sale = faqId("怎么开单？");
-        long price = faqId("套餐和价格");
+        long price = faqId("会员和价格");
         aiReplies(Status.ANSWERED, "点底部中间的 ＋ 按钮，搜商品加入订单，确认后点「完成开单」。", List.of(price, sale), sale);
         long before = logs.count();
 
@@ -135,7 +135,7 @@ class SupportAiApiTest extends IntegrationTest {
 
     @Test
     void buttonOnlyFromCitedFaqs_neverFromUncitedOrMadeUp() throws Exception {
-        long price = faqId("套餐和价格");
+        long price = faqId("会员和价格");
         long sale = faqId("怎么开单？");
         // actionFaqId 指向没有引用的话术：改用引用话术里带按钮的那条
         aiReplies(Status.ANSWERED, "标准版 6.99 元/月。", List.of(price), sale);
@@ -210,7 +210,7 @@ class SupportAiApiTest extends IntegrationTest {
     @Test
     @SuppressWarnings("unchecked")
     void followUpsSendCleanedHistory_andPromptHasLivePricesAndFaqs() throws Exception {
-        long price = faqId("套餐和价格");
+        long price = faqId("会员和价格");
         aiReplies(Status.ANSWERED, "年付 69.9 元。", List.of(price), price);
         String body = """
                 {"message":"那年付呢？","history":[
@@ -227,17 +227,17 @@ class SupportAiApiTest extends IntegrationTest {
         assertThat(question.getValue()).isEqualTo("那年付呢？");
         assertThat(history.getValue()).containsExactly(new SupportAi.Turn(true, "标准版多少钱"),
                 new SupportAi.Turn(false, "标准版 6.99 元/月。"));
-        assertThat(system.getValue()).contains("标准版 月付（30 天）：CNY 6.99", "专业版 年付（365 天）：MYR 69.9",
-                "[文档 " + price + "]", "跳转按钮：查看套餐");
+        assertThat(system.getValue()).contains("名下所有店铺都有效）：CNY 29.9", "名下所有店铺都有效）：MYR 19.9",
+                "[文档 " + price + "]", "跳转按钮：查看套餐", "最多开 2 家店、新建 3 个商品");
 
         // 调价后提示里的价格跟着变；提示内容稳定（相同输入两次生成完全一样，利于缓存）
-        jdbc.update("update plan_prices set amount = 7.99 where plan = 'STANDARD' and period = 'MONTH' and currency = 'CNY'");
+        jdbc.update("update plan_prices set amount = 39.90 where period = 'LIFETIME' and currency = 'CNY'");
         try {
             SupportPrompt p = context.getBean(SupportPrompt.class);
             String a = p.build(p.enabledFaqs());
-            assertThat(a).contains("标准版 月付（30 天）：CNY 7.99").isEqualTo(p.build(p.enabledFaqs()));
+            assertThat(a).contains("名下所有店铺都有效）：CNY 39.9").isEqualTo(p.build(p.enabledFaqs()));
         } finally {
-            jdbc.update("update plan_prices set amount = 6.99 where plan = 'STANDARD' and period = 'MONTH' and currency = 'CNY'");
+            jdbc.update("update plan_prices set amount = 29.90 where period = 'LIFETIME' and currency = 'CNY'");
         }
     }
 

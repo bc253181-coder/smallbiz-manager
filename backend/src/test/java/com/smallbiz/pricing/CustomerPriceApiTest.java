@@ -155,7 +155,7 @@ class CustomerPriceApiTest extends IntegrationTest {
         long sa = customer(std, "客户戊", "13900000005");
         MockHttpServletResponse denied = setPrice(std, sa, sp, "7");
         assertThat(denied.getStatus()).isEqualTo(403);
-        assertThat((String) read(denied, "$.details.requiredPlan")).isEqualTo("PRO");
+        assertThat((String) read(denied, "$.details.requiredPlan")).isEqualTo("LIFETIME");
 
         Session s = registerWithProTenant("cp-down", "降级店");
         long p = product(s, "CP-5", null);

@@ -22,6 +22,7 @@ import { ProductThumb } from '../components/ProductThumb'
 import { STATUS_LABELS, type Product, type ProductStatus } from '../types'
 
 import { tr } from '@/lib/i18n'
+import { FreeUsageHint } from '@/features/billing/FreeUsageHint'
 const SORTS = [
   { value: '', label: tr('最近更新') },
   { value: 'name,asc', label: tr('名称 A→Z') },
@@ -121,6 +122,7 @@ export function ProductListPage() {
           </>
         }
       />
+      <FreeUsageHint kind="products" className="mb-4" />
 
       <Card>
         {/* 筛选栏 */}

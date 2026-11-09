@@ -140,8 +140,8 @@ class ReceivableApiTest extends IntegrationTest {
         MockHttpServletResponse res = sale(s, c, p, 1, "0");
         assertThat(res.getStatus()).isEqualTo(403);
         assertThat((String) read(res, "$.code")).isEqualTo("PLAN_FEATURE_REQUIRED");
-        assertThat((String) read(res, "$.details.requiredPlan")).isEqualTo("PRO");
-        assertThat((String) read(res, "$.message")).contains("专业版");
+        assertThat((String) read(res, "$.details.requiredPlan")).isEqualTo("LIFETIME");
+        assertThat((String) read(res, "$.message")).contains("高级会员");
         assertThat(send(get("/api/v1/receivables/summary"), s, null).getStatus()).isEqualTo(403);
         assertThat(pay(s, c, "1", null).getStatus()).isEqualTo(403);
         assertThat(saleId(sale(s, c, p, 1, null))).isPositive(); // 全额收款照常
@@ -351,12 +351,7 @@ class ReceivableApiTest extends IntegrationTest {
                 "{\"name\":\"标准版\",\"plan\":\"STANDARD\",\"durationDays\":30,\"trial\":false,\"quantity\":1}"), "$.codes[0]");
         assertThat((String) read(send(post("/api/v1/billing/redeem"), s, "{\"code\":\"%s\"}".formatted(stdCode)), "$.code"))
                 .isEqualTo("PLAN_DOWNGRADE_NOT_ALLOWED");
-        List<Integer> stdMonth = read(send(get("/api/v1/billing/prices?currency=CNY"), s, null),
-                "$[?(@.plan == 'STANDARD' && @.period == 'MONTH')].id");
-        List<Integer> wechat = read(send(get("/api/v1/billing/payment-methods"), s, null), "$[?(@.code == 'WECHAT_PAY')].id");
-        assertThat((String) read(send(post("/api/v1/billing/payment-orders"), s,
-                "{\"priceId\":%d,\"paymentMethodId\":%d}".formatted(stdMonth.get(0), wechat.get(0))), "$.code"))
-                .isEqualTo("PLAN_DOWNGRADE_NOT_ALLOWED");
+        // （按月 / 按年订阅已停售，价格表里已没有标准版价格）
 
         // 首月体验不能用于专业版
         assertThat(send(post("/api/v1/admin/code-batches"), admin,

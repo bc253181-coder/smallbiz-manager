@@ -28,8 +28,12 @@ public class TenantService {
     private final AuthService authService;
     private final jakarta.persistence.EntityManager em;
 
+    private final com.smallbiz.billing.membership.MembershipService membership;
+
     public TenantService(TenantRepository tenants, TenantMemberRepository members, UserRepository users,
-            AuthService authService, jakarta.persistence.EntityManager em) {
+            AuthService authService, jakarta.persistence.EntityManager em,
+            com.smallbiz.billing.membership.MembershipService membership) {
+        this.membership = membership;
         this.em = em;
         this.tenants = tenants;
         this.members = members;
@@ -47,6 +51,8 @@ public class TenantService {
         if (owned >= MAX_OWNED_TENANTS) {
             throw ApiException.conflict("TENANT_LIMIT_REACHED", "每个账号最多创建 " + MAX_OWNED_TENANTS + " 个店铺");
         }
+        // 普通会员：新开店铺次数按账号累计（关闭店铺不返还）
+        membership.chargeStore(userId);
         Tenant newTenant = new Tenant(req.name().trim(), req.businessType(), userId);
         if (req.currency() != null && !req.currency().isBlank()) {
             String currency = Currencies.require(req.currency());
@@ -58,6 +64,7 @@ public class TenantService {
         }
         Tenant tenant = tenants.save(newTenant);
         members.save(new TenantMember(tenant.getId(), userId, MemberRole.OWNER));
+        membership.onStoreCreated(userId, tenant.getId());
         // 每家店一个默认仓库。当前会话的店铺 id 在请求开始时就确定了（那时还没有这家店），
         // 所以用原生 SQL 在同一事务里显式写入 tenant_id
         em.createNativeQuery("""

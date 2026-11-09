@@ -131,7 +131,7 @@ class WarehouseApiTest extends IntegrationTest {
 
         MockHttpServletResponse denied = createWarehouse(s, "门店");
         assertThat(denied.getStatus()).isEqualTo(403);
-        assertThat((String) read(denied, "$.details.requiredPlan")).isEqualTo("PRO");
+        assertThat((String) read(denied, "$.details.requiredPlan")).isEqualTo("LIFETIME");
         assertInvariants(s);
     }
 

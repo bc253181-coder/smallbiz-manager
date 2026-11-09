@@ -336,7 +336,7 @@ export function SaleFormPage() {
               )}
               {!canCustomers && (
                 <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                  {tr('免费版开单按散客零售价。升级标准版可记录客户、使用批发价。')}{' '}
+                  {tr('普通会员开单按散客零售价。升级高级永久会员可记录客户、使用批发价。')}{' '}
                   <Link to="/settings/billing" className="font-medium text-blue-600 hover:underline">
                     {tr('查看套餐')}
                   </Link>

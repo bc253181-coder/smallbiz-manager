@@ -1,5 +1,5 @@
 import type { Plan } from '@/features/auth/types'
-import type { MethodView, PaymentOrder, PaymentStatus, PriceView } from '@/features/billing/api'
+import type { FreeLimits, MethodView, PaymentOrder, PaymentStatus, PriceView } from '@/features/billing/api'
 import { api } from '@/lib/api'
 
 export interface AdminStats {
@@ -18,6 +18,8 @@ export interface TenantRow {
   trialUsed: boolean
   ownerEmail: string | null
   ownerName: string | null
+  ownerId: number | null
+  ownerMembership: 'FREE' | 'LIFETIME' | null
   createdAt: string
 }
 
@@ -27,6 +29,7 @@ export interface BatchRow {
   plan: Plan
   durationDays: number
   trial: boolean
+  lifetime: boolean
   quantity: number
   redeemed: number
   voided: number
@@ -39,6 +42,8 @@ export interface BatchInput {
   plan: Plan
   durationDays: number
   trial: boolean
+  /** 高级永久会员激活码（忽略套餐和天数） */
+  lifetime: boolean
   quantity: number
   expiresOn: string | null
 }
@@ -124,6 +129,10 @@ export const adminApi = {
     api.post<TenantRow>(`/admin/tenants/${id}/plan`, body).then((r) => r.data),
 
   batches: () => api.get<BatchRow[]>('/admin/code-batches').then((r) => r.data),
+  membershipConfig: () => api.get<FreeLimits>('/admin/membership/config').then((r) => r.data),
+  updateMembershipConfig: (body: FreeLimits) => api.put<FreeLimits>('/admin/membership/config', body).then((r) => r.data),
+  setMembership: (userId: number, membership: 'FREE' | 'LIFETIME', note: string) =>
+    api.post(`/admin/users/${userId}/membership`, { membership, note }).then((r) => r.data),
   createBatch: (body: BatchInput) =>
     api.post<{ batch: BatchRow; codes: string[] }>('/admin/code-batches', body).then((r) => r.data),
   voidCode: (code: string) => api.post<{ status: string; hint: string }>('/admin/codes/void', { code }).then((r) => r.data),

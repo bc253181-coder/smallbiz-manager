@@ -242,14 +242,19 @@ class ImportExportApiTest extends IntegrationTest {
     void freePlanProductLimitAppliesToImport() throws Exception {
         Session s = registerWithFreeTenant("ix-lim", "上限店");
         List<List<Object>> rows = new ArrayList<>();
-        for (int i = 1; i <= 101; i++) {
+        // 普通会员最多新建 3 个商品（按账号累计）：4 个整批拒绝，什么都不写入
+        for (int i = 1; i <= 4; i++) {
             rows.add(product("商品" + i, 1, 1, "L-" + i, null, null));
         }
         MockHttpServletResponse res = upload(s, "products", "p.xlsx", xlsx(PRODUCT_HEADER, rows), "CREATE_ONLY", false);
         assertThat((Boolean) read(res, "$.imported")).isFalse();
         assertThat((Integer) read(res, "$.errors[0].row")).isZero();
-        assertThat((String) read(res, "$.errors[0].message")).contains("免费版最多 100 个商品");
+        assertThat((String) read(res, "$.errors[0].message")).contains("普通会员还可以新建 3 个商品", "本次要新增 4 个");
         assertThat(count("select count(*) from products where tenant_id = ?", currentTenantId(s, mvc))).isZero();
+        // 3 个正好可以导入，导入后用完次数
+        MockHttpServletResponse ok = upload(s, "products", "p.xlsx", xlsx(PRODUCT_HEADER, rows.subList(0, 3)), "CREATE_ONLY", false);
+        assertThat((Boolean) read(ok, "$.imported")).as(ok.getContentAsString()).isTrue();
+        assertThat(count("select products_created from account_usage where user_id = ?", s.userId())).isEqualTo(3);
     }
 
     // ---------------- 客户、供应商、CSV 编码 ----------------
@@ -324,7 +329,7 @@ class ImportExportApiTest extends IntegrationTest {
         Session std = registerWithTenant("ix-std", "标准版店");
         MockHttpServletResponse res = send(get("/api/v1/exports/products"), std, null);
         assertThat(res.getStatus()).isEqualTo(403);
-        assertThat((String) read(res, "$.details.requiredPlan")).isEqualTo("PRO");
+        assertThat((String) read(res, "$.details.requiredPlan")).isEqualTo("LIFETIME");
         assertThat(send(get("/api/v1/reports/sales/export"), std, null).getStatus()).isEqualTo(200);
         assertThat(send(get("/api/v1/reports/sales/export").param("format", "xlsx"), std, null).getStatus()).isEqualTo(403);
     }

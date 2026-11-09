@@ -37,11 +37,14 @@ public class PaymentService {
     private final PaymentMethodRepository methods;
     private final TenantRepository tenants;
     private final PlanService plans;
+    private final com.smallbiz.billing.membership.MembershipService membership;
     private final ImageStorage storage;
     private final SecureRandom random = new SecureRandom();
 
     public PaymentService(PaymentOrderRepository orders, PlanPriceRepository prices, PaymentMethodRepository methods,
-            TenantRepository tenants, PlanService plans, ImageStorage storage) {
+            TenantRepository tenants, PlanService plans, ImageStorage storage,
+            com.smallbiz.billing.membership.MembershipService membership) {
+        this.membership = membership;
         this.orders = orders;
         this.prices = prices;
         this.methods = methods;
@@ -62,7 +65,7 @@ public class PaymentService {
             throw ApiException.badRequest("CURRENCY_MISMATCH",
                     method.getDisplayName() + " 只能支付 " + method.getCurrency() + " 价格");
         }
-        Tenant tenant = checkCanOrder(tenantId, price);
+        Tenant tenant = checkCanOrder(tenantId, userId, price);
         Instant now = Instant.now();
         PaymentOrder order = new PaymentOrder(tenantId, orderNo(now, tenant.getTimezone()), uniqueReference(), price, method,
                 now.plus(PAY_WINDOW), userId);
@@ -74,7 +77,7 @@ public class PaymentService {
     public PaymentOrder createOnline(Long tenantId, Long userId, Long priceId, String channel) {
         PlanPrice price = prices.findById(priceId).filter(PlanPrice::isEnabled)
                 .orElseThrow(() -> ApiException.notFound("PRICE_NOT_FOUND", "该套餐暂不可购买"));
-        Tenant tenant = checkCanOrder(tenantId, price);
+        Tenant tenant = checkCanOrder(tenantId, userId, price);
         Instant now = Instant.now();
         return orders.saveAndFlush(PaymentOrder.online(tenantId, orderNo(now, tenant.getTimezone()), uniqueReference(),
                 price, channel, now.plus(ONLINE_PAY_WINDOW), userId));
@@ -122,11 +125,18 @@ public class PaymentService {
         Tenant t = tenants.findByIdForUpdate(o.getTenantId()).orElseThrow(); // 锁定店铺，检查和开通之间不会被其他开通插队
         boolean trial = o.getPeriod() == PlanPrice.Period.TRIAL_MONTH;
         Instant now = Instant.now();
-        if (trial && t.isTrialUsed()) {
+        if (o.isLifetime()) {
+            if (o.getCreatedBy() == null || membership.isLifetime(o.getCreatedBy())) {
+                o.markPaidWithProblem(paid.txnId(), paid.paidAt(), "已经是高级永久会员，未重复开通，请退款");
+                return PaidResult.ANOMALY;
+            }
+        } else if (t.isLifetime()) {
+            o.markPaidWithProblem(paid.txnId(), paid.paidAt(), "已经是高级永久会员，未开通，请退款");
+            return PaidResult.ANOMALY;
+        } else if (trial && t.isTrialUsed()) {
             o.markPaidWithProblem(paid.txnId(), paid.paidAt(), "首月体验已经用过，未开通，请退款或改为开通月付");
             return PaidResult.ANOMALY;
-        }
-        if (PlanPolicy.rank(t.effectivePlan(now)) > PlanPolicy.rank(o.getPlan())) {
+        } else if (PlanPolicy.rank(t.effectivePlan(now)) > PlanPolicy.rank(o.getPlan())) {
             o.markPaidWithProblem(paid.txnId(), paid.paidAt(), "店铺当前套餐更高，未开通，请退款");
             return PaidResult.ANOMALY;
         }
@@ -136,8 +146,13 @@ public class PaymentService {
             case CANCELLED -> "付款单取消后才付款，已照常开通";
             default -> null;
         };
-        plans.grant(o.getTenantId(), o.getPlan(), o.getDurationDays(), trial, PlanChangeLog.Source.ONLINE_PAYMENT, null,
-                o.getId(), null, "在线支付 " + o.getOrderNo());
+        if (o.isLifetime()) {
+            membership.grantLifetime(o.getCreatedBy(), PlanChangeLog.Source.ONLINE_PAYMENT, o.getId(), null, null,
+                    "在线支付 " + o.getOrderNo());
+        } else {
+            plans.grant(o.getTenantId(), o.getPlan(), o.getDurationDays(), trial, PlanChangeLog.Source.ONLINE_PAYMENT, null,
+                    o.getId(), null, "在线支付 " + o.getOrderNo());
+        }
         o.markPaid(paid.txnId(), paid.paidAt(), now, note);
         return note == null ? PaidResult.GRANTED : PaidResult.GRANTED_WITH_NOTE;
     }
@@ -165,13 +180,22 @@ public class PaymentService {
     }
 
     /** 下单前检查：不能降级、首月体验每店一次、没有未完成的付款单。锁定店铺行，防止同时下两单。 */
-    private Tenant checkCanOrder(Long tenantId, PlanPrice price) {
+    private Tenant checkCanOrder(Long tenantId, Long userId, PlanPrice price) {
         Tenant tenant = tenants.findByIdForUpdate(tenantId)
                 .orElseThrow(() -> ApiException.notFound("TENANT_NOT_FOUND", "店铺不存在"));
-        // 专业版有效期内不能下单标准版（否则审核通过时会覆盖专业版剩余时间）
-        PlanService.checkNotDowngrade(tenant.effectivePlan(Instant.now()), price.getPlan());
-        if (price.isTrial() && tenant.isTrialUsed()) {
-            throw PlanService.trialUsed();
+        if (price.isLifetime()) {
+            if (membership.isLifetime(userId)) {
+                throw ApiException.conflict("ALREADY_LIFETIME", "你已经是高级永久会员，无需再购买");
+            }
+        } else {
+            if (tenant.isLifetime()) {
+                throw ApiException.conflict("ALREADY_LIFETIME", "已经是高级永久会员，无需再购买");
+            }
+            // 专业版有效期内不能下单标准版（否则审核通过时会覆盖专业版剩余时间）
+            PlanService.checkNotDowngrade(tenant.effectivePlan(Instant.now()), price.getPlan());
+            if (price.isTrial() && tenant.isTrialUsed()) {
+                throw PlanService.trialUsed();
+            }
         }
         Instant now = Instant.now();
         List<PaymentOrder> open = orders.findByTenantIdAndStatusIn(tenantId,
@@ -270,8 +294,13 @@ public class PaymentService {
         if (o.getStatus() != PaymentOrder.Status.PENDING_REVIEW) {
             throw ApiException.conflict("INVALID_STATUS", "只有待审核的付款单可以通过");
         }
-        plans.grant(o.getTenantId(), o.getPlan(), o.getDurationDays(), o.getPeriod() == PlanPrice.Period.TRIAL_MONTH,
-                PlanChangeLog.Source.MANUAL_PAYMENT, null, o.getId(), adminId, "付款单 " + o.getOrderNo());
+        if (o.isLifetime()) {
+            membership.grantLifetime(o.getCreatedBy(), PlanChangeLog.Source.MANUAL_PAYMENT, o.getId(), null, adminId,
+                    "付款单 " + o.getOrderNo());
+        } else {
+            plans.grant(o.getTenantId(), o.getPlan(), o.getDurationDays(), o.getPeriod() == PlanPrice.Period.TRIAL_MONTH,
+                    PlanChangeLog.Source.MANUAL_PAYMENT, null, o.getId(), adminId, "付款单 " + o.getOrderNo());
+        }
         o.approve(adminId, Instant.now());
         return o;
     }

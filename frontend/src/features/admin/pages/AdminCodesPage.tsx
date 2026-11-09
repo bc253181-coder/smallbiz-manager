@@ -14,7 +14,7 @@ import { formatDateTime } from '@/lib/format'
 import { adminApi, type BatchRow } from '../api'
 
 function downloadCodes(batch: BatchRow, codes: string[]) {
-  const rows = ['激活码,套餐,天数,首月体验', ...codes.map((c) => `${c},${PLAN_LABELS[batch.plan]},${batch.durationDays},${batch.trial ? '是' : '否'}`)]
+  const rows = ['激活码,套餐,天数,首月体验', ...codes.map((c) => `${c},${batch.lifetime ? '高级永久会员' : PLAN_LABELS[batch.plan]},${batch.lifetime ? '永久' : batch.durationDays},${batch.trial ? '是' : '否'}`)]
   const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -110,7 +110,7 @@ export function AdminCodesPage() {
                   <tr key={b.id}>
                     <td className="px-5 py-2.5 font-medium text-slate-800">{b.name}</td>
                     <td className="px-5 py-2.5">
-                      {PLAN_LABELS[b.plan]} {b.durationDays} 天 {b.trial && <Badge tone="amber">首月体验</Badge>}
+                      {b.lifetime ? <Badge tone="amber">高级永久会员</Badge> : <>{PLAN_LABELS[b.plan]} {b.durationDays} 天</>} {b.trial && <Badge tone="amber">首月体验</Badge>}
                     </td>
                     <td className="px-5 py-2.5 text-right tabular-nums">{b.quantity}</td>
                     <td className="px-5 py-2.5 text-right tabular-nums">{b.redeemed}</td>
@@ -149,7 +149,7 @@ function CreateBatchDialog({
 }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
-  const [preset, setPreset] = useState<'trial' | 'month' | 'year' | 'custom'>('month')
+  const [preset, setPreset] = useState<'lifetime' | 'trial' | 'month' | 'year' | 'custom'>('lifetime')
   const [plan, setPlan] = useState<Plan>('STANDARD')
   const [days, setDays] = useState('30')
   const [quantity, setQuantity] = useState('10')
@@ -157,15 +157,17 @@ function CreateBatchDialog({
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const trial = preset === 'trial'
-  const duration = preset === 'year' ? 365 : preset === 'custom' ? Number(days) : 30
+  const lifetime = preset === 'lifetime'
+  const duration = lifetime ? 0 : preset === 'year' ? 365 : preset === 'custom' ? Number(days) : 30
 
   const create = useMutation({
     mutationFn: () =>
       adminApi.createBatch({
         name: name.trim(),
-        plan,
+        plan: lifetime ? 'PRO' : plan,
         durationDays: duration,
         trial,
+        lifetime,
         quantity: Number(quantity),
         expiresOn: expiresOn || null,
       }),
@@ -193,7 +195,7 @@ function CreateBatchDialog({
         if (!name.trim()) errs.name = '请填写批次名称'
         const q = Number(quantity)
         if (!Number.isInteger(q) || q < 1 || q > 1000) errs.quantity = '数量为 1–1000'
-        if (!Number.isInteger(duration) || duration < 1 || duration > 3660) errs.durationDays = '天数为 1–3660'
+        if (!lifetime && (!Number.isInteger(duration) || duration < 1 || duration > 3660)) errs.durationDays = '天数为 1–3660'
         setErrors(errs)
         if (Object.keys(errs).length === 0) create.mutate()
       }}
@@ -202,7 +204,7 @@ function CreateBatchDialog({
         <Input id="cb-name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} invalid={!!errors.name} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="套餐" htmlFor="cb-plan">
+        {!lifetime && (<Field label="套餐" htmlFor="cb-plan">
           <Select
             id="cb-plan"
             value={plan}
@@ -215,9 +217,10 @@ function CreateBatchDialog({
             <option value="STANDARD">标准版</option>
             <option value="PRO">专业版</option>
           </Select>
-        </Field>
+        </Field>)}
         <Field label="类型" htmlFor="cb-preset">
           <Select id="cb-preset" value={preset} onChange={(e) => setPreset(e.target.value as typeof preset)}>
+            <option value="lifetime">高级永久会员（现在销售的会员）</option>
             {plan === 'STANDARD' && <option value="trial">首月体验（30 天，每店限一次）</option>}
             <option value="month">月卡（30 天）</option>
             <option value="year">年卡（365 天）</option>

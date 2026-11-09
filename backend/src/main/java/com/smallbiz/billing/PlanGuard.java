@@ -39,16 +39,9 @@ public class PlanGuard implements HandlerInterceptor {
 
     public static ApiException featureRequired(Feature feature) {
         return new ApiException(HttpStatus.FORBIDDEN, "PLAN_FEATURE_REQUIRED",
-                "「" + feature.label() + "」需要" + PlanPolicy.label(PlanPolicy.requiredPlan(feature)) + "，升级后即可使用",
-                Map.of("feature", feature.name(), "requiredPlan", PlanPolicy.requiredPlan(feature).name()));
+                "「" + feature.label() + "」是高级会员功能，升级高级永久会员即可使用",
+                Map.of("feature", feature.name(), "requiredPlan", "LIFETIME"));
     }
-
-    public static ApiException limitReached(String limit, int max) {
-        return new ApiException(HttpStatus.FORBIDDEN, "PLAN_LIMIT_REACHED",
-                "免费版最多 " + max + " 个商品，升级标准版可不限数量",
-                Map.of("limit", limit, "max", max, "requiredPlan", Plan.STANDARD.name()));
-    }
-
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (!(handler instanceof HandlerMethod hm)) {

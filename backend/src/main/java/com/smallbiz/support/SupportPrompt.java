@@ -66,18 +66,24 @@ public class SupportPrompt {
             if (!p.isEnabled()) {
                 continue;
             }
-            String period = switch (p.getPeriod()) {
-                case TRIAL_MONTH -> "首月体验（30 天，每个店铺限一次）";
-                case MONTH -> "月付（30 天）";
-                case YEAR -> "年付（365 天）";
+            String name = switch (p.getPeriod()) {
+                case LIFETIME -> "高级永久会员（一次性付款，永久有效，不自动续费，名下所有店铺都有效）";
+                case TRIAL_MONTH -> PlanPolicy.label(p.getPlan()) + " 首月体验（30 天，每个店铺限一次）";
+                case MONTH -> PlanPolicy.label(p.getPlan()) + " 月付（30 天）";
+                case YEAR -> PlanPolicy.label(p.getPlan()) + " 年付（365 天）";
             };
             byCurrency.computeIfAbsent(p.getCurrency(), k -> new StringBuilder())
-                    .append("- ").append(PlanPolicy.label(p.getPlan())).append(' ').append(period).append('：')
+                    .append("- ").append(name).append('：')
                     .append(p.getCurrency()).append(' ').append(p.getAmount().stripTrailingZeros().toPlainString())
                     .append('\n');
         }
-        StringBuilder sb = new StringBuilder("- 免费版：永久免费，最多 " + PlanPolicy.FREE_MAX_PRODUCTS + " 个商品\n");
+        var l = PlanPolicy.freeLimits();
+        StringBuilder sb = new StringBuilder("- 普通会员：免费；按账号累计最多开 " + l.maxStores() + " 家店、新建 " + l.maxProducts()
+                + " 个商品（删除不返还次数），报表可查看最近 " + l.reportDays() + " 天"
+                + (l.advancedTools() ? "，高级工具已开放" : "，客户、供应商、采购等高级工具不可用")
+                + (l.export() ? "，可以导出" : "，不能导出") + "\n");
         byCurrency.values().forEach(sb::append);
+        sb.append("- 以前购买的标准版、专业版订阅在有效期内照常使用，现在不再销售\n");
         return sb.toString();
     }
 }

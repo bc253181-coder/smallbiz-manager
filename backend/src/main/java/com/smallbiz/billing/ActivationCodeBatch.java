@@ -36,6 +36,10 @@ public class ActivationCodeBatch {
     @Column(name = "is_trial", nullable = false)
     private boolean trial;
 
+    /** 高级永久会员激活码（开通对象是兑换的账号）。 */
+    @Column(nullable = false)
+    private boolean lifetime;
+
     @Column(nullable = false)
     private int quantity;
 
@@ -52,12 +56,13 @@ public class ActivationCodeBatch {
     protected ActivationCodeBatch() {
     }
 
-    public ActivationCodeBatch(String name, Plan plan, int durationDays, boolean trial, int quantity,
+    public ActivationCodeBatch(String name, Plan plan, int durationDays, boolean trial, boolean lifetime, int quantity,
             Instant expiresAt, Long createdBy) {
         this.name = name;
         this.plan = plan;
         this.durationDays = durationDays;
         this.trial = trial;
+        this.lifetime = lifetime;
         this.quantity = quantity;
         this.expiresAt = expiresAt;
         this.createdBy = createdBy;
@@ -93,5 +98,9 @@ public class ActivationCodeBatch {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isLifetime() {
+        return lifetime;
     }
 }

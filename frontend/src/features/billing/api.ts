@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/AuthProvider'
-import type { Plan } from '@/features/auth/types'
+import { PLAN_LABELS, type Plan } from '@/features/auth/types'
 import { api } from '@/lib/api'
 
 import { tr } from '@/lib/i18n'
@@ -17,7 +17,7 @@ export type Feature =
   | 'LABEL_PRINTING'
   | 'CUSTOMER_PRICES'
   | 'WAREHOUSES'
-export type Period = 'TRIAL_MONTH' | 'MONTH' | 'YEAR'
+export type Period = 'TRIAL_MONTH' | 'MONTH' | 'YEAR' | 'LIFETIME'
 export type PaymentStatus = 'AWAITING_PAYMENT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED'
 export type PlanSource = 'ACTIVATION_CODE' | 'MANUAL_PAYMENT' | 'ONLINE_PAYMENT' | 'ADMIN_MANUAL'
 
@@ -30,6 +30,31 @@ export interface CurrentPlan {
   features: Record<Feature, boolean>
   /** 现在升级专业版时，标准版剩余时间可折算的专业版天数 */
   proUpgradeBonusDays: number
+  /** 店铺属于高级永久会员（永久有效） */
+  lifetime: boolean
+  /** 当前账号的会员等级和普通会员用量（max 为 null 表示不限） */
+  membership: MembershipUsage
+}
+
+export interface FreeLimits {
+  maxStores: number
+  maxProducts: number
+  reportDays: number
+  advancedTools: boolean
+  advancedTemplates: boolean
+  export: boolean
+  advancedAnalytics: boolean
+}
+
+export interface MembershipUsage {
+  membership: 'FREE' | 'LIFETIME'
+  lifetimeSince: string | null
+  storesUsed: number
+  storesMax: number | null
+  productsUsed: number
+  productsMax: number | null
+  reportDays: number | null
+  freeLimits: FreeLimits
 }
 
 export interface PriceView {
@@ -100,7 +125,7 @@ export const FEATURE_LABELS: Record<Feature, string> = {
   SUPPLIERS: tr('供应商管理'),
   PURCHASING: tr('采购入库'),
   WHOLESALE_PRICE: tr('批发价开单'),
-  FULL_REPORTS: tr('完整报表（不限时间范围）'),
+  FULL_REPORTS: tr('高级数据分析（趋势、排行、毛利）'),
   EXPORT: tr('导出 Excel / CSV'),
   RECEIVABLES: tr('应收账款（赊账、收款、对账单）'),
   STAFF_ACCOUNTS: tr('员工账号'),
@@ -130,6 +155,7 @@ export const PERIOD_LABELS: Record<Period, string> = {
   TRIAL_MONTH: tr('首月体验'),
   MONTH: tr('月付'),
   YEAR: tr('年付'),
+  LIFETIME: tr('永久'),
 }
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
@@ -217,4 +243,28 @@ export function usePlan() {
 export function useFeature(feature: Feature): boolean {
   const { data } = usePlan()
   return data ? data.features[feature] : true
+}
+
+/** 店铺的会员显示名称：没有到期时间的付费店铺 = 高级永久会员；以前的订阅显示标准版 / 专业版。 */
+export function membershipLabel(plan: Plan, expiresAt: string | null | undefined): string {
+  if (plan === 'FREE') return tr('普通会员')
+  return expiresAt ? PLAN_LABELS[plan] : tr('高级永久会员')
+}
+
+/** 付款单 / 价格的名称。 */
+export function orderTitle(o: { plan: Plan; period: Period }): string {
+  return o.period === 'LIFETIME' ? tr('高级永久会员') : `${PLAN_LABELS[o.plan]} · ${PERIOD_LABELS[o.period]}`
+}
+
+/** 高级永久会员的价格（按店铺币种；没有该币种时用人民币）。 */
+export function useLifetimePrice() {
+  const { session } = useAuth()
+  const currency = session?.currentTenant?.currency === 'MYR' ? 'MYR' : 'CNY'
+  const q = useQuery({
+    queryKey: ['billing', 'prices', currency],
+    queryFn: () => billingApi.prices(currency),
+    enabled: !!session?.currentTenant,
+    staleTime: 300_000,
+  })
+  return q.data?.find((p) => p.period === 'LIFETIME') ?? null
 }

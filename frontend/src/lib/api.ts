@@ -2,6 +2,7 @@ import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
 import type { SessionResponse } from '@/features/auth/types'
 
 import { hasTranslation, tr } from '@/lib/i18n'
+import { openUpgrade, upgradeReasonFromError } from '@/lib/upgrade'
 /** 后端统一错误格式。 */
 export interface ApiErrorBody {
   code: string
@@ -69,6 +70,16 @@ interface RetryableConfig extends AxiosRequestConfig {
 }
 
 // 访问令牌过期（401）时自动刷新一次并重试原请求
+// 普通会员达到次数上限 / 使用高级功能被服务端拒绝（新建、保存等写操作）：弹出升级窗口。
+// 读取数据被拒绝时由各页面自己显示锁定状态，不弹窗。
+api.interceptors.response.use(undefined, (error: AxiosError<ApiErrorBody>) => {
+  const method = (error.config?.method ?? 'get').toLowerCase()
+  if (method !== 'get' && error.response?.status === 403) {
+    const reason = upgradeReasonFromError(error.response.data?.code, error.response.data?.details as Record<string, unknown> | undefined)
+    if (reason) openUpgrade(reason)
+  }
+  return Promise.reject(error)
+})
 api.interceptors.response.use(undefined, async (error: AxiosError<ApiErrorBody>) => {
   const original = error.config as RetryableConfig | undefined
   const isAuthCall = original?.url?.startsWith('/auth/') && !original.url.startsWith('/auth/me')

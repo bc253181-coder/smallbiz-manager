@@ -52,6 +52,10 @@ public class PlanService {
             Long activationCodeId, Long paymentOrderId, Long operatorId, String note) {
         Tenant t = tenants.findByIdForUpdate(tenantId)
                 .orElseThrow(() -> ApiException.notFound("TENANT_NOT_FOUND", "店铺不存在"));
+        if (t.isLifetime()) {
+            // 永久有效的店铺不能再按天数开通（否则会被改成有到期时间）
+            throw ApiException.conflict("ALREADY_LIFETIME", "已经是高级永久会员，无需再开通");
+        }
         if (trial && t.isTrialUsed()) {
             throw trialUsed();
         }

@@ -56,10 +56,13 @@ public class BillingController {
     private final PaymentService payments;
     private final PlanService planService;
     private final OnlinePaymentService online;
+    private final com.smallbiz.billing.membership.MembershipService membership;
 
     public BillingController(TenantRepository tenants, ProductRepository products, PlanPriceRepository prices,
             PaymentMethodRepository methods, PlanChangeLogRepository logs, ActivationService activation,
-            PaymentService payments, PlanService planService, OnlinePaymentService online) {
+            PaymentService payments, PlanService planService, OnlinePaymentService online,
+            com.smallbiz.billing.membership.MembershipService membership) {
+        this.membership = membership;
         this.planService = planService;
         this.online = online;
         this.tenants = tenants;
@@ -82,8 +85,10 @@ public class BillingController {
         for (Feature f : Feature.values()) {
             features.put(f, PlanPolicy.allows(plan, f));
         }
+        var usage = membership.usage(CurrentUser.userId(), tenantId);
         return new CurrentPlan(plan, plan == Plan.FREE ? null : t.getPlanExpiresAt(), t.isTrialUsed(),
-                products.count(), PlanPolicy.maxProducts(plan), features, planService.upgradeBonusDays(t, Plan.PRO, now));
+                products.count(), usage.productsMax(), features, planService.upgradeBonusDays(t, Plan.PRO, now),
+                t.isLifetime(), usage);
     }
 
     @GetMapping("/prices")

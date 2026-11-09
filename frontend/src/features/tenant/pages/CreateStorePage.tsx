@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { AuthLayout } from '@/components/layout/AuthLayout'
+import { FreeUsageHint } from '@/features/billing/FreeUsageHint'
 import { Button } from '@/components/ui/button'
 import { Field, FormError, Input, Select } from '@/components/ui/form'
 import { CURRENCIES, guessCurrency } from '@/lib/currency'
@@ -62,6 +63,7 @@ export function CreateStorePage({ firstStore }: { firstStore: boolean }) {
       title={firstStore ? tr('欢迎，{{v0}}！先创建你的店铺', { v0: session?.user.displayName ?? '' }) : tr('新建店铺')}
       subtitle={tr('每个店铺的商品、库存、订单数据完全独立。以后可以随时修改店铺信息。')}
     >
+      {!firstStore && <FreeUsageHint kind="stores" className="mb-4" />}
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         <FormError message={formError} />
         <Field label={tr('店铺名称')} htmlFor="name" error={errors.name?.message} required>

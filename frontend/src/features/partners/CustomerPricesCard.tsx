@@ -108,8 +108,8 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
           allowed
             ? tr('给这个客户的专门价格，开单时自动带出（优先于批发价 / 零售价）')
             : data?.length
-              ? tr('专业版已到期：协议价暂不生效，开单按批发价 / 零售价，续费后恢复')
-              : tr('专业版功能：为老客户设置固定价格，开单自动带出')
+              ? tr('高级会员已到期：协议价暂不生效，开单按批发价 / 零售价，升级高级永久会员后恢复')
+              : tr('高级会员功能：为老客户设置固定价格，开单自动带出')
         }
         action={allowed && <ImportButton type="customer-prices" size="sm" />}
       />
@@ -117,7 +117,7 @@ export function CustomerPricesCard({ customerId, customerName }: { customerId: n
         <div className="px-5 pb-5">
           <Link to="/settings/billing" className={buttonVariants({ size: 'sm', variant: 'secondary' })}>
             <Tags aria-hidden />
-            {tr('了解专业版')}
+            {tr('了解高级会员')}
           </Link>
         </div>
       ) : (
