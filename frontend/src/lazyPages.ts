@@ -35,6 +35,10 @@ export const TransferFormPage = page(() => import('@/features/warehouse/Transfer
 export const TransferDetailPage = page(() => import('@/features/warehouse/TransferPages'), 'TransferDetailPage')
 export const StaffPage = page(() => import('@/features/staff/StaffPage'), 'StaffPage')
 export const PaymentPage =page(() => import('@/features/billing/pages/PaymentPage'), 'PaymentPage')
+// 模拟支付页面只在开发环境构建（正式构建中这段代码被整体去掉）
+export const MockCheckoutPage = import.meta.env.DEV
+  ? page(() => import('@/features/billing/pages/MockCheckoutPage'), 'MockCheckoutPage')
+  : () => null
 export const ReceivablesPage = page(() => import('@/features/receivables/pages/ReceivablesPage'), 'ReceivablesPage')
 export const ReceivablePaymentsPage = page(() => import('@/features/receivables/pages/PaymentsPage'), 'PaymentsPage')
 export const StatementPage = page(() => import('@/features/receivables/pages/StatementPage'), 'StatementPage')

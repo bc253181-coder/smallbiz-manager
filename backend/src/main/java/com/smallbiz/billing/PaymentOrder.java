@@ -54,8 +54,31 @@ public class PaymentOrder extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "payment_method_id", nullable = false)
+    /** 站内扫码付款的收款方式；在线支付时为空。 */
+    @Column(name = "payment_method_id")
     private Long paymentMethodId;
+
+    /** 在线支付渠道（例如 MOCK）；扫码付款时为空。 */
+    @Column(length = 30, updatable = false)
+    private String channel;
+
+    /** 支付渠道的交易号（同一渠道内唯一，防止重复开通）。 */
+    @Column(name = "provider_txn_id", length = 100)
+    private String providerTxnId;
+
+    /** 支付渠道的付款页地址。 */
+    @Column(name = "checkout_ref", length = 200)
+    private String checkoutRef;
+
+    @Column(name = "paid_at")
+    private Instant paidAt;
+
+    /** 需要平台人工处理的异常（金额不符、过期后付款、重复付款等）。 */
+    @Column(length = 200)
+    private String anomaly;
+
+    @Column(name = "anomaly_resolved_at")
+    private Instant anomalyResolvedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -108,6 +131,61 @@ public class PaymentOrder extends BaseEntity {
         this.paymentMethodId = method.getId();
         this.expiresAt = expiresAt;
         this.createdBy = createdBy;
+    }
+
+    /** 在线支付付款单。 */
+    public static PaymentOrder online(Long tenantId, String orderNo, String referenceCode, PlanPrice price, String channel,
+            Instant expiresAt, Long createdBy) {
+        PaymentOrder o = new PaymentOrder();
+        o.tenantId = tenantId;
+        o.orderNo = orderNo;
+        o.referenceCode = referenceCode;
+        o.planPriceId = price.getId();
+        o.plan = price.getPlan();
+        o.period = price.getPeriod();
+        o.durationDays = price.getDurationDays();
+        o.currency = price.getCurrency();
+        o.amount = price.getAmount();
+        o.channel = channel;
+        o.expiresAt = expiresAt;
+        o.createdBy = createdBy;
+        return o;
+    }
+
+    public boolean isOnline() {
+        return channel != null;
+    }
+
+    public void setCheckoutRef(String checkoutRef) {
+        this.checkoutRef = checkoutRef;
+    }
+
+    /** 在线支付成功并已开通。note 不为空时记为异常（如过期后才付款），开通照常。 */
+    public void markPaid(String txnId, Instant paidAt, Instant now, String note) {
+        this.providerTxnId = txnId;
+        this.paidAt = paidAt;
+        this.status = Status.APPROVED;
+        this.reviewedAt = now;
+        if (note != null) {
+            addAnomaly(note);
+        }
+    }
+
+    /** 收到付款但不能开通（金额不符等）：记录交易号和原因，状态不变，由平台处理。 */
+    public void markPaidWithProblem(String txnId, Instant paidAt, String reason) {
+        this.providerTxnId = txnId;
+        this.paidAt = paidAt;
+        addAnomaly(reason);
+    }
+
+    public void addAnomaly(String reason) {
+        String s = anomaly == null ? reason : anomaly + "；" + reason;
+        this.anomaly = s.length() > 200 ? s.substring(0, 200) : s;
+        this.anomalyResolvedAt = null;
+    }
+
+    public void resolveAnomaly(Instant now) {
+        this.anomalyResolvedAt = now;
     }
 
     /** 待付款且已过期：在读取或操作时惰性标记为 EXPIRED。 */
@@ -214,5 +292,29 @@ public class PaymentOrder extends BaseEntity {
 
     public String getRejectReason() {
         return rejectReason;
+    }
+
+    public String getChannel() {
+        return channel;
+    }
+
+    public String getProviderTxnId() {
+        return providerTxnId;
+    }
+
+    public String getCheckoutRef() {
+        return checkoutRef;
+    }
+
+    public Instant getPaidAt() {
+        return paidAt;
+    }
+
+    public String getAnomaly() {
+        return anomaly;
+    }
+
+    public Instant getAnomalyResolvedAt() {
+        return anomalyResolvedAt;
     }
 }

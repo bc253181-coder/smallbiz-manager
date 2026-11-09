@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, ChevronRight, KeyRound, Lock, QrCode } from 'lucide-react'
+import { Check, ChevronRight, CreditCard, KeyRound, Lock, QrCode } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -24,6 +24,7 @@ import {
   usePlan,
   type Feature,
   type PriceView,
+  channelLabel,
 } from '../api'
 
 import { tr } from '@/lib/i18n'
@@ -137,7 +138,8 @@ function BuyCard() {
   const plan = usePlan()
   const [currency, setCurrency] = useState(session?.currentTenant?.currency === 'MYR' ? 'MYR' : 'CNY')
   const [priceId, setPriceId] = useState<number | null>(null)
-  const [methodId, setMethodId] = useState<number | null>(null)
+  // 付款方式：'online:渠道' 或 'qr:收款方式 id'
+  const [pick, setPick] = useState<string | null>(null)
   const isPro = plan.data?.plan === 'PRO'
   const [planTab, setPlanTab] = useState<'STANDARD' | 'PRO'>(isPro ? 'PRO' : 'STANDARD')
   // 专业版有效期内只能续费专业版
@@ -145,6 +147,7 @@ function BuyCard() {
 
   const prices = useQuery({ queryKey: ['billing', 'prices', currency], queryFn: () => billingApi.prices(currency) })
   const methods = useQuery({ queryKey: ['billing', 'methods'], queryFn: billingApi.methods })
+  const channels = useQuery({ queryKey: ['billing', 'online-channels', currency], queryFn: () => billingApi.onlineChannels(currency) })
   const payments = useQuery({ queryKey: ['billing', 'payments'], queryFn: billingApi.payments })
   const open = payments.data?.find((p) => p.status === 'AWAITING_PAYMENT' || p.status === 'PENDING_REVIEW')
 
@@ -154,13 +157,28 @@ function BuyCard() {
   const bonusDays = plan.data?.proUpgradeBonusDays ?? 0
   const currencyMethods = (methods.data ?? []).filter((m) => m.currency === currency)
   const selected = options.find((p) => p.id === priceId) ?? options[0]
-  const method = currencyMethods.find((m) => m.id === methodId) ?? currencyMethods[0]
+  const payOptions = [
+    ...(channels.data ?? []).map((c) => ({ key: `online:${c.channel}`, online: true, label: channelLabel(c.channel) })),
+    ...currencyMethods.map((m) => ({ key: `qr:${m.id}`, online: false, label: m.displayName })),
+  ]
+  const payOption = payOptions.find((o) => o.key === pick) ?? payOptions[0]
 
   const create = useMutation({
-    mutationFn: () => billingApi.createPayment(selected!.id, method!.id),
-    onSuccess: (order) => {
+    mutationFn: async () => {
+      const [kind, value] = payOption!.key.split(':')
+      if (kind === 'online') {
+        const started = await billingApi.startOnline(selected!.id, value)
+        return { id: started.order.id, checkoutUrl: started.checkoutUrl }
+      }
+      const order = await billingApi.createPayment(selected!.id, Number(value))
+      return { id: order.id, checkoutUrl: null }
+    },
+    onSuccess: ({ id, checkoutUrl }) => {
       void queryClient.invalidateQueries({ queryKey: ['billing', 'payments'] })
-      navigate(`/settings/billing/pay/${order.id}`)
+      if (!checkoutUrl) navigate(`/settings/billing/pay/${id}`)
+      // 在线支付：跳转到支付渠道的付款页（站内地址用路由跳转，外部地址整页跳转）
+      else if (checkoutUrl.startsWith('/')) navigate(checkoutUrl)
+      else window.location.assign(checkoutUrl)
     },
     onError: (e) => {
       toast.error(errorMessage(e, tr('创建付款单失败')))
@@ -172,7 +190,11 @@ function BuyCard() {
     <Card>
       <CardHeader
         title={tr('升级 / 续费')}
-        description={tr('扫码付款后上传截图，人工核对后开通（通常几小时内）')}
+        description={
+          channels.data?.length
+            ? tr('在线支付付款后立即开通；也可以扫码付款后上传截图，人工核对后开通')
+            : tr('扫码付款后上传截图，人工核对后开通（通常几小时内）')
+        }
         action={
           <div className="inline-flex shrink-0 self-start rounded-lg border border-slate-200 p-0.5" role="radiogroup" aria-label={tr('币种')}>
             {[
@@ -187,7 +209,7 @@ function BuyCard() {
                 onClick={() => {
                   setCurrency(c.v)
                   setPriceId(null)
-                  setMethodId(null)
+                  setPick(null)
                 }}
                 className={cn('rounded-md px-3 py-1 text-sm', currency === c.v ? 'bg-blue-50 font-medium text-blue-700' : 'text-slate-600')}
               >
@@ -292,23 +314,26 @@ function BuyCard() {
 
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-slate-700">{tr('付款方式')}</legend>
-          {currencyMethods.length === 0 ? (
+          {payOptions.length === 0 ? (
             <p className="text-sm text-slate-500">{tr('该币种暂无可用的付款方式')}</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
-              {currencyMethods.map((m) => (
+              {payOptions.map((o) => (
                 <button
-                  key={m.id}
+                  key={o.key}
                   type="button"
-                  aria-pressed={method?.id === m.id}
-                  onClick={() => setMethodId(m.id)}
+                  aria-pressed={payOption?.key === o.key}
+                  onClick={() => setPick(o.key)}
                   className={cn(
                     'flex items-center gap-3 rounded-xl border p-3 text-left text-sm',
-                    method?.id === m.id ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:bg-slate-50',
+                    payOption?.key === o.key ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-600' : 'border-slate-200 hover:bg-slate-50',
                   )}
                 >
-                  <QrCode className="size-5 shrink-0 text-slate-500" aria-hidden />
-                  <span className="font-medium text-slate-800">{m.displayName}</span>
+                  {o.online ? <CreditCard className="size-5 shrink-0 text-slate-500" aria-hidden /> : <QrCode className="size-5 shrink-0 text-slate-500" aria-hidden />}
+                  <span className="min-w-0">
+                    <span className="block font-medium text-slate-800">{o.online ? tr('在线支付 · {{v0}}', { v0: o.label }) : o.label}</span>
+                    <span className="block text-xs text-slate-500">{o.online ? tr('付款后立即开通') : tr('扫码付款，上传截图后人工核对')}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -318,7 +343,7 @@ function BuyCard() {
         <Button
           size="lg"
           className="w-full"
-          disabled={!selected || !method || !!open}
+          disabled={!selected || !payOption || !!open}
           loading={create.isPending}
           onClick={() => create.mutate()}
         >
@@ -420,7 +445,9 @@ function PaymentsCard() {
                   <p className="truncate text-sm font-medium text-slate-800">
                     {PLAN_LABELS[o.plan]} · {PERIOD_LABELS[o.period]} · {formatMoney(o.amount, o.currency)}
                   </p>
-                  <p className="text-xs text-slate-500">{formatDateTime(o.createdAt)}</p>
+                  <p className="text-xs text-slate-500">
+                    {formatDateTime(o.createdAt)} · {o.channel ? tr('在线支付') : (o.method?.displayName ?? tr('扫码付款'))}
+                  </p>
                 </div>
                 <Badge tone={PAYMENT_STATUS_TONES[o.status]}>{PAYMENT_STATUS_LABELS[o.status]}</Badge>
               </Link>

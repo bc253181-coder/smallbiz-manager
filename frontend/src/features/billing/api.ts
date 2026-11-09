@@ -19,7 +19,7 @@ export type Feature =
   | 'WAREHOUSES'
 export type Period = 'TRIAL_MONTH' | 'MONTH' | 'YEAR'
 export type PaymentStatus = 'AWAITING_PAYMENT' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED'
-export type PlanSource = 'ACTIVATION_CODE' | 'MANUAL_PAYMENT' | 'ADMIN_MANUAL'
+export type PlanSource = 'ACTIVATION_CODE' | 'MANUAL_PAYMENT' | 'ONLINE_PAYMENT' | 'ADMIN_MANUAL'
 
 export interface CurrentPlan {
   plan: Plan
@@ -74,6 +74,14 @@ export interface PaymentOrder {
   createdAt: string
   tenantId: number
   tenantName: string | null
+  /** 在线支付渠道（扫码付款时为空）。 */
+  channel: string | null
+  paidAt: string | null
+  providerTxnId: string | null
+  /** 继续付款的地址（只在待付款的在线付款单上有）。 */
+  checkoutUrl: string | null
+  anomaly: string | null
+  anomalyResolvedAt: string | null
 }
 
 export interface PlanLog {
@@ -145,6 +153,7 @@ export const PAYMENT_STATUS_TONES: Record<PaymentStatus, 'slate' | 'blue' | 'gre
 export const SOURCE_LABELS: Record<PlanSource, string> = {
   ACTIVATION_CODE: tr('激活码'),
   MANUAL_PAYMENT: tr('扫码付款'),
+  ONLINE_PAYMENT: tr('在线支付'),
   ADMIN_MANUAL: tr('平台调整'),
 }
 
@@ -166,6 +175,21 @@ export const billingApi = {
     return api.post<PaymentOrder>(`/billing/payment-orders/${id}/proof`, form).then((r) => r.data)
   },
   cancel: (id: number) => api.post<PaymentOrder>(`/billing/payment-orders/${id}/cancel`).then((r) => r.data),
+  onlineChannels: (currency: string) =>
+    api.get<OnlineChannel[]>('/billing/online-channels', { params: { currency } }).then((r) => r.data),
+  startOnline: (priceId: number, channel: string) =>
+    api.post<{ order: PaymentOrder; checkoutUrl: string }>('/billing/online-payments', { priceId, channel }).then((r) => r.data),
+}
+
+export interface OnlineChannel {
+  channel: string
+  displayName: string
+}
+
+/** 支付渠道名称（后端名称为中文，这里统一翻译）。 */
+export function channelLabel(channel: string | null): string {
+  if (!channel) return ''
+  return channel === 'MOCK' ? tr('模拟支付（测试）') : channel
 }
 
 /** 需要登录才能读取的图片（付款截图）→ 对象 URL。 */

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CircleCheck, Clock, Copy, ImageUp, TriangleAlert } from 'lucide-react'
+import { CircleCheck, Clock, Copy, CreditCard, ImageUp, Loader2, Printer, TriangleAlert } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -15,6 +15,7 @@ import { formatDateTime, formatMoney } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import {
   billingApi,
+  channelLabel,
   fetchImageBlob,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_TONES,
@@ -32,8 +33,13 @@ export function PaymentPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['billing', 'payments', id],
     queryFn: () => billingApi.payment(id),
-    // 审核中每 30 秒刷新一次状态
-    refetchInterval: (q) => (q.state.data?.status === 'PENDING_REVIEW' ? 30_000 : false),
+    // 审核中每 30 秒刷新；在线支付等待确认时每 2 秒刷新（付款通知通常几秒内到达）
+    refetchInterval: (q) => {
+      const o = q.state.data
+      if (o?.status === 'PENDING_REVIEW') return 30_000
+      if (o?.channel && o.status === 'AWAITING_PAYMENT') return q.state.dataUpdateCount < 60 ? 2_000 : 15_000
+      return false
+    },
   })
 
   // 本页停留期间审核通过 → 刷新套餐和会话
@@ -51,7 +57,7 @@ export function PaymentPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader
-        title={tr('扫码付款')}
+        title={data?.channel ? tr('在线支付') : tr('扫码付款')}
         description={data ? tr('付款单 {{orderNo}}', { orderNo: data.orderNo }) : undefined}
         back={{ to: '/settings/billing', label: tr('套餐与续费') }}
       />
@@ -85,7 +91,7 @@ function PaymentBody({ order }: { order: PaymentOrder }) {
         </CardBody>
       </Card>
 
-      {order.status === 'AWAITING_PAYMENT' && <AwaitingPayment order={order} />}
+      {order.status === 'AWAITING_PAYMENT' && (order.channel ? <OnlineAwaiting order={order} /> : <AwaitingPayment order={order} />)}
       {order.status === 'PENDING_REVIEW' && (
         <StatusCard icon={Clock} tone="blue" title={tr('已提交，等待人工核对')}>
           {tr('我们会核对到账金额和付款备注，通常几小时内开通（夜间可能顺延到第二天）。开通后刷新页面即可使用标准版功能。')}
@@ -94,9 +100,18 @@ function PaymentBody({ order }: { order: PaymentOrder }) {
       )}
       {order.status === 'APPROVED' && (
         <StatusCard icon={CircleCheck} tone="green" title={tr('付款已确认，套餐已开通')}>
-          <Link to="/" className={cn(buttonVariants({ size: 'sm' }), 'mt-3')}>
-            {tr('开始使用')}
-          </Link>
+          {order.channel && <Receipt order={order} />}
+          <div className="mt-3 flex flex-wrap gap-2 print:hidden">
+            <Link to="/" className={buttonVariants({ size: 'sm' })}>
+              {tr('开始使用')}
+            </Link>
+            {order.channel && (
+              <Button size="sm" variant="secondary" onClick={() => window.print()}>
+                <Printer aria-hidden />
+                {tr('打印收据')}
+              </Button>
+            )}
+          </div>
         </StatusCard>
       )}
       {order.status === 'REJECTED' && (
@@ -110,13 +125,90 @@ function PaymentBody({ order }: { order: PaymentOrder }) {
       )}
       {(order.status === 'EXPIRED' || order.status === 'CANCELLED') && (
         <StatusCard icon={Clock} tone="slate" title={order.status === 'EXPIRED' ? tr('付款单已过期') : tr('付款单已取消')}>
-          {order.status === 'EXPIRED' && tr('付款单在 24 小时内有效。如果你已经付款，请联系客服处理。')}
+          {order.status === 'EXPIRED' &&
+            (order.channel
+              ? tr('在线付款单在 30 分钟内有效。如果你已经付款，系统确认后会自动开通，不需要重新付款。')
+              : tr('付款单在 24 小时内有效。如果你已经付款，请联系客服处理。'))}
           <Link to="/settings/billing" className={cn(buttonVariants({ size: 'sm', variant: 'secondary' }), 'mt-3')}>
             {tr('重新下单')}
           </Link>
         </StatusCard>
       )}
     </div>
+  )
+}
+
+/** 在线支付：等待渠道的付款通知（页面自动刷新）。用户中途离开也没关系，付款成功后照样开通。 */
+function OnlineAwaiting({ order }: { order: PaymentOrder }) {
+  const queryClient = useQueryClient()
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const cancel = useMutation({
+    mutationFn: () => billingApi.cancel(order.id),
+    onSuccess: (o) => {
+      queryClient.setQueryData(['billing', 'payments', o.id], o)
+      void queryClient.invalidateQueries({ queryKey: ['billing', 'payments'], exact: true })
+      setConfirmCancel(false)
+      toast.success(tr('付款单已取消'))
+    },
+    onError: (e) => toast.error(errorMessage(e, tr('取消失败'))),
+  })
+  return (
+    <>
+      <StatusCard icon={Loader2} tone="blue" title={tr('正在确认付款…')}>
+        {tr('付款成功后会自动开通，通常只需几秒，本页会自动刷新。还没付款的话，可以继续付款。')}
+        <p className="mt-1 text-xs text-slate-500">{tr('支付方式：{{v0}}', { v0: channelLabel(order.channel) })}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {order.checkoutUrl && (
+            <a
+              href={order.checkoutUrl}
+              className={buttonVariants({ size: 'sm' })}
+            >
+              <CreditCard aria-hidden />
+              {tr('继续付款')}
+            </a>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(true)}>
+            {tr('取消付款单')}
+          </Button>
+        </div>
+      </StatusCard>
+      <ConfirmDialog
+        open={confirmCancel}
+        onOpenChange={setConfirmCancel}
+        title={tr('取消这张付款单？')}
+        description={tr('如果你已经付款，请不要取消，系统确认后会自动开通。')}
+        confirmText={tr('取消付款单')}
+        danger
+        loading={cancel.isPending}
+        onConfirm={() => cancel.mutate()}
+      />
+    </>
+  )
+}
+
+/** 在线支付收据（可打印）。 */
+function Receipt({ order }: { order: PaymentOrder }) {
+  return (
+    <dl className="mt-3 grid gap-x-4 gap-y-1 sm:grid-cols-[auto_1fr]" aria-label={tr('收据')}>
+      <dt className="text-slate-500">{tr('付款单号')}</dt>
+      <dd className="font-mono">{order.orderNo}</dd>
+      <dt className="text-slate-500">{tr('套餐')}</dt>
+      <dd>
+        {PLAN_LABELS[order.plan]} · {PERIOD_LABELS[order.period]}（{order.durationDays} {tr('天）')}
+      </dd>
+      <dt className="text-slate-500">{tr('金额')}</dt>
+      <dd className="tabular-nums">{formatMoney(order.amount, order.currency)}</dd>
+      <dt className="text-slate-500">{tr('支付方式')}</dt>
+      <dd>{channelLabel(order.channel)}</dd>
+      {order.providerTxnId && (
+        <>
+          <dt className="text-slate-500">{tr('交易号')}</dt>
+          <dd className="break-all font-mono">{order.providerTxnId}</dd>
+        </>
+      )}
+      <dt className="text-slate-500">{tr('付款时间')}</dt>
+      <dd>{formatDateTime(order.paidAt)}</dd>
+    </dl>
   )
 }
 

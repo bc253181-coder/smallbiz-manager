@@ -25,4 +25,19 @@ public interface PaymentOrderRepository extends JpaRepository<PaymentOrder, Long
     boolean existsByReferenceCode(String referenceCode);
 
     long countByStatus(PaymentOrder.Status status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select o from PaymentOrder o where o.orderNo = :orderNo")
+    Optional<PaymentOrder> findByOrderNoForUpdate(String orderNo);
+
+    Optional<PaymentOrder> findByOrderNo(String orderNo);
+
+    /** 对账：最近创建、还没有收到付款的在线支付付款单。 */
+    @Query("select o from PaymentOrder o where o.channel is not null and o.providerTxnId is null "
+            + "and o.status in :statuses and o.createdAt >= :since order by o.id")
+    List<PaymentOrder> findOnlineUnpaidSince(List<PaymentOrder.Status> statuses, java.time.Instant since);
+
+    List<PaymentOrder> findTop200ByAnomalyIsNotNullAndAnomalyResolvedAtIsNullOrderByIdDesc();
+
+    long countByAnomalyIsNotNullAndAnomalyResolvedAtIsNull();
 }

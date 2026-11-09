@@ -29,6 +29,7 @@ import com.smallbiz.tenant.TenantRepository;
 public class PaymentService {
 
     static final Duration PAY_WINDOW = Duration.ofHours(24);
+    static final Duration ONLINE_PAY_WINDOW = Duration.ofMinutes(30);
     private static final String REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     private final PaymentOrderRepository orders;
@@ -61,6 +62,110 @@ public class PaymentService {
             throw ApiException.badRequest("CURRENCY_MISMATCH",
                     method.getDisplayName() + " 只能支付 " + method.getCurrency() + " 价格");
         }
+        Tenant tenant = checkCanOrder(tenantId, price);
+        Instant now = Instant.now();
+        PaymentOrder order = new PaymentOrder(tenantId, orderNo(now, tenant.getTimezone()), uniqueReference(), price, method,
+                now.plus(PAY_WINDOW), userId);
+        return orders.saveAndFlush(order);
+    }
+
+    /** 在线支付：创建付款单（30 分钟内有效）；付款页由渠道创建，见 OnlinePaymentService。 */
+    @Transactional
+    public PaymentOrder createOnline(Long tenantId, Long userId, Long priceId, String channel) {
+        PlanPrice price = prices.findById(priceId).filter(PlanPrice::isEnabled)
+                .orElseThrow(() -> ApiException.notFound("PRICE_NOT_FOUND", "该套餐暂不可购买"));
+        Tenant tenant = checkCanOrder(tenantId, price);
+        Instant now = Instant.now();
+        return orders.saveAndFlush(PaymentOrder.online(tenantId, orderNo(now, tenant.getTimezone()), uniqueReference(),
+                price, channel, now.plus(ONLINE_PAY_WINDOW), userId));
+    }
+
+    @Transactional
+    public void setCheckout(Long id, String checkoutRef) {
+        orders.findById(id).ifPresent(o -> o.setCheckoutRef(checkoutRef));
+    }
+
+    @Transactional
+    public void cancelSilently(Long id) {
+        orders.findByIdForUpdate(id).filter(o -> o.getStatus() == PaymentOrder.Status.AWAITING_PAYMENT)
+                .ifPresent(PaymentOrder::cancel);
+    }
+
+    /** 处理结果（写入付款通知记录）。 */
+    public enum PaidResult { GRANTED, GRANTED_WITH_NOTE, DUPLICATE, ANOMALY, UNKNOWN_ORDER }
+
+    /**
+     * 渠道确认的一笔付款：校验后开通。付款单行锁 + 渠道交易号唯一，保证同一笔付款只开通一次
+     * （重复通知、通知和对账同时到达都安全）。不能开通的情况记为异常，由平台人工处理（多为退款）。
+     */
+    @Transactional
+    public PaidResult applyOnlinePayment(String channel, com.smallbiz.billing.online.PaymentGateway.Paid paid) {
+        PaymentOrder o = orders.findByOrderNoForUpdate(paid.orderNo()).orElse(null);
+        if (o == null || !channel.equals(o.getChannel())) {
+            return PaidResult.UNKNOWN_ORDER;
+        }
+        if (paid.txnId().equals(o.getProviderTxnId())) {
+            return PaidResult.DUPLICATE;
+        }
+        if (o.getProviderTxnId() != null) {
+            // 同一张付款单收到第二笔不同的付款：不再开通，提示平台退款
+            o.addAnomaly("重复付款：又收到一笔 " + paid.currency() + " " + paid.amount().toPlainString() + "（交易号 "
+                    + paid.txnId() + "），请退款");
+            return PaidResult.ANOMALY;
+        }
+        if (paid.amount().compareTo(o.getAmount()) != 0 || !o.getCurrency().equalsIgnoreCase(paid.currency())) {
+            o.markPaidWithProblem(paid.txnId(), paid.paidAt(), "金额不符：收到 " + paid.currency() + " "
+                    + paid.amount().toPlainString() + "，应付 " + o.getCurrency() + " " + o.getAmount().toPlainString() + "，未开通");
+            return PaidResult.ANOMALY;
+        }
+        // 开通前先检查（不在 grant 里抛异常：那样整个事务回滚，付款记录也丢了）
+        Tenant t = tenants.findByIdForUpdate(o.getTenantId()).orElseThrow(); // 锁定店铺，检查和开通之间不会被其他开通插队
+        boolean trial = o.getPeriod() == PlanPrice.Period.TRIAL_MONTH;
+        Instant now = Instant.now();
+        if (trial && t.isTrialUsed()) {
+            o.markPaidWithProblem(paid.txnId(), paid.paidAt(), "首月体验已经用过，未开通，请退款或改为开通月付");
+            return PaidResult.ANOMALY;
+        }
+        if (PlanPolicy.rank(t.effectivePlan(now)) > PlanPolicy.rank(o.getPlan())) {
+            o.markPaidWithProblem(paid.txnId(), paid.paidAt(), "店铺当前套餐更高，未开通，请退款");
+            return PaidResult.ANOMALY;
+        }
+        o.expireIfDue(now);
+        String note = switch (o.getStatus()) {
+            case EXPIRED -> "付款单过期后才付款，已照常开通";
+            case CANCELLED -> "付款单取消后才付款，已照常开通";
+            default -> null;
+        };
+        plans.grant(o.getTenantId(), o.getPlan(), o.getDurationDays(), trial, PlanChangeLog.Source.ONLINE_PAYMENT, null,
+                o.getId(), null, "在线支付 " + o.getOrderNo());
+        o.markPaid(paid.txnId(), paid.paidAt(), now, note);
+        return note == null ? PaidResult.GRANTED : PaidResult.GRANTED_WITH_NOTE;
+    }
+
+    /** 对账候选：最近 2 天创建、还没收到付款的在线付款单。 */
+    @Transactional(readOnly = true)
+    public List<PaymentOrder> onlineUnpaid() {
+        return orders.findOnlineUnpaidSince(List.of(PaymentOrder.Status.AWAITING_PAYMENT, PaymentOrder.Status.EXPIRED,
+                PaymentOrder.Status.CANCELLED), Instant.now().minus(Duration.ofDays(2)));
+    }
+
+    @Transactional
+    public List<PaymentOrder> adminAnomalies() {
+        return orders.findTop200ByAnomalyIsNotNullAndAnomalyResolvedAtIsNullOrderByIdDesc();
+    }
+
+    @Transactional
+    public PaymentOrder resolveAnomaly(Long id) {
+        PaymentOrder o = orders.findByIdForUpdate(id).orElseThrow(PaymentService::notFound);
+        if (o.getAnomaly() == null) {
+            throw ApiException.conflict("NO_ANOMALY", "该付款单没有需要处理的异常");
+        }
+        o.resolveAnomaly(Instant.now());
+        return o;
+    }
+
+    /** 下单前检查：不能降级、首月体验每店一次、没有未完成的付款单。锁定店铺行，防止同时下两单。 */
+    private Tenant checkCanOrder(Long tenantId, PlanPrice price) {
         Tenant tenant = tenants.findByIdForUpdate(tenantId)
                 .orElseThrow(() -> ApiException.notFound("TENANT_NOT_FOUND", "店铺不存在"));
         // 专业版有效期内不能下单标准版（否则审核通过时会覆盖专业版剩余时间）
@@ -81,9 +186,7 @@ public class PaymentService {
                         java.util.Map.of("paymentOrderId", o.getId()));
             }
         }
-        PaymentOrder order = new PaymentOrder(tenantId, orderNo(now, tenant.getTimezone()), uniqueReference(), price, method,
-                now.plus(PAY_WINDOW), userId);
-        return orders.saveAndFlush(order);
+        return tenant;
     }
 
     @Transactional
@@ -108,7 +211,7 @@ public class PaymentService {
         if (o.expireIfDue(Instant.now())) {
             throw ApiException.conflict("PAYMENT_EXPIRED", "付款单已过期，请重新创建");
         }
-        if (o.getStatus() != PaymentOrder.Status.AWAITING_PAYMENT) {
+        if (o.getStatus() != PaymentOrder.Status.AWAITING_PAYMENT || o.isOnline()) {
             throw ApiException.conflict("INVALID_STATUS", "该付款单当前不能提交凭证");
         }
         String path = storage.storePrivate("payments/t" + tenantId, image);

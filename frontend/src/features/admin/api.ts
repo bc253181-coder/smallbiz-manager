@@ -109,6 +109,14 @@ export interface AiLogPage {
   totalPages: number
 }
 
+export interface OnlineStatus {
+  channels: { channel: string; displayName: string }[]
+  lastReconcileAt: string | null
+  lastChecked: number | null
+  lastFixed: number | null
+  openAnomalies: number
+}
+
 export const adminApi = {
   stats: () => api.get<AdminStats>('/admin/stats').then((r) => r.data),
   tenants: (q: string) => api.get<TenantRow[]>('/admin/tenants', { params: { q: q || undefined } }).then((r) => r.data),
@@ -120,8 +128,15 @@ export const adminApi = {
     api.post<{ batch: BatchRow; codes: string[] }>('/admin/code-batches', body).then((r) => r.data),
   voidCode: (code: string) => api.post<{ status: string; hint: string }>('/admin/codes/void', { code }).then((r) => r.data),
 
-  payments: (status: PaymentStatus | '') =>
-    api.get<PaymentOrder[]>('/admin/payment-orders', { params: { status: status || undefined } }).then((r) => r.data),
+  payments: (status: PaymentStatus | '' | 'ANOMALY') =>
+    api
+      .get<PaymentOrder[]>('/admin/payment-orders', {
+        params: status === 'ANOMALY' ? { anomaly: true } : { status: status || undefined },
+      })
+      .then((r) => r.data),
+  resolveAnomaly: (id: number) => api.post<PaymentOrder>(`/admin/payment-orders/${id}/resolve-anomaly`).then((r) => r.data),
+  onlineStatus: () => api.get<OnlineStatus>('/admin/online-payments/status').then((r) => r.data),
+  reconcileNow: () => api.post<OnlineStatus>('/admin/online-payments/reconcile').then((r) => r.data),
   approve: (id: number) => api.post<PaymentOrder>(`/admin/payment-orders/${id}/approve`).then((r) => r.data),
   reject: (id: number, reason: string) =>
     api.post<PaymentOrder>(`/admin/payment-orders/${id}/reject`, { reason }).then((r) => r.data),

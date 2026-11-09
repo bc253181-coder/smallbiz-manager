@@ -58,6 +58,9 @@ smallbiz:
     # 首次启动时从这里导入收款码图片
     payment-assets-dir: ${PAYMENT_ASSETS_DIR:../assets/payment}
 
+  # 在线支付：模拟支付只用于开发和测试（prod 环境无论如何都不会启用）
+  payment:
+    mock-enabled: ${PAYMENT_MOCK_ENABLED:false}
   # AI 客服：没有 ANTHROPIC_API_KEY 时关闭，只用关键词匹配
   ai-support:
     api-key: ${ANTHROPIC_API_KEY:}

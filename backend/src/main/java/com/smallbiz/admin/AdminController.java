@@ -157,12 +157,15 @@ public class AdminController {
     private final SupportFaqRepository faqs;
     private final UnmatchedQueryRepository unmatched;
     private final ImageStorage storage;
+    private final com.smallbiz.billing.online.OnlinePaymentService online;
 
     public AdminController(TenantRepository tenants, TenantMemberRepository members, UserRepository users,
             PlanService plans, ActivationService activation, ActivationCodeBatchRepository batches,
             ActivationCodeRepository codes, PaymentService payments, PaymentOrderRepository paymentOrders,
             PaymentMethodRepository methods, PlanPriceRepository prices, SupportFaqRepository faqs,
-            UnmatchedQueryRepository unmatched, ImageStorage storage) {
+            UnmatchedQueryRepository unmatched, ImageStorage storage,
+            com.smallbiz.billing.online.OnlinePaymentService online) {
+        this.online = online;
         this.tenants = tenants;
         this.members = members;
         this.users = users;
@@ -257,8 +260,9 @@ public class AdminController {
 
     @GetMapping("/payment-orders")
     @Transactional
-    public List<PaymentOrderView> paymentOrders(@RequestParam(required = false) PaymentOrder.Status status) {
-        List<PaymentOrder> list = payments.adminList(status);
+    public List<PaymentOrderView> paymentOrders(@RequestParam(required = false) PaymentOrder.Status status,
+            @RequestParam(defaultValue = "false") boolean anomaly) {
+        List<PaymentOrder> list = anomaly ? payments.adminAnomalies() : payments.adminList(status);
         Map<Long, PaymentMethod> m = methods.findAll().stream().collect(Collectors.toMap(PaymentMethod::getId, Function.identity()));
         Map<Long, String> names = tenants.findAllById(list.stream().map(PaymentOrder::getTenantId).distinct().toList())
                 .stream().collect(Collectors.toMap(Tenant::getId, Tenant::getName));
@@ -282,9 +286,36 @@ public class AdminController {
         return adminView(payments.reject(id, CurrentUser.userId(), req.reason()));
     }
 
+    /** 异常已处理（例如已在支付渠道后台退款，或已手动调整套餐）。 */
+    @PostMapping("/payment-orders/{id}/resolve-anomaly")
+    public PaymentOrderView resolveAnomaly(@PathVariable Long id) {
+        return adminView(payments.resolveAnomaly(id));
+    }
+
+    public record OnlineStatus(List<com.smallbiz.billing.online.OnlinePaymentService.Channel> channels, Instant lastReconcileAt, Integer lastChecked,
+            Integer lastFixed, long openAnomalies) {
+    }
+
+    @GetMapping("/online-payments/status")
+    public OnlineStatus onlineStatus() {
+        var last = online.lastRun();
+        List<com.smallbiz.billing.online.OnlinePaymentService.Channel> channels = java.util.stream.Stream.of("CNY", "MYR")
+                .flatMap(c -> online.channels(c).stream()).distinct().toList();
+        return new OnlineStatus(channels, last.map(r -> r.getCreatedAt()).orElse(null),
+                last.map(r -> r.getChecked()).orElse(null), last.map(r -> r.getFixed()).orElse(null),
+                paymentOrders.countByAnomalyIsNotNullAndAnomalyResolvedAtIsNull());
+    }
+
+    /** 立即对账一次（不用等 10 分钟）。 */
+    @PostMapping("/online-payments/reconcile")
+    public OnlineStatus reconcileNow() {
+        online.reconcile();
+        return onlineStatus();
+    }
+
     private PaymentOrderView adminView(PaymentOrder o) {
-        return PaymentOrderView.of(o, methods.findById(o.getPaymentMethodId()).orElse(null),
-                tenants.findById(o.getTenantId()).map(Tenant::getName).orElse(null));
+        PaymentMethod m = o.getPaymentMethodId() == null ? null : methods.findById(o.getPaymentMethodId()).orElse(null);
+        return PaymentOrderView.of(o, m, tenants.findById(o.getTenantId()).map(Tenant::getName).orElse(null));
     }
 
     // ---------------- 价格与收款方式 ----------------
