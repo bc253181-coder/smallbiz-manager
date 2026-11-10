@@ -64,6 +64,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook/**").permitAll()
                 // 商品图片：文件名是不可猜测的随机 UUID，<img> 标签无法携带令牌，因此公开读取
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                // 快速发码页：不登录，靠服务器配置的密码（按 IP 限制输错次数）
+                .requestMatchers("/api/v1/quick-code").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().denyAll())
             .oauth2ResourceServer(rs -> rs

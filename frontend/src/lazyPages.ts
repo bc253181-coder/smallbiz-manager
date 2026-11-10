@@ -47,5 +47,6 @@ export const AdminTenantsPage = page(() => import('@/features/admin/pages/AdminT
 export const AdminPaymentsPage = page(() => import('@/features/admin/pages/AdminPaymentsPage'), 'AdminPaymentsPage')
 export const AdminCodesPage = page(() => import('@/features/admin/pages/AdminCodesPage'), 'AdminCodesPage')
 export const AdminDispenserPage = page(() => import('@/features/admin/pages/AdminDispenserPage'), 'AdminDispenserPage')
+export const QuickCodePage = page(() => import('@/features/admin/QuickCodePage'), 'QuickCodePage')
 export const AdminConfigPage = page(() => import('@/features/admin/pages/AdminConfigPage'), 'AdminConfigPage')
 export const AdminSupportPage = page(() => import('@/features/admin/pages/AdminSupportPage'), 'AdminSupportPage')

@@ -14,6 +14,7 @@ import { SelectStorePage } from '@/features/tenant/pages/SelectStorePage'
 import {
   AdminCodesPage,
   AdminDispenserPage,
+  QuickCodePage,
   AdminConfigPage,
   AdminOverviewPage,
   AdminPaymentsPage,
@@ -122,6 +123,8 @@ export const router = createBrowserRouter([
   { path: '/terms', element: <TermsPage /> },
   { path: '/privacy', element: <PrivacyPage /> },
   { path: '/invite/:token', element: <InvitePage /> },
+  // 快速发码：不登录，靠服务器配置的密码（docs/18）
+  { path: '/quick-code', element: <QuickCodePage /> },
   {
     element: <GuestOnly />,
     children: [
