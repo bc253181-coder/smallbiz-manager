@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700;900&family=ZCOOL+KuaiLe&display=block');
+
+:root {
+  --blue: #2563eb;
+  --blue-dark: #1d4ed8;
+  --blue-soft: #dbeafe;
+  --orange: #f97316;
+  --red: #ef4444;
+  --yellow: #fde047;
+  --green: #22c55e;
+  --ink: #0f172a;
+  --muted: #475569;
+  --cream: #fff8e7;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 1242px;
+  height: 1660px;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  color: var(--ink);
+  background: var(--cream);
+  position: relative;
+}
+
+.fun { font-family: 'ZCOOL KuaiLe', 'Noto Sans SC', sans-serif; font-weight: 400; }
+
+/* 荧光笔划线 */
+.hl {
+  background: linear-gradient(transparent 58%, var(--yellow) 58%, var(--yellow) 92%, transparent 92%);
+  padding: 0 6px;
+}
+
+/* 背景点阵 */
+.dots::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#f1d9a7 3px, transparent 3.5px);
+  background-size: 44px 44px;
+  opacity: .55;
+  z-index: 0;
+}
+
+.layer { position: relative; z-index: 1; }
+
+/* 顶部品牌条 */
+.brandbar {
+  display: flex; align-items: center; gap: 18px;
+  font-weight: 900; font-size: 40px; letter-spacing: -.5px;
+}
+.brandbar img { width: 76px; height: 76px; }
+.brandbar small { font-size: 28px; font-weight: 700; color: var(--muted); margin-left: 6px; }
+
+/* 贴纸 */
+.sticker {
+  position: absolute;
+  border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; color: #fff; font-weight: 900;
+  box-shadow: 0 12px 0 rgba(0,0,0,.12);
+}
+
+.tag {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 12px 26px; border-radius: 999px;
+  font-weight: 700; font-size: 34px;
+  background: #fff; border: 4px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.card {
+  background: #fff;
+  border: 5px solid var(--ink);
+  border-radius: 36px;
+  box-shadow: 10px 10px 0 var(--ink);
+}
+
+.footer {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 132px;
+  background: var(--ink); color: #fff;
+  display: flex; align-items: center; justify-content: center; gap: 28px;
+  font-size: 40px; font-weight: 700;
+  z-index: 2;
+}
+.footer b { color: var(--yellow); font-weight: 900; }

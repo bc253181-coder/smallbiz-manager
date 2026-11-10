@@ -1,0 +1,78 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="base.css">
+<style>
+  body { background: #eef4ff; }
+  .dots::before { background-image: radial-gradient(#c7d7fb 3px, transparent 3.5px); }
+  .wrap { padding: 72px 70px 0; }
+  h1 { margin-top: 36px; font-size: 96px; line-height: 1.15; letter-spacing: -2px; }
+  h1 .blue { color: var(--blue); }
+  .grid { margin-top: 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  .f { padding: 28px 28px 30px; }
+  .f .ico { width: 88px; height: 88px; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 50px; border: 4px solid var(--ink); }
+  .f h3 { margin-top: 16px; font-size: 46px; font-weight: 900; }
+  .f p { margin-top: 6px; font-size: 30px; line-height: 1.4; color: var(--muted); font-weight: 500; }
+  .f p b { color: var(--ink); }
+  .more { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 18px; }
+  .more .tag { font-size: 32px; padding: 10px 22px; box-shadow: 5px 5px 0 var(--ink); }
+  .badge {
+    width: 230px; height: 230px; right: 60px; top: 150px;
+    background: var(--orange); transform: rotate(12deg);
+    font-size: 40px; line-height: 1.2; border: 7px solid #fff; outline: 5px solid var(--orange);
+  }
+  .badge b { font-size: 58px; }
+</style>
+</head>
+<body class="dots">
+  <div class="wrap layer">
+    <div class="brandbar"><img src="logo-mark.svg" alt="">SmallBiz Manager<small>小店进销存</small></div>
+    <h1>开店要用的<br><span class="hl">这些功能</span><span class="blue">全都有</span>👇</h1>
+
+    <div class="grid">
+      <div class="card f">
+        <div class="ico" style="background:#dbeafe">📷</div>
+        <h3>扫码开单</h3>
+        <p>手机摄像头扫条码 · <b>几秒开好一单</b></p>
+      </div>
+      <div class="card f">
+        <div class="ico" style="background:#dcfce7">📦</div>
+        <h3>库存自动算</h3>
+        <p>卖一件少一件 · <b>快卖完自动提醒</b></p>
+      </div>
+      <div class="card f">
+        <div class="ico" style="background:#fef3c7">💰</div>
+        <h3>欠款对账</h3>
+        <p>客户赊账自动记 · <b>一键出对账单</b></p>
+      </div>
+      <div class="card f">
+        <div class="ico" style="background:#fce7f3">🤝</div>
+        <h3>老客户专属价</h3>
+        <p>批发价因人而异 · <b>开单自动带出</b></p>
+      </div>
+      <div class="card f">
+        <div class="ico" style="background:#ede9fe">📊</div>
+        <h3>利润报表</h3>
+        <p>卖了多少、赚了多少 · <b>一眼看清楚</b></p>
+      </div>
+      <div class="card f">
+        <div class="ico" style="background:#ffedd5">📑</div>
+        <h3>Excel 导入导出</h3>
+        <p>老数据一键导入 · <b>不用重新录</b></p>
+      </div>
+    </div>
+
+    <div class="more">
+      <span class="tag">👥 员工账号</span>
+      <span class="tag">🏬 多仓库</span>
+      <span class="tag">💱 多币种</span>
+      <span class="tag">💬 在线客服</span>
+    </div>
+  </div>
+
+  <div class="sticker badge layer"><b>手机</b>电脑<br>都能用</div>
+
+  <div class="footer">摆摊 · 网店 · 批发 · 实体店 <b>都适用</b></div>
+</body>
+</html>
