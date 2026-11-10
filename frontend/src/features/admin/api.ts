@@ -139,6 +139,7 @@ export interface DispenserRow {
   dispensedByName: string | null
   redeemedAt: string | null
   redeemedTenantName: string | null
+  redeemedByEmail: string | null
 }
 
 export interface DispenserStock {
@@ -153,6 +154,7 @@ export const adminApi = {
   dispense: (orderRef: string, quantity: number, confirmRepeat: boolean) =>
     api.post<DispensedCode[]>('/admin/code-dispenser/dispense', { orderRef, quantity, confirmRepeat }).then((r) => r.data),
   dispenserCodes: (q: string) => api.get<DispenserRow[]>('/admin/code-dispenser/codes', { params: { q: q || undefined } }).then((r) => r.data),
+  recentlyRedeemed: (days = 7) => api.get<DispenserRow[]>('/admin/code-dispenser/redeemed', { params: { days } }).then((r) => r.data),
   revealCode: (id: number) => api.post<DispensedCode>(`/admin/code-dispenser/codes/${id}/reveal`).then((r) => r.data),
   voidOrder: (orderRef: string) =>
     api.post<{ voided: number; alreadyRedeemed: string[] }>('/admin/code-dispenser/void-order', { orderRef }).then((r) => r.data),

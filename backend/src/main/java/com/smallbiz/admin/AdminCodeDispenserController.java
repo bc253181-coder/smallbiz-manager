@@ -59,6 +59,12 @@ public class AdminCodeDispenserController {
         return dispenser.search(q);
     }
 
+    /** 最近被使用的码（默认 7 天，最多 90 天）。 */
+    @GetMapping("/redeemed")
+    public List<Row> redeemed(@RequestParam(defaultValue = "7") int days) {
+        return dispenser.recentlyRedeemed(days);
+    }
+
     @PostMapping("/codes/{id}/reveal")
     public Dispensed reveal(@PathVariable Long id) {
         return dispenser.reveal(id, CurrentUser.userId());

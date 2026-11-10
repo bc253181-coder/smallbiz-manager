@@ -26,6 +26,9 @@ public interface ActivationCodeRepository extends JpaRepository<ActivationCode, 
 
     List<ActivationCode> findTop100ByDispensedAtIsNotNullOrderByDispensedAtDescIdDesc();
 
+    /** 发码台「最近被使用」：这个时间之后兑换的码，最新的在前。 */
+    List<ActivationCode> findTop100ByRedeemedAtAfterOrderByRedeemedAtDescIdDesc(java.time.Instant since);
+
     /** 发码台搜索：订单号包含 q，或激活码后 4 位等于 hint。 */
     @Query("select c from ActivationCode c where (c.orderRef is not null and lower(c.orderRef) like lower(concat('%', :q, '%'))) "
             + "or c.codeHint = :hint order by c.id desc limit 100")
