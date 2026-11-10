@@ -43,7 +43,7 @@ public class CodeDispenserService {
     }
 
     public record Row(Long id, String hint, String batchName, CodeState state, boolean hasRaw, String orderRef,
-            Instant dispensedAt, String dispensedByName, Instant redeemedAt, String redeemedTenantName) {
+            Instant dispensedAt, String dispensedByName, Instant redeemedAt, String redeemedTenantName, String redeemedByEmail) {
     }
 
     public record Stock(boolean keyConfigured, long available, int lowStockThreshold, boolean low) {
@@ -207,10 +207,24 @@ public class CodeDispenserService {
             String hint = query.toUpperCase(java.util.Locale.ROOT).replaceAll("[^A-Z0-9]", "");
             found = codes.searchDispenser(query, hint.length() >= 4 ? hint.substring(hint.length() - 4) : "~");
         }
+        return toRows(found);
+    }
+
+    /** 最近 days 天内被使用（兑换）的永久会员激活码，最新的在前。 */
+    @Transactional(readOnly = true)
+    public List<Row> recentlyRedeemed(int days) {
+        int d = Math.max(1, Math.min(days, 90));
+        return toRows(codes.findTop100ByRedeemedAtAfterOrderByRedeemedAtDescIdDesc(Instant.now().minus(java.time.Duration.ofDays(d))));
+    }
+
+    private List<Row> toRows(List<ActivationCode> found) {
         Map<Long, ActivationCodeBatch> batchById = batches.findAllById(found.stream().map(ActivationCode::getBatchId).distinct().toList())
                 .stream().collect(Collectors.toMap(ActivationCodeBatch::getId, Function.identity()));
-        Set<Long> userIds = found.stream().map(ActivationCode::getDispensedBy).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
-        Map<Long, String> names = users.findAllById(userIds).stream().collect(Collectors.toMap(User::getId, User::getDisplayName));
+        Set<Long> userIds = found.stream().flatMap(c -> java.util.stream.Stream.of(c.getDispensedBy(), c.getRedeemedBy()))
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        List<User> people = users.findAllById(userIds);
+        Map<Long, String> names = people.stream().collect(Collectors.toMap(User::getId, User::getDisplayName));
+        Map<Long, String> emails = people.stream().collect(Collectors.toMap(User::getId, User::getEmail));
         Set<Long> tenantIds = found.stream().map(ActivationCode::getRedeemedTenantId).filter(java.util.Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<Long, String> tenantNames = tenants.findAllById(tenantIds).stream().collect(Collectors.toMap(Tenant::getId, Tenant::getName));
@@ -219,7 +233,7 @@ public class CodeDispenserService {
             return b != null && b.isLifetime();
         }).map(c -> new Row(c.getId(), c.getCodeHint(), batchById.get(c.getBatchId()).getName(), state(c),
                 c.getCodeEncrypted() != null, c.getOrderRef(), c.getDispensedAt(), names.get(c.getDispensedBy()),
-                c.getRedeemedAt(), tenantNames.get(c.getRedeemedTenantId()))).toList();
+                c.getRedeemedAt(), tenantNames.get(c.getRedeemedTenantId()), emails.get(c.getRedeemedBy()))).toList();
     }
 
     static CodeState state(ActivationCode c) {

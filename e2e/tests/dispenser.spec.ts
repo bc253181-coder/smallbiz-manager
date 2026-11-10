@@ -72,9 +72,22 @@ test('发码台：按订单取码，买家兑换后显示已兑换', async ({ pa
   await expect(buyer.getByTestId('membership-level')).toHaveText('高级永久会员')
   await buyerCtx.close()
 
-  // 发码台：已兑换，显示买家店铺
+  // 发码台：顶部提示「有激活码刚被使用」，列出买家账号；记录里显示「已使用」和买家店铺
   await page.reload()
+  const recent = page.getByTestId('recently-used')
+  await expect(recent.getByText(/有 \d+ 个激活码刚被使用/)).toBeVisible()
+  await expect(recent.getByText(`buyer-${stamp}@e2e.test`, { exact: false })).toBeVisible()
   await page.getByLabel('搜索发码记录').fill(order)
-  await expect(row.getByText('已兑换')).toBeVisible()
-  await expect(row.getByText(`E2E 买家店 ${stamp}`)).toBeVisible()
+  await expect(row.getByText('已使用')).toBeVisible()
+  await expect(row.getByText(`E2E 买家店 ${stamp}`, { exact: false })).toBeVisible()
+  await expect(row.getByText(`buyer-${stamp}@e2e.test`, { exact: false })).toBeVisible()
+
+  // 显示已使用的码：提示不要再发，没有复制按钮
+  await row.getByRole('button', { name: '显示激活码' }).click()
+  await expect(row.getByText('这个码已经被使用过，不要再发给别人')).toBeVisible()
+  await expect(row.getByRole('button', { name: '复制激活码' })).toHaveCount(0)
+
+  // 点「知道了」后不再高亮为新
+  await recent.getByRole('button', { name: '知道了' }).click()
+  await expect(recent.getByText('最近被使用的激活码')).toBeVisible()
 })

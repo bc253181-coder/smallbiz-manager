@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Copy, Eye, PackageOpen, Search, TriangleAlert } from 'lucide-react'
+import { BellRing, Check, Copy, Eye, PackageOpen, Search, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
@@ -17,7 +17,7 @@ import { adminApi, type DispensedCode, type DispenserRow } from '../api'
 const STATE: Record<DispenserRow['state'], { label: string; tone: 'slate' | 'blue' | 'green' | 'red' }> = {
   UNUSED: { label: '未发出', tone: 'slate' },
   DISPENSED: { label: '已发出', tone: 'blue' },
-  REDEEMED: { label: '已兑换', tone: 'green' },
+  REDEEMED: { label: '已使用', tone: 'green' },
   VOIDED: { label: '已作废', tone: 'red' },
 }
 
@@ -87,6 +87,8 @@ export function AdminDispenserPage() {
           </Link>
         </p>
       )}
+
+      <RecentlyUsedCard />
 
       <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
@@ -180,11 +182,88 @@ export function AdminDispenserPage() {
   )
 }
 
+const SEEN_KEY = 'smallbiz.dispenser.lastSeenRedeemedAt'
+
+function readSeen(): string | null {
+  try {
+    return localStorage.getItem(SEEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 最近 7 天被使用（兑换）的激活码。上次点「知道了」之后新被使用的，高亮提示并显示数量。
+ * 每分钟自动刷新。
+ */
+function RecentlyUsedCard() {
+  const used = useQuery({
+    queryKey: ['admin', 'dispenser', 'redeemed'],
+    queryFn: () => adminApi.recentlyRedeemed(7),
+    refetchInterval: 60_000,
+  })
+  const [seen, setSeen] = useState<string | null>(readSeen)
+  const rows = used.data ?? []
+  const isNew = (r: DispenserRow) => !!r.redeemedAt && (!seen || r.redeemedAt > seen)
+  const fresh = rows.filter(isNew)
+
+  function markSeen() {
+    const newest = rows[0]?.redeemedAt
+    if (!newest) return
+    try {
+      localStorage.setItem(SEEN_KEY, newest)
+    } catch {
+      // 浏览器不允许保存时，只在本页生效
+    }
+    setSeen(newest)
+  }
+
+  if (used.isLoading || used.isError) return null
+  return (
+    <Card className={fresh.length ? 'border-emerald-300 ring-2 ring-emerald-100' : undefined} data-testid="recently-used">
+      <CardHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <BellRing className={fresh.length ? 'size-4 text-emerald-600' : 'size-4 text-slate-400'} aria-hidden />
+            {fresh.length ? `有 ${fresh.length} 个激活码刚被使用` : '最近被使用的激活码'}
+          </span>
+        }
+        description={rows.length ? '最近 7 天被兑换的码（已使用的码不能再发给别人）' : '最近 7 天没有激活码被使用'}
+        action={
+          fresh.length > 0 && (
+            <Button size="sm" variant="secondary" onClick={markSeen}>
+              <Check aria-hidden />
+              知道了
+            </Button>
+          )
+        }
+      />
+      {rows.length > 0 && (
+        <ul className="divide-y divide-slate-100" aria-label="最近被使用的激活码">
+          {rows.slice(0, 10).map((r) => (
+            <li key={r.id} className={isNew(r) ? 'flex flex-wrap items-center gap-x-4 gap-y-1 bg-emerald-50/60 px-5 py-2.5 text-sm' : 'flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-2.5 text-sm'}>
+              <span className="font-mono font-semibold text-slate-800">****{r.hint}</span>
+              {isNew(r) && <Badge tone="green">新</Badge>}
+              <span className="text-slate-600">{formatDateTime(r.redeemedAt!)} 被使用</span>
+              <span className="min-w-0 break-all text-slate-600">
+                账号 {r.redeemedByEmail ?? '—'}
+                {r.redeemedTenantName && ` · 店铺 ${r.redeemedTenantName}`}
+              </span>
+              <span className="text-xs text-slate-400">{r.orderRef ? `订单 ${r.orderRef}` : r.batchName}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  )
+}
+
 function CodesCard() {
   const queryClient = useQueryClient()
   const [q, setQ] = useState('')
   const query = useDebouncedValue(q.trim())
-  const rows = useQuery({ queryKey: ['admin', 'dispenser', 'codes', query], queryFn: () => adminApi.dispenserCodes(query) })
+  // 每分钟刷新：买家兑换后状态自动变成「已使用」
+  const rows = useQuery({ queryKey: ['admin', 'dispenser', 'codes', query], queryFn: () => adminApi.dispenserCodes(query), refetchInterval: 60_000 })
   const [revealed, setRevealed] = useState<Record<number, string>>({})
   const [voiding, setVoiding] = useState<string | null>(null)
 
@@ -234,7 +313,7 @@ function CodesCard() {
                 <th className="px-5 py-2">状态</th>
                 <th className="px-5 py-2">小红书订单</th>
                 <th className="px-5 py-2">发出</th>
-                <th className="px-5 py-2">兑换</th>
+                <th className="px-5 py-2">使用</th>
                 <th className="px-5 py-2" />
               </tr>
             </thead>
@@ -244,15 +323,25 @@ function CodesCard() {
                   <td className="px-5 py-2.5">
                     {revealed[r.id] ? (
                       <span className="inline-flex items-center gap-1">
-                        <span className="font-mono font-semibold">{revealed[r.id]}</span>
-                        <Button size="sm" variant="ghost" onClick={() => void copy(revealed[r.id])} aria-label="复制激活码">
-                          <Copy aria-hidden />
-                        </Button>
+                        <span className={r.state === 'REDEEMED' ? 'font-mono font-semibold text-slate-400 line-through' : 'font-mono font-semibold'}>
+                          {revealed[r.id]}
+                        </span>
+                        {r.state === 'UNUSED' || r.state === 'DISPENSED' ? (
+                          <Button size="sm" variant="ghost" onClick={() => void copy(revealed[r.id])} aria-label="复制激活码">
+                            <Copy aria-hidden />
+                          </Button>
+                        ) : null}
                       </span>
                     ) : (
                       <span className="font-mono text-slate-600">****{r.hint}</span>
                     )}
                     <p className="text-xs text-slate-400">{r.batchName}{!r.hasRaw && ' · 旧码（未保存原码）'}</p>
+                    {revealed[r.id] && r.state === 'REDEEMED' && (
+                      <p className="text-xs font-medium text-red-600" role="alert">这个码已经被使用过，不要再发给别人</p>
+                    )}
+                    {revealed[r.id] && r.state === 'VOIDED' && (
+                      <p className="text-xs font-medium text-red-600" role="alert">这个码已作废，不能使用</p>
+                    )}
                   </td>
                   <td className="px-5 py-2.5">
                     <Badge tone={STATE[r.state].tone}>{STATE[r.state].label}</Badge>
@@ -272,7 +361,10 @@ function CodesCard() {
                     {r.redeemedAt ? (
                       <>
                         {formatDateTime(r.redeemedAt)}
-                        <p className="text-xs text-slate-400">{r.redeemedTenantName}</p>
+                        <p className="break-all text-xs text-slate-400">
+                          {r.redeemedByEmail}
+                          {r.redeemedTenantName && ` · ${r.redeemedTenantName}`}
+                        </p>
                       </>
                     ) : (
                       '—'

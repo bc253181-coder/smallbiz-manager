@@ -85,6 +85,18 @@ class CodeDispenserApiTest extends IntegrationTest {
         assertThat(states).containsExactly("REDEEMED");
         List<String> stores = read(rows, "$[?(@.id == " + id + ")].redeemedTenantName");
         assertThat(stores).containsExactly("发码买家店");
+        List<String> emails = read(rows, "$[?(@.id == " + id + ")].redeemedByEmail");
+        assertThat(emails).containsExactly(buyer.email());
+
+        // 「最近被使用」列表里有它，显示使用的账号
+        MockHttpServletResponse recent = send(get("/api/v1/admin/code-dispenser/redeemed?days=7"), admin, null);
+        assertThat(recent.getStatus()).isEqualTo(200);
+        List<String> recentEmails = read(recent, "$[?(@.id == " + id + ")].redeemedByEmail");
+        assertThat(recentEmails).containsExactly(buyer.email());
+        List<String> recentStates = read(recent, "$[?(@.id == " + id + ")].state");
+        assertThat(recentStates).containsExactly("REDEEMED");
+        // 普通用户不能看
+        assertThat(send(get("/api/v1/admin/code-dispenser/redeemed"), buyer, null).getStatus()).isEqualTo(403);
 
         // 再看一次：和发出去的一样，并记录
         assertThat((String) read(send(post("/api/v1/admin/code-dispenser/codes/" + id + "/reveal"), admin, null), "$.code"))
