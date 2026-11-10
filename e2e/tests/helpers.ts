@@ -2,19 +2,24 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { expect, request, type Locator, type Page } from '@playwright/test'
 
-/** 平台管理员账号：优先读环境变量，否则读项目根目录 .env.dev 中的开发账号（不会打印出来）。 */
-export function adminCredentials(): { email: string; password: string } {
-  if (process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD) {
-    return { email: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD }
-  }
+/** 读取项目根目录 .env.dev（KEY=VALUE）。值不会打印出来。 */
+export function devEnv(): Record<string, string> {
   const file = fileURLToPath(new URL('../../.env.dev', import.meta.url))
-  const vars = Object.fromEntries(
+  return Object.fromEntries(
     readFileSync(file, 'utf8')
       .split(/\r?\n/)
       .map((l) => l.match(/^\s*([A-Z0-9_]+)=(.*)$/))
       .filter((m): m is RegExpMatchArray => !!m)
       .map((m) => [m[1], m[2].trim()]),
   )
+}
+
+/** 平台管理员账号：优先读环境变量，否则读项目根目录 .env.dev 中的开发账号（不会打印出来）。 */
+export function adminCredentials(): { email: string; password: string } {
+  if (process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD) {
+    return { email: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD }
+  }
+  const vars = devEnv()
   if (!vars.DEV_TEST_EMAIL || !vars.DEV_TEST_PASSWORD) {
     throw new Error('请设置 E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD，或在 .env.dev 中配置 DEV_TEST_EMAIL / DEV_TEST_PASSWORD')
   }

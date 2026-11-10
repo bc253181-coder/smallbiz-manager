@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.smallbiz.auth.User;
 import com.smallbiz.auth.UserRepository;
 import com.smallbiz.common.ApiException;
+import com.smallbiz.tenant.Plan;
 import com.smallbiz.tenant.Tenant;
 import com.smallbiz.tenant.TenantRepository;
 
@@ -30,6 +31,11 @@ public class CodeDispenserService {
     /** 可发出的码少于这个数时提醒补充。 */
     public static final int LOW_STOCK = 10;
     public static final int MAX_PER_ORDER = 20;
+    /** 快速发码页取出的码记在这个「订单号」下，发码台可以按它搜索。 */
+    public static final String QUICK_ORDER = "快速发码";
+    static final Long QUICK_OPERATOR = 0L;
+    static final String QUICK_REFILL_BATCH = "快速发码自动补充";
+    static final int QUICK_REFILL_SIZE = 50;
 
     public enum CodeState { UNUSED, DISPENSED, REDEEMED, VOIDED }
 
@@ -52,10 +58,12 @@ public class CodeDispenserService {
     private final UserRepository users;
     private final TenantRepository tenants;
     private final CodeCrypto crypto;
+    private final ActivationService activation;
 
     public CodeDispenserService(EntityManager em, ActivationCodeRepository codes, ActivationCodeBatchRepository batches,
-            UserRepository users, TenantRepository tenants, CodeCrypto crypto) {
+            UserRepository users, TenantRepository tenants, CodeCrypto crypto, ActivationService activation) {
         this.em = em;
+        this.activation = activation;
         this.codes = codes;
         this.batches = batches;
         this.users = users;
@@ -95,6 +103,24 @@ public class CodeDispenserService {
             throw new ApiException(HttpStatus.CONFLICT, "ORDER_ALREADY_DISPENSED",
                     "订单「" + order + "」已经发过 " + already + " 个码，确认要再发吗？", Map.of("count", already));
         }
+        return claim(order, quantity, adminId);
+    }
+
+    /**
+     * 快速发码页（docs/18）：不需要订单号，取 1 个可发出的永久会员激活码；库存用完时自动补充一批再取。
+     * 记录的订单号固定为「快速发码」，操作人为 0（不登录使用）。
+     */
+    @Transactional
+    public Dispensed quickIssue() {
+        requireKey();
+        if (stock().available() == 0) {
+            activation.createBatch(new ActivationService.BatchRequest(QUICK_REFILL_BATCH, Plan.PRO, 0, false, true,
+                    QUICK_REFILL_SIZE, null), null);
+        }
+        return claim(QUICK_ORDER, 1, QUICK_OPERATOR).getFirst();
+    }
+
+    private List<Dispensed> claim(String order, int quantity, Long adminId) {
         Instant now = Instant.now();
         List<Long> claimed = new ArrayList<>();
         Set<Long> tried = new java.util.HashSet<>();

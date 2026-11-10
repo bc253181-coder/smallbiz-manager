@@ -62,7 +62,15 @@ export function AdminDispenserPage() {
   const s = stock.data
   return (
     <div className="space-y-6">
-      <PageHeader title="发码台" description="小红书有新订单时：输入订单号 → 取码 → 复制发给买家。每个码只会被取出一次，系统记录发给了哪个订单" />
+      <PageHeader
+        title="发码台"
+        description="小红书有新订单时：输入订单号 → 取码 → 复制发给买家。每个码只会被取出一次，系统记录发给了哪个订单"
+        actions={
+          <Link to="/quick-code" target="_blank" className={buttonVariants({ variant: 'secondary' })}>
+            快速发码（不用订单号）
+          </Link>
+        }
+      />
 
       {s && !s.keyConfigured && (
         <p className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
